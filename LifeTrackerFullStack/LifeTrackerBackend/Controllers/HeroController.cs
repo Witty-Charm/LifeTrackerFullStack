@@ -16,14 +16,12 @@ public class HeroController : ControllerBase
         _context = context;
     }
 
-    // GET: api/Hero
     [HttpGet]
     public async Task<ActionResult<IEnumerable<Hero>>> GetHeroes()
     {
         return await _context.Heroes.ToListAsync();
     }
 
-    // GET: api/Hero/5
     [HttpGet("{id}")]
     public async Task<ActionResult<Hero>> GetHero(int id)
     {
@@ -37,11 +35,9 @@ public class HeroController : ControllerBase
         return hero;
     }
 
-    // POST: api/Hero
     [HttpPost]
     public async Task<ActionResult<Hero>> PostHero(Hero hero)
     {
-        // Устанавливаем начальные значения, если они не заданы
         if (hero.Level == 0) hero.Level = 1;
         if (hero.MaxXP == 0) hero.MaxXP = 100;
         if (hero.HP == 0) hero.HP = 100;
@@ -52,7 +48,6 @@ public class HeroController : ControllerBase
         return CreatedAtAction(nameof(GetHero), new { id = hero.Id }, hero);
     }
 
-    // PUT: api/Hero/5
     [HttpPut("{id}")]
     public async Task<IActionResult> PutHero(int id, Hero hero)
     {
