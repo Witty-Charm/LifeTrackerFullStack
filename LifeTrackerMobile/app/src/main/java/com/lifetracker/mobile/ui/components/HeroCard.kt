@@ -1,10 +1,16 @@
 package com.lifetracker.mobile.ui.components
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.unit.dp
 import com.lifetracker.mobile.data.Hero
 
@@ -58,14 +64,25 @@ fun HeroCard(
             }
             
             Spacer(modifier = Modifier.height(12.dp))
-            
+
+
             LinearProgressIndicator(
                 progress = hero.getExperienceProgress(),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(24.dp),
+                    .height(12.dp)
+                    .clip(CircleShape),
                 color = MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.surfaceVariant
+                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                strokeCap = StrokeCap.Round
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = "Золото: ${hero.gold} \uD83D\uDCB0",
+                style = MaterialTheme.typography.titleMedium,
+                color = Color(0xFFB8860B)
             )
         }
     }

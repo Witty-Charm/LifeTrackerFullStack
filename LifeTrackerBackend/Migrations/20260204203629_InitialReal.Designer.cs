@@ -10,8 +10,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LifeTracker.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260202164609_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20260204203629_InitialReal")]
+    partial class InitialReal
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -53,6 +53,9 @@ namespace LifeTracker.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<int>("Gold")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("HP")
                         .HasColumnType("INTEGER");
 
@@ -67,6 +70,9 @@ namespace LifeTracker.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<int>("XP")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("maxHP")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");

@@ -22,7 +22,14 @@ data class Hero(
     val experienceToNextLevel: Int,
 
     @SerializedName("hp")
-    val hp: Int
+    val hp: Int,
+
+    @SerializedName("maxHP")
+    val maxHP: Int,
+
+    @SerializedName("gold")
+    val gold: Int
+
 ) {
     fun getExperienceProgress(): Float {
         return if (experienceToNextLevel > 0) {

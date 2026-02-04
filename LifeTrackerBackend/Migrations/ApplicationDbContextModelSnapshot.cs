@@ -50,6 +50,9 @@ namespace LifeTracker.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<int>("Gold")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("HP")
                         .HasColumnType("INTEGER");
 
@@ -64,6 +67,9 @@ namespace LifeTracker.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<int>("XP")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("maxHP")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");

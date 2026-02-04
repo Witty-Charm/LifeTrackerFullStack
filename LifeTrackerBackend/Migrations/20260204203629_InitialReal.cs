@@ -5,7 +5,7 @@
 namespace LifeTracker.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class InitialReal : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -37,7 +37,9 @@ namespace LifeTracker.Migrations
                     Level = table.Column<int>(type: "INTEGER", nullable: false),
                     XP = table.Column<int>(type: "INTEGER", nullable: false),
                     MaxXP = table.Column<int>(type: "INTEGER", nullable: false),
-                    HP = table.Column<int>(type: "INTEGER", nullable: false)
+                    HP = table.Column<int>(type: "INTEGER", nullable: false),
+                    maxHP = table.Column<int>(type: "INTEGER", nullable: false),
+                    Gold = table.Column<int>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
