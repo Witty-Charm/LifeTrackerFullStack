@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Life Tracker</string>
+    <string name="add_task">Добавить задачу</string>
+    <string name="task_title">Название задачи</string>
+    <string name="task_description">Описание</string>
+    <string name="task_xp">XP за выполнение</string>
+    <string name="save">Сохранить</string>
+    <string name="cancel">Отмена</string>
+    <string name="level">Уровень</string>
+    <string name="xp">Опыт</string>
+    <string name="complete">Выполнить</string>
+    <string name="no_tasks">Нет активных задач</string>
+</resources>
+
