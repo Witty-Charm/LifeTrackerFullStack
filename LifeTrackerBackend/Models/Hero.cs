@@ -5,33 +5,82 @@ public class Hero
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public int Level { get; set; } = 1;
-    public int XP { get; set; } = 0;
-    public int MaxXP { get; set; } = 100;
-    public int HP { get; set; } = 100;
-    public int maxHP { get; set; } = 100;
+    public long CurrentXp { get; set; } = 0;
+    public long TotalXpEarned { get; set; } = 0;
+    
+    public int CurrentHp { get; set; } = 100;
+    public int MaxHp { get; set; } = 100;
     public int Gold { get; set; } = 0;
+    
+    public bool IsDead { get; set; } = false;
+    public DateTime? DeathTime { get; set; }
+    public int DeathCount { get; set; } = 0;
+    
+    public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    
+    public ICollection<GameTask> Tasks { get; set; } = new List<GameTask>();
+    public ICollection<Streak> Streaks { get; set; } = new List<Streak>();
+    public EconomyBalance?  EconomyBalance { get; set; }
 
-    public void GainXP(int amount)
+    public void GainXP(long amount)
     {
-        XP += amount;
-        while (XP >= MaxXP)
+        if (IsDead) return;
+        
+        CurrentXp += amount;
+        TotalXpEarned += amount;
+        UpdatedAt = DateTime.UtcNow;
+        
+        while (CurrentXp >= GetXpRequiredForNextLevel())
         {
-            XP -= MaxXP;
+            CurrentXp -= GetXpRequiredForNextLevel();
             Level++;
-            MaxXP = Level * 100;
-            HP = maxHP;
+            
+            MaxHp = 50 + (Level * 5);
+            CurrentHp = MaxHp;
         }
     }
-
+    
     public void TakeDamage(int damage)
     {
-        HP -= damage;
-        if (HP <= 0)
+        if (IsDead) return;
+        
+        CurrentHp -= damage;
+        UpdatedAt = DateTime.UtcNow;
+        
+        if (CurrentHp <= 0)
         {
-            HP = maxHP / 2;
-            XP = 0;
-            Gold = Math.Max(0, Gold - 10);
+            Die();
         }
+    }
+    
+    public long GetXpRequiredForNextLevel()
+    {   
+        const double baseXp = 100;
+        const double exponent = 1.8;
+        const double scaleFactor = 50.0;
+
+        return (long)Math.Floor(baseXp * Math.Pow(Level, exponent) * (1 + Level / scaleFactor));
+    }
+
+    public void Die()
+    {
+        IsDead = true;
+        DeathTime = DateTime.UtcNow;
+        DeathCount++;
+        
+        
+        CurrentHp = MaxHp / 4;
+
+        long xpLoss = (long)(GetXpRequiredForNextLevel() * 0.10);
+        CurrentXp = Math.Max(0, CurrentXp - xpLoss);
+
+        int goldLoss = (int)(Gold * 0.20);
+        Gold = Math.Max(0, Gold - goldLoss);
+        
+        IsDead = false;
+        UpdatedAt = DateTime.UtcNow;
+
     }
 }
 
