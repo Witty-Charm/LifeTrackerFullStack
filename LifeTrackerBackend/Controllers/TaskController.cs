@@ -19,19 +19,19 @@ public class TaskController : ControllerBase
         _context = context;
         _gameEngine = gameEngine;
     }
-    
+
     [HttpGet]
     public async Task<ActionResult<IEnumerable<TaskDto>>> GetTasks([FromQuery] int? heroId = null)
     {
         var query = _context.GameTasks
             .Include(t => t.Streak)
             .Where(t => t.IsActive);
-        
+
         if (heroId.HasValue)
             query = query.Where(t => t.HeroId == heroId.Value);
-        
+
         var tasks = await query.ToListAsync();
-        
+
         var taskDtos = tasks.Select(t => new TaskDto
         {
             Id = t.Id,
@@ -51,14 +51,16 @@ public class TaskController : ControllerBase
             BaseGold = t.GetGoldReward(),
             HpPenalty = t.GetHpPenalty(),
             GoldPenalty = t.GetGoldPenalty(),
-            StreakInfo = t.Streak != null ? new StreakInfoDto
-            {
-                CurrentDays = t.Streak.CurrentDays,
-                BonusXpPercent = t.Streak.GetBonusXpPercent(),
-                Multiplier = t.Streak.GetStreakMultiplier(),
-                IsFrozen = t.Streak.IsFrozen(),
-                IsShieldActive = t.Streak.IsShieldActive
-            } : null
+            StreakInfo = t.Streak != null
+                ? new StreakInfoDto
+                {
+                    CurrentDays = t.Streak.CurrentDays,
+                    BonusXpPercent = t.Streak.GetBonusXpPercent(),
+                    Multiplier = t.Streak.GetStreakMultiplier(),
+                    IsFrozen = t.Streak.IsFrozen(),
+                    IsShieldActive = t.Streak.IsShieldActive
+                }
+                : null
         }).ToList();
 
         return Ok(taskDtos);
@@ -70,7 +72,7 @@ public class TaskController : ControllerBase
         var task = await _context.GameTasks
             .Include(t => t.Streak)
             .FirstOrDefaultAsync(t => t.Id == id);
-        
+
         if (task == null)
             return NotFound();
 
@@ -93,14 +95,16 @@ public class TaskController : ControllerBase
             BaseGold = task.GetGoldReward(),
             HpPenalty = task.GetHpPenalty(),
             GoldPenalty = task.GetGoldPenalty(),
-            StreakInfo = task.Streak != null ? new StreakInfoDto
-            {
-                CurrentDays = task.Streak.CurrentDays,
-                BonusXpPercent = task.Streak.GetBonusXpPercent(),
-                Multiplier = task.Streak.GetStreakMultiplier(),
-                IsFrozen = task.Streak.IsFrozen(),
-                IsShieldActive = task.Streak.IsShieldActive
-            } : null
+            StreakInfo = task.Streak != null
+                ? new StreakInfoDto
+                {
+                    CurrentDays = task.Streak.CurrentDays,
+                    BonusXpPercent = task.Streak.GetBonusXpPercent(),
+                    Multiplier = task.Streak.GetStreakMultiplier(),
+                    IsFrozen = task.Streak.IsFrozen(),
+                    IsShieldActive = task.Streak.IsShieldActive
+                }
+                : null
         };
 
         return Ok(dto);
@@ -139,7 +143,7 @@ public class TaskController : ControllerBase
 
         _context.GameTasks.Add(task);
         await _context.SaveChangesAsync();
-        
+
         if (task.Type == TaskType.Habit)
         {
             var streak = new Streak
@@ -157,33 +161,34 @@ public class TaskController : ControllerBase
 
         return CreatedAtAction(nameof(GetTask), new { id = task.Id }, await GetTaskDto(task.Id));
     }
-    
+
     [HttpPut("{id}/complete")]
     public async Task<ActionResult<CompleteTaskResponse>> CompleteTask(int id)
     {
         var task = await _context.GameTasks
             .Include(t => t.Streak)
             .FirstOrDefaultAsync(t => t.Id == id);
-        
-        if (task == null) 
+
+        if (task == null)
             return NotFound("Task not found");
-    
-        if (task.IsCompleted && task.Type == TaskType.OneTime) 
+
+        if (task.IsCompleted && task.Type == TaskType.OneTime)
             return BadRequest("Task is already completed");
-    
+
         var hero = await _context.Heroes
             .Include(h => h.EconomyBalance)
             .FirstOrDefaultAsync(h => h.Id == task.HeroId);
-    
-        if (hero == null) 
+
+        if (hero == null)
             return BadRequest("Hero not found");
-        
-        if (hero.IsDead) 
-            return BadRequest(new { 
-                error = "Hero is dead", 
-                message = "Use /api/Hero/{id}/respawn to continue playing" 
+
+        if (hero.IsDead)
+            return BadRequest(new
+            {
+                error = "Hero is dead",
+                message = "Use /api/Hero/{id}/respawn to continue playing"
             });
-    
+
         var economy = hero.EconomyBalance;
         if (economy == null)
         {
@@ -191,17 +196,19 @@ public class TaskController : ControllerBase
             _context.EconomyBalances.Add(economy);
             hero.EconomyBalance = economy;
         }
-        
+
         economy.CheckDailyReset();
         if (!economy.CanCompleteTask())
-            return BadRequest(new {
+            return BadRequest(new
+            {
                 error = "Daily limit reached",
-                message = $"You have completed {economy.DailyTaskCompletions}/{economy.MaxDailyCompletions} tasks today. Try again tomorrow!",
+                message =
+                    $"You have completed {economy.DailyTaskCompletions}/{economy.MaxDailyCompletions} tasks today. Try again tomorrow!",
                 dailyCompletions = economy.DailyTaskCompletions,
                 maxDailyCompletions = economy.MaxDailyCompletions,
                 resetTime = economy.DailyResetAt.AddDays(1)
             });
-        
+
         Streak? streak = null;
         if (task.Type == TaskType.Habit)
         {
@@ -209,23 +216,23 @@ public class TaskController : ControllerBase
                 .FirstOrDefaultAsync(s => s.HeroId == hero.Id && s.TaskId == task.Id);
 
             if (streak == null)
-            { 
-                streak = new Streak 
-                { 
-                    HeroId = hero.Id, 
+            {
+                streak = new Streak
+                {
+                    HeroId = hero.Id,
                     TaskId = task.Id,
                     CurrentDays = 0,
                     LongestDays = 0
                 };
                 _context.Streaks.Add(streak);
             }
-            
+
             streak.RegisterSuccess();
         }
-        
-        var (xpReward, goldReward, leveledUp, streakBonus) = 
+
+        var (xpReward, goldReward, leveledUp, streakBonus) =
             _gameEngine.ApplyTaskCompletion(task, hero, streak, economy);
-    
+
         await _context.SaveChangesAsync();
 
         return Ok(new CompleteTaskResponse
@@ -233,10 +240,10 @@ public class TaskController : ControllerBase
             Success = true,
             TaskId = task.Id,
             TaskTitle = task.Title,
-            
+
             XpGained = xpReward,
             GoldGained = goldReward,
-            
+
             HeroId = hero.Id,
             NewLevel = hero.Level,
             LeveledUp = leveledUp,
@@ -246,47 +253,48 @@ public class TaskController : ControllerBase
             NewGold = hero.Gold,
             NewHp = hero.CurrentHp,
             MaxHp = hero.MaxHp,
-            
+
             StreakBonus = streakBonus,
             CurrentStreak = streak?.CurrentDays ?? 0,
             StreakMultiplier = streak?.GetStreakMultiplier() ?? 1.0,
-            
+
             DailyCompletions = economy.DailyTaskCompletions,
             MaxDailyCompletions = economy.MaxDailyCompletions,
-            
-            Message = leveledUp 
+
+            Message = leveledUp
                 ? $"LEVEL UP! You're now level {hero.Level}! +{xpReward} XP, +{goldReward} Gold"
                 : $"Task completed! +{xpReward} XP, +{goldReward} Gold"
         });
     }
-    
+
     [HttpPut("{id}/fail")]
     public async Task<ActionResult<FailTaskResponse>> FailTask(int id)
     {
         var task = await _context.GameTasks
             .Include(t => t.Streak)
             .FirstOrDefaultAsync(t => t.Id == id);
-        
-        if (task == null) 
+
+        if (task == null)
             return NotFound("Task not found");
 
         var hero = await _context.Heroes
             .Include(h => h.EconomyBalance)
             .FirstOrDefaultAsync(h => h.Id == task.HeroId);
-        
-        if (hero == null) 
+
+        if (hero == null)
             return BadRequest("Hero not found");
 
         if (hero.IsDead)
-            return BadRequest(new {
+            return BadRequest(new
+            {
                 error = "Hero is already dead",
                 message = "Use /api/Hero/{id}/respawn to continue playing"
             });
 
         var economy = hero.EconomyBalance ?? new EconomyBalance { HeroId = hero.Id };
         var streak = task.Streak;
-        
-        var (hpLost, goldLost, heroDied, streakBroken, streakPenalty) = 
+
+        var (hpLost, goldLost, heroDied, streakBroken, streakPenalty) =
             _gameEngine.ApplyTaskFailure(task, hero, streak, economy);
 
         await _context.SaveChangesAsync();
@@ -296,35 +304,37 @@ public class TaskController : ControllerBase
             Success = true,
             TaskId = task.Id,
             TaskTitle = task.Title,
-            
+
             DamageDealt = hpLost,
             GoldLost = goldLost,
-            
+
             HeroId = hero.Id,
             NewHp = hero.CurrentHp,
             MaxHp = hero.MaxHp,
             NewGold = hero.Gold,
             CurrentLevel = hero.Level,
             CurrentXp = hero.CurrentXp,
-            
+
             HeroDied = heroDied,
             DeathCount = hero.DeathCount,
-            
+
             StreakBroken = streakBroken,
-            StreakPenalty = streakPenalty != null ? new StreakPenaltyDto
-            {
-                StreakDays = streakPenalty.StreakDays,
-                XpLost = streakPenalty.XpLost,
-                GoldLost = streakPenalty.GoldLost,
-                CooldownHours = streakPenalty.CooldownHours
-            } : null,
-            
+            StreakPenalty = streakPenalty != null
+                ? new StreakPenaltyDto
+                {
+                    StreakDays = streakPenalty.StreakDays,
+                    XpLost = streakPenalty.XpLost,
+                    GoldLost = streakPenalty.GoldLost,
+                    CooldownHours = streakPenalty.CooldownHours
+                }
+                : null,
+
             Message = GetFailureMessage(heroDied, hpLost, goldLost, streakBroken, streakPenalty)
         };
 
         return Ok(response);
     }
-    
+
     [HttpPost("check-overdue")]
     public async Task<ActionResult<OverdueCheckResponse>> CheckOverdueTasks([FromQuery] int? heroId = null)
     {
@@ -333,13 +343,13 @@ public class TaskController : ControllerBase
             .Include(t => t.Hero)
             .ThenInclude(h => h!.EconomyBalance)
             .Where(t => t.IsActive && !t.IsCompleted);
-        
+
         if (heroId.HasValue)
             query = query.Where(t => t.HeroId == heroId.Value);
-        
+
         var tasks = await query.ToListAsync();
         var overdueTasks = tasks.Where(t => t.IsOverdue()).ToList();
-        
+
         if (!overdueTasks.Any())
             return Ok(new OverdueCheckResponse
             {
@@ -348,16 +358,16 @@ public class TaskController : ControllerBase
             });
 
         var penalties = new List<OverdueTaskPenalty>();
-        
+
         foreach (var task in overdueTasks)
         {
             var hero = task.Hero!;
             var economy = hero.EconomyBalance ?? new EconomyBalance { HeroId = hero.Id };
             var streak = task.Streak;
 
-            var (hpLost, goldLost, heroDied, streakBroken, streakPenalty) = 
+            var (hpLost, goldLost, heroDied, streakBroken, streakPenalty) =
                 _gameEngine.ApplyTaskFailure(task, hero, streak, economy);
-            
+
             penalties.Add(new OverdueTaskPenalty
             {
                 TaskId = task.Id,
@@ -386,20 +396,20 @@ public class TaskController : ControllerBase
         var task = await _context.GameTasks.FindAsync(id);
         if (task == null)
             return NotFound();
-        
+
         task.IsActive = false;
         task.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
-        
+
         return NoContent();
     }
-    
+
     private async Task<TaskDto> GetTaskDto(int taskId)
     {
         var task = await _context.GameTasks
             .Include(t => t.Streak)
             .FirstOrDefaultAsync(t => t.Id == taskId);
-        
+
         if (task == null)
             throw new Exception("Task not found");
 
@@ -422,21 +432,23 @@ public class TaskController : ControllerBase
             BaseGold = task.GetGoldReward(),
             HpPenalty = task.GetHpPenalty(),
             GoldPenalty = task.GetGoldPenalty(),
-            StreakInfo = task.Streak != null ? new StreakInfoDto
-            {
-                CurrentDays = task.Streak.CurrentDays,
-                BonusXpPercent = task.Streak.GetBonusXpPercent(),
-                Multiplier = task.Streak.GetStreakMultiplier(),
-                IsFrozen = task.Streak.IsFrozen(),
-                IsShieldActive = task.Streak.IsShieldActive
-            } : null
+            StreakInfo = task.Streak != null
+                ? new StreakInfoDto
+                {
+                    CurrentDays = task.Streak.CurrentDays,
+                    BonusXpPercent = task.Streak.GetBonusXpPercent(),
+                    Multiplier = task.Streak.GetStreakMultiplier(),
+                    IsFrozen = task.Streak.IsFrozen(),
+                    IsShieldActive = task.Streak.IsShieldActive
+                }
+                : null
         };
     }
 
     private string GetFailureMessage(bool died, int hp, int gold, bool streakBroken, StreakBreakPenalty? penalty)
     {
         var messages = new List<string>();
-        
+
         if (died)
         {
             messages.Add($"💀 DEATH! You took {hp} damage and lost {gold} gold.");

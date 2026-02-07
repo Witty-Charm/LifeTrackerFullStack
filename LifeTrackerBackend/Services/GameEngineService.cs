@@ -29,7 +29,7 @@ public class GameEngineService
 
         return (int)Math.Floor(finalGold);
     }
-    
+
 
     public (long xpGained, int goldGained, bool leveledUp, int streakBonusPercent) ApplyTaskCompletion(
         GameTask task,
@@ -43,18 +43,15 @@ public class GameEngineService
         long xpReward = CalculateFinalXpReward(task, hero, streak, economy);
         int goldReward = CalculateFinalGoldReward(task, hero, economy);
 
-        // hero
         hero.GainXP(xpReward);
         hero.Gold += goldReward;
         hero.UpdatedAt = DateTime.UtcNow;
 
-        // economy stats
         economy.TotalXpEarned += xpReward;
         economy.TotalGoldEarned += goldReward;
         economy.IncrementDailyCompletion();
         economy.UpdatedAt = DateTime.UtcNow;
 
-        // task lifecycle
         task.IsCompleted = task.Type == TaskType.OneTime;
         task.CompletionCount++;
         task.LastCompletedAt = DateTime.UtcNow;
@@ -75,7 +72,6 @@ public class GameEngineService
         int hpPenalty = task.GetHpPenalty();
         int goldPenalty = task.GetGoldPenalty();
 
-        // base penalties
         hero.Gold = Math.Max(0, hero.Gold - goldPenalty);
         hero.TakeDamage(hpPenalty);
 
@@ -85,7 +81,6 @@ public class GameEngineService
         bool streakBroken = false;
         StreakBreakPenalty? streakPenalty = null;
 
-        // streak break
         if (streak != null && streak.CurrentDays > 0 && !streak.IsFrozen() && !streak.IsShieldActive)
         {
             var (xpPenalty, goldPenaltyFromStreak, cooldownHours) =
@@ -109,7 +104,6 @@ public class GameEngineService
             streakBroken = true;
         }
 
-        // death system
         if (hero.IsDead)
         {
             economy.ActivateDeathPenalty();
@@ -125,7 +119,7 @@ public class GameEngineService
         return (hpPenalty, goldPenalty, hero.IsDead, streakBroken, streakPenalty);
     }
 
-    
+
     public void CheckOverdueTasks(List<GameTask> tasks, Hero hero, List<Streak> streaks, EconomyBalance economy)
     {
         foreach (var task in tasks.Where(t => t.IsActive && t.IsOverdue()))

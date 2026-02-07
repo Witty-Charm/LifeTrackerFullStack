@@ -36,9 +36,9 @@ using (var scope = app.Services.CreateScope())
     try
     {
         var context = services.GetRequiredService<ApplicationDbContext>();
-        
+
         context.Database.Migrate();
-        
+
         if (!context.Heroes.Any())
         {
             var hero = new LifeTracker.Models.Hero
@@ -70,4 +70,3 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.Run();
-
