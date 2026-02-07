@@ -1,4 +1,6 @@
-﻿namespace LifeTracker.Models;
+﻿using LifeTracker.Constants;
+
+namespace LifeTracker.Models;
 
 public class Streak
 {
@@ -25,14 +27,21 @@ public class Streak
     public Hero? Hero { get; set; }
     public GameTask? Task { get; set; }
     
-    public double GetStreakMultiplier()
-    {
-        if (CurrentDays == 0) return 1.0;
-        double logValue = Math.Log2(CurrentDays + 1) * 0.15;
-        return 1.0 / logValue;
-    }
+    /// <summary>
+    /// GDD Formula: 1 + log₂(streak_days + 1) × 0.15
+    /// </summary>
+    public double GetStreakMultiplier() => GameConstants.CalculateStreakMultiplier(CurrentDays);
     
+    /// <summary>
+    /// Get bonus XP percentage from streak.
+    /// </summary>
     public int GetBonusXpPercent() => (int)((GetStreakMultiplier() - 1.0) * 100);
+
+    /// <summary>
+    /// GDD: streak_tier = floor(streak_days / 30) + 1
+    /// Used for calculating freeze/shield costs.
+    /// </summary>
+    public int GetStreakTier() => (CurrentDays / GameConstants.StreakTierDays) + 1;
 
     public bool IsFrozen()
     {
@@ -63,11 +72,13 @@ public class Streak
             {
                 CurrentDays++;
             }
-            else if (daysDiff > 1)
+            else if (daysDiff > 1 && !IsFrozen())
             {
+                // Streak broken - reset
                 CurrentDays = 1;
                 StartDate = now;
             }
+            // daysDiff == 0: same day, no change
         }
         
         LastCheckIn = now;
@@ -82,6 +93,7 @@ public class Streak
     public void Break()
     {
         CurrentDays = 0;
+        StartDate = null;
         TotalBreaks++;
         LastBreakDate = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;

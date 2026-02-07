@@ -1,17 +1,11 @@
+using LifeTracker.Constants;
+
 namespace LifeTracker.Models;
 
 public enum TaskType
 {
     Habit = 1,
     OneTime = 2
-}
-
-public enum TaskDifficulty
-{
-    Easy = 1,
-    Medium = 2,
-    Hard = 3,
-    Epic = 4
 }
 
 public class GameTask
@@ -37,51 +31,53 @@ public class GameTask
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     
-    public int RewardXP { get; set; } = 10;
-    
     public Hero? Hero { get; set; }
     public Streak? Streak { get; set; }
     
+    /// <summary>
+    /// Get base XP reward from GDD tables (before multipliers).
+    /// </summary>
     public int GetBaseRewardXP()
     {
-        double multiplier = Difficulty switch
-        {
-            TaskDifficulty.Easy => 1.0,
-            TaskDifficulty.Medium => 1.5,
-            TaskDifficulty.Hard => 2.5,
-            TaskDifficulty.Epic => 4.0,
-            _ => 1.0
-        };
-        return (int)Math.Ceiling(RewardXP * multiplier);
+        var (xp, _) = Type == TaskType.Habit 
+            ? GameConstants.GetHabitReward(Difficulty)
+            : GameConstants.GetOneTimeReward(Difficulty);
+        return xp;
     }
 
-    public int GetFailPenalty()
-    {
-        return Difficulty switch
-        {
-            TaskDifficulty.Easy => 5,
-            TaskDifficulty.Medium => 10,
-            TaskDifficulty.Hard => 20,
-            TaskDifficulty.Epic => 35,
-            _ => 5
-        };
-    }
-
+    /// <summary>
+    /// Get Gold reward from GDD tables.
+    /// </summary>
     public int GetGoldReward()
     {
-        return Difficulty switch
-        {
-            TaskDifficulty.Easy => 5,
-            TaskDifficulty.Medium => 12,
-            TaskDifficulty.Hard => 25,
-            TaskDifficulty.Epic => 50,
-            _ => 5
-        };
+        var (_, gold) = Type == TaskType.Habit 
+            ? GameConstants.GetHabitReward(Difficulty)
+            : GameConstants.GetOneTimeReward(Difficulty);
+        return gold;
     }
 
-    public bool IsOverdue()
+    /// <summary>
+    /// Get HP penalty for failing this task (from GDD tables).
+    /// </summary>
+    public int GetHpPenalty()
     {
-        return DueDate.HasValue && DateTime.UtcNow > DueDate.Value && !IsCompleted;
+        var (hpLoss, _) = Type == TaskType.Habit 
+            ? GameConstants.GetHabitPenalty(Difficulty)
+            : GameConstants.GetOneTimePenalty(Difficulty);
+        return hpLoss;
     }
-}
 
+    /// <summary>
+    /// Get Gold penalty for failing this task (from GDD tables).
+    /// </summary>
+    public int GetGoldPenalty()
+    {
+        var (_, goldLoss) = Type == TaskType.Habit 
+            ? GameConstants.GetHabitPenalty(Difficulty)
+            : GameConstants.GetOneTimePenalty(Difficulty);
+        return goldLoss;
+    }
+
+    public bool IsOverdue() => 
+        DueDate.HasValue && DateTime.UtcNow > DueDate.Value && !IsCompleted;
+}

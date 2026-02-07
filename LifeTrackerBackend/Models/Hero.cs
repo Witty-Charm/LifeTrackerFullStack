@@ -1,3 +1,5 @@
+using LifeTracker.Constants;
+
 namespace LifeTracker.Models;
 
 public class Hero
@@ -8,21 +10,34 @@ public class Hero
     public long CurrentXp { get; set; } = 0;
     public long TotalXpEarned { get; set; } = 0;
     
-    public int CurrentHp { get; set; } = 100;
-    public int MaxHp { get; set; } = 100;
+    public int CurrentHp { get; set; } = GameConstants.BaseHp;
+    public int MaxHp { get; set; } = GameConstants.BaseHp;
     public int Gold { get; set; } = 0;
     
     public bool IsDead { get; set; } = false;
     public DateTime? DeathTime { get; set; }
     public int DeathCount { get; set; } = 0;
     
+    // Recovery debuff after death (GDD: 4-hour -25% rewards)
+    public DateTime? RecoveryEndsAt { get; set; }
+    
     public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     
     public ICollection<GameTask> Tasks { get; set; } = new List<GameTask>();
     public ICollection<Streak> Streaks { get; set; } = new List<Streak>();
-    public EconomyBalance?  EconomyBalance { get; set; }
+    public EconomyBalance? EconomyBalance { get; set; }
 
+    /// <summary>
+    /// XP required for next level using GDD formula:
+    /// floor(BASE_XP × level^EXPONENT × (1 + level/SCALE_FACTOR))
+    /// </summary>
+    public long GetXpRequiredForNextLevel() => GameConstants.CalculateXpForLevel(Level);
+
+    /// <summary>
+    /// Gain XP and level up if threshold is reached.
+    /// Updates MaxHp on level up using GDD formula: BaseHp + HpPerLevel × Level
+    /// </summary>
     public void GainXP(long amount)
     {
         if (IsDead) return;
@@ -31,16 +46,20 @@ public class Hero
         TotalXpEarned += amount;
         UpdatedAt = DateTime.UtcNow;
         
-        while (CurrentXp >= GetXpRequiredForNextLevel())
+        while (CurrentXp >= GetXpRequiredForNextLevel() && Level < GameConstants.MaxLevel)
         {
             CurrentXp -= GetXpRequiredForNextLevel();
             Level++;
             
-            MaxHp = 50 + (Level * 5);
-            CurrentHp = MaxHp;
+            // GDD: MaxHp = BaseHp + HpPerLevel × Level
+            MaxHp = GameConstants.CalculateMaxHp(Level);
+            CurrentHp = MaxHp; // Full heal on level up
         }
     }
     
+    /// <summary>
+    /// Take HP damage. Triggers death if HP reaches 0.
+    /// </summary>
     public void TakeDamage(int damage)
     {
         if (IsDead) return;
@@ -50,37 +69,60 @@ public class Hero
         
         if (CurrentHp <= 0)
         {
+            CurrentHp = 0;
             Die();
         }
     }
-    
-    public long GetXpRequiredForNextLevel()
-    {   
-        const double baseXp = 100;
-        const double exponent = 1.8;
-        const double scaleFactor = 50.0;
 
-        return (long)Math.Floor(baseXp * Math.Pow(Level, exponent) * (1 + Level / scaleFactor));
-    }
-
+    /// <summary>
+    /// GDD Option A: Soft Reset
+    /// - HP reset to 25% of MaxHp
+    /// - Lose 10% of current level XP
+    /// - Lose 20% of Gold
+    /// - IsDead remains TRUE until Respawn() is called
+    /// </summary>
     public void Die()
     {
         IsDead = true;
         DeathTime = DateTime.UtcNow;
         DeathCount++;
         
+        // GDD: Reset HP to 25% of MaxHp
+        CurrentHp = (int)(MaxHp * GameConstants.DeathHpResetPercent);
         
-        CurrentHp = MaxHp / 4;
-
-        long xpLoss = (long)(GetXpRequiredForNextLevel() * 0.10);
+        // GDD: Lose 10% of current level's required XP
+        long xpLoss = (long)(GetXpRequiredForNextLevel() * GameConstants.DeathXpPenaltyPercent);
         CurrentXp = Math.Max(0, CurrentXp - xpLoss);
 
-        int goldLoss = (int)(Gold * 0.20);
+        // GDD: Lose 20% of Gold
+        int goldLoss = (int)(Gold * GameConstants.DeathGoldPenaltyPercent);
         Gold = Math.Max(0, Gold - goldLoss);
         
-        IsDead = false;
         UpdatedAt = DateTime.UtcNow;
-
+        // NOTE: IsDead stays TRUE - must call Respawn() to continue playing
     }
-}
 
+    /// <summary>
+    /// Respawn the hero after death. Applies recovery debuff.
+    /// </summary>
+    public void Respawn()
+    {
+        if (!IsDead) return;
+        
+        IsDead = false;
+        RecoveryEndsAt = DateTime.UtcNow.AddHours(GameConstants.RecoveryDebuffHours);
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Check if hero is in recovery period (reduced rewards).
+    /// </summary>
+    public bool IsInRecovery() => 
+        RecoveryEndsAt.HasValue && DateTime.UtcNow < RecoveryEndsAt.Value;
+
+    /// <summary>
+    /// Get current reward multiplier (affected by recovery debuff).
+    /// </summary>
+    public double GetRecoveryMultiplier() => 
+        IsInRecovery() ? GameConstants.RecoveryDebuffMultiplier : 1.0;
+}

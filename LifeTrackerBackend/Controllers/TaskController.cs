@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LifeTracker.Data;
 using LifeTracker.Models;
+using LifeTracker.Services;
 
 namespace LifeTracker.Controllers;
 
@@ -10,10 +11,12 @@ namespace LifeTracker.Controllers;
 public class TaskController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
+    private readonly GameEngineService _gameEngine;
 
-    public TaskController(ApplicationDbContext context)
+    public TaskController(ApplicationDbContext context, GameEngineService gameEngine)
     {
         _context = context;
+        _gameEngine = gameEngine;
     }
 
     [HttpGet]
@@ -65,16 +68,17 @@ public class TaskController : ControllerBase
     {
         var task = await _context.GameTasks.FindAsync(id);
         if (task == null) return NotFound("Task not found");
-
+    
+        if (task.IsCompleted && task.Type == TaskType.OneTime) 
+            return BadRequest("Task is already completed");
+    
         var hero = await _context.Heroes
             .Include(h => h.EconomyBalance)
             .FirstOrDefaultAsync(h => h.Id == task.HeroId);
-        if (hero == null)
-            return BadRequest("Hero not found");
-
-        if (hero.IsDead)
-            return BadRequest("Hero is dead");
-        
+    
+        if (hero == null) return BadRequest("Hero not found");
+        if (hero.IsDead) return BadRequest("Hero is dead");
+    
         var economy = hero.EconomyBalance;
         if (economy == null)
         {
@@ -82,42 +86,29 @@ public class TaskController : ControllerBase
             _context.EconomyBalances.Add(economy);
             hero.EconomyBalance = economy;
         }
-        
+
         economy.CheckDailyReset();
         if (!economy.CanCompleteTask())
             return BadRequest("Daily task limit reached (50 tasks/day)");
-
-        long xpReward = task.GetBaseRewardXP();
-        int goldReward = task.GetGoldReward();
-
-        xpReward = (long)(xpReward * economy.GetFinalXpMultiplier());
-
-        hero.GainXP(xpReward);
-        hero.Gold += goldReward;
-        hero.UpdatedAt = DateTime.UtcNow;
-
-        task.IsCompleted = true;
-        task.CompletionCount++;
-        task.LastCompletedAt = DateTime.UtcNow;
-        
+    
+        // Get streak for multiplier calculation
+        Streak? streak = null;
         if (task.Type == TaskType.Habit)
         {
-            var streak = await _context.Streaks
+            streak = await _context.Streaks
                 .FirstOrDefaultAsync(s => s.HeroId == hero.Id && s.TaskId == task.Id);
 
-            if (streak == null) 
-            {
+            if (streak == null)
+            { 
                 streak = new Streak { HeroId = hero.Id, TaskId = task.Id };
                 _context.Streaks.Add(streak);
             }
-
             streak.RegisterSuccess();
         }
 
-        economy.IncrementDailyCompletion(); 
-        
-            _context.EconomyBalances.Add(economy);
-
+        // Use GameEngineService for GDD-compliant reward calculation
+        var (xpReward, goldReward) = _gameEngine.ApplyTaskCompletion(task, hero, streak, economy);
+    
         await _context.SaveChangesAsync();
 
         return Ok(new CompleteTaskResponse
@@ -129,7 +120,7 @@ public class TaskController : ControllerBase
             NewXp = hero.CurrentXp,
             NewGold = hero.Gold,
             NewHp = hero.CurrentHp,
-            Message = $"Task completed! +{xpReward} XP, +{goldReward} Gold"  // ← ИСПРАВЛЕНО: убрал пробелы около +
+            Message = $"Task completed! +{xpReward} XP, +{goldReward} Gold"
         });
     }
 
@@ -143,10 +134,9 @@ public class TaskController : ControllerBase
         if (hero == null) return BadRequest("Hero not found");
 
         if (hero.IsDead)
-            return BadRequest("Hero is dead");
+            return BadRequest("Hero is dead. Use /api/Hero/{id}/respawn to continue.");
 
-        int hpDamage = task.GetFailPenalty();
-
+        // Break streak if applicable
         if (task.Type == TaskType.Habit)
         {
             var streak = await _context.Streaks
@@ -156,21 +146,22 @@ public class TaskController : ControllerBase
                 streak.Break();
         }
 
-        hero.TakeDamage(hpDamage);
-        bool heroDied = hero.IsDead;
-
-        task.FailCount++;
-        task.UpdatedAt = DateTime.UtcNow;
+        // Use GameEngineService for GDD-compliant penalty calculation
+        var (hpLost, goldLost, heroDied) = _gameEngine.ApplyTaskFailure(task, hero);
 
         await _context.SaveChangesAsync();
 
         return Ok(new FailTaskResponse
         {
             TaskId = task.Id,
-            DamageDealt = hpDamage,
+            DamageDealt = hpLost,
+            GoldLost = goldLost,
             NewHp = hero.CurrentHp,
-            HeroDied = hero.IsDead,
-            Message = hero.IsDead ? $"DEATH! You took {hpDamage} damage." : $"Task failed! Took {hpDamage} damage."
+            NewGold = hero.Gold,
+            HeroDied = heroDied,
+            Message = heroDied 
+                ? $"DEATH! You took {hpLost} damage and lost {goldLost} gold." 
+                : $"Task failed! -{hpLost} HP, -{goldLost} Gold"
         });
     }
 
@@ -188,7 +179,7 @@ public class TaskController : ControllerBase
     }
 }
 
-// ===== DTOs =====
+// dtos
 public class CompleteTaskResponse
 {
     public int TaskId { get; set; }
@@ -205,7 +196,9 @@ public class FailTaskResponse
 {
     public int TaskId { get; set; }
     public int DamageDealt { get; set; }
+    public int GoldLost { get; set; }
     public int NewHp { get; set; }
+    public int NewGold { get; set; }
     public bool HeroDied { get; set; }
     public string Message { get; set; } = string.Empty;
 }
