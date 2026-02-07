@@ -34,9 +34,6 @@ public class GameTask
     public Hero? Hero { get; set; }
     public Streak? Streak { get; set; }
     
-    /// <summary>
-    /// Get base XP reward from GDD tables (before multipliers).
-    /// </summary>
     public int GetBaseRewardXP()
     {
         var (xp, _) = Type == TaskType.Habit 
@@ -44,10 +41,7 @@ public class GameTask
             : GameConstants.GetOneTimeReward(Difficulty);
         return xp;
     }
-
-    /// <summary>
-    /// Get Gold reward from GDD tables.
-    /// </summary>
+    
     public int GetGoldReward()
     {
         var (_, gold) = Type == TaskType.Habit 
@@ -55,10 +49,7 @@ public class GameTask
             : GameConstants.GetOneTimeReward(Difficulty);
         return gold;
     }
-
-    /// <summary>
-    /// Get HP penalty for failing this task (from GDD tables).
-    /// </summary>
+    
     public int GetHpPenalty()
     {
         var (hpLoss, _) = Type == TaskType.Habit 
@@ -66,10 +57,7 @@ public class GameTask
             : GameConstants.GetOneTimePenalty(Difficulty);
         return hpLoss;
     }
-
-    /// <summary>
-    /// Get Gold penalty for failing this task (from GDD tables).
-    /// </summary>
+    
     public int GetGoldPenalty()
     {
         var (_, goldLoss) = Type == TaskType.Habit 

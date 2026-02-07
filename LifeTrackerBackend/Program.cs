@@ -43,7 +43,7 @@ using (var scope = app.Services.CreateScope())
         {
             var hero = new LifeTracker.Models.Hero
             {
-                Name = "Test Hero",
+                Name = "Jerry",
                 Level = 1,
                 CurrentXp = 0,
                 CurrentHp = 50,
