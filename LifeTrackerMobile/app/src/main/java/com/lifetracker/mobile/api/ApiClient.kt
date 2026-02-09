@@ -7,8 +7,8 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 object ApiClient {
-    private const val BASE_URL = "http://10.0.2.2:5000/"
-    //private const val BASE_URL = "http://10.79.234.173:5000/"
+   // private const val BASE_URL = "http://10.0.2.2:5000/"
+    private const val BASE_URL = "http://10.79.234.173:5000/"
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
     }
@@ -19,13 +19,13 @@ object ApiClient {
         .readTimeout(30, TimeUnit.SECONDS)
         .writeTimeout(30, TimeUnit.SECONDS)
         .build()
-    
+
     private val retrofit = Retrofit.Builder()
         .baseUrl(BASE_URL)
         .client(okHttpClient)
         .addConverterFactory(GsonConverterFactory.create())
         .build()
-    
+
     val taskApi: TaskApi = retrofit.create(TaskApi::class.java)
     val heroApi: HeroApi = retrofit.create(HeroApi::class.java)
 }
