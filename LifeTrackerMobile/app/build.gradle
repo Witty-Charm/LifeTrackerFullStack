@@ -1,6 +1,5 @@
 plugins {
     id 'com.android.application'
-    id 'org.jetbrains.kotlin.android'
     id 'org.jetbrains.kotlin.plugin.compose'
     id 'com.google.devtools.ksp'
     id 'org.jetbrains.kotlin.plugin.serialization'
@@ -8,7 +7,7 @@ plugins {
 
 android {
     namespace 'com.lifetracker.mobile'
-
+    compileSdk = 36
     defaultConfig {
         applicationId "com.lifetracker.mobile"
         minSdk 24
@@ -25,6 +24,7 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
@@ -35,10 +35,10 @@ android {
     }
     packaging {
         resources {
-            resources.excludes.add('/META-INF/{AL2.0,LGPL2.1}')
-            resources.excludes.add('/META-INF/versions/**')
-            resources.excludes.add('/META-INF/OSGI-INF/**')
-            resources.excludes.add('META-INF/MANIFEST.MF')
+            excludes.add('/META-INF/{AL2.0,LGPL2.1}')
+            excludes.add('/META-INF/versions/**')
+            excludes.add('/META-INF/OSGI-INF/**')
+            excludes.add('META-INF/MANIFEST.MF')
         }
     }
 }
