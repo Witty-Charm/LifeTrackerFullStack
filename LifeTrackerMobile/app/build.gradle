@@ -8,7 +8,6 @@ plugins {
 
 android {
     namespace 'com.lifetracker.mobile'
-    compileSdk 36
 
     defaultConfig {
         applicationId "com.lifetracker.mobile"
@@ -30,18 +29,16 @@ android {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        jvmTarget = '17'
-    }
+
     buildFeatures {
         compose true
     }
     packaging {
         resources {
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
-            excludes += "/META-INF/versions/**"
-            excludes += "/META-INF/OSGI-INF/**"
-            excludes += "META-INF/MANIFEST.MF"
+            resources.excludes.add('/META-INF/{AL2.0,LGPL2.1}')
+            resources.excludes.add('/META-INF/versions/**')
+            resources.excludes.add('/META-INF/OSGI-INF/**')
+            resources.excludes.add('META-INF/MANIFEST.MF')
         }
     }
 }
