@@ -1,11 +1,10 @@
 package com.lifetracker.mobile.data.remote.dto
 
 import kotlinx.serialization.Serializable
-import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
 @Serializable
-data class TaskDto @OptIn(ExperimentalTime::class) constructor(
+data class TaskDto(
     val id: Int,
     val heroId: Int,
     val title: String,
@@ -36,7 +35,7 @@ data class StreakInfoDto(
 )
 
 @Serializable
-data class CreateTaskRequest @OptIn(ExperimentalTime::class) constructor(
+data class CreateTaskRequest(
     val heroId: Int? = null,
     val title: String,
     val description: String? = null,
@@ -106,7 +105,7 @@ data class OverdueCheckResponse(
 )
 
 @Serializable
-data class OverdueTaskPenalty @OptIn(ExperimentalTime::class) constructor(
+data class OverdueTaskPenalty(
     val taskId: Int,
     val taskTitle: String,
     val dueDate: Instant,
