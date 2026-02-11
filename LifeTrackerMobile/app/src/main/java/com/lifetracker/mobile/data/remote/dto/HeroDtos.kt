@@ -32,7 +32,6 @@ data class HeroStatsDto(
     val id: Int,
     val name: String,
 
-    // XP
     val level: Int,
     val currentXp: Long,
     val xpForNextLevel: Long,
