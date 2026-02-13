@@ -8,7 +8,7 @@ data class TaskDto(
     val id: Int,
     val heroId: Int,
     val title: String,
-    val description: String?,
+    val description: String,
     val type: TaskType,
     val difficulty: TaskDifficulty,
     val isCompleted: Boolean,
