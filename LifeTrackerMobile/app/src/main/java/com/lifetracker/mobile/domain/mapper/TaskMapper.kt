@@ -61,7 +61,7 @@ fun CompleteTaskResponse.toDomain(): TaskCompletionResult = TaskCompletionResult
         currentHp = newHp,
         maxHp = maxHp,
         gold = newGold,
-        deathCount = 0,                    // not in response
+        deathCount = 0,
         dailyCompletions = dailyCompletions,
         dailyCompletionsMax = maxDailyCompletions,
     ),
@@ -87,13 +87,13 @@ fun FailTaskResponse.toDomain(): TaskFailureResult = TaskFailureResult(
         heroId = heroId,
         level = currentLevel,
         currentXp = currentXp,
-        xpForNextLevel = 0,                // not in response
+        xpForNextLevel = 0,
         currentHp = newHp,
         maxHp = maxHp,
         gold = newGold,
         deathCount = deathCount,
-        dailyCompletions = 0,              // not in response
-        dailyCompletionsMax = 0,           // not in response
+        dailyCompletions = 0,
+        dailyCompletionsMax = 0,
     ),
 )
 
