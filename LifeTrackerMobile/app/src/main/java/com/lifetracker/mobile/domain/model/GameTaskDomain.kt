@@ -4,7 +4,7 @@ import com.lifetracker.mobile.data.remote.dto.TaskDifficulty
 import com.lifetracker.mobile.data.remote.dto.TaskType
 import kotlin.time.Instant
 
-data class GameStatsDomain(
+data class GameTaskDomain(
     val id: Int,
     val heroId: Int,
     val title: String,
