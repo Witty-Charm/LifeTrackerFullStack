@@ -30,5 +30,5 @@ class TaskRepository(private val api: LifeTrackerApi) {
         ("heroId") heroId: Int? = null,
     ): Response<OverdueCheckResponse>
 
-    suspend fun deleteTask(@Path("id") id: Int): Response<Unit>
+    suspend fun deleteTask(("id") id: Int): Response<Unit>
 }
