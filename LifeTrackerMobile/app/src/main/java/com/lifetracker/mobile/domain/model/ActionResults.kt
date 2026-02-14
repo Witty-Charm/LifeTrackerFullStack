@@ -1,6 +1,5 @@
 package com.lifetracker.mobile.domain.model
 
-import com.lifetracker.mobile.data.remote.dto.StreakPenaltyDto
 import kotlin.time.Instant
 
 data class TaskCompletionResult(
