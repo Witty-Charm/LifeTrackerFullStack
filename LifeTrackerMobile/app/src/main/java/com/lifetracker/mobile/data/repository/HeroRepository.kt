@@ -3,6 +3,7 @@ package com.lifetracker.mobile.data.repository
 import com.lifetracker.mobile.core.network.NetworkResult
 import com.lifetracker.mobile.core.network.map
 import com.lifetracker.mobile.core.network.safeApiCall
+import com.lifetracker.mobile.core.network.safeApiCallUnit
 import com.lifetracker.mobile.data.remote.LifeTrackerApi
 import com.lifetracker.mobile.data.remote.dto.CreateHeroRequest
 import com.lifetracker.mobile.data.remote.dto.HeroUpdateBody
@@ -40,7 +41,7 @@ class HeroRepository(private val api: LifeTrackerApi) {
         }.map { it.toDomain() }
 
     suspend fun updateHero(body: HeroUpdateBody): NetworkResult<Unit> =
-        safeApiCall { api.updateHero(body.id, body) }
+        safeApiCallUnit { api.updateHero(body.id, body) }
 
     suspend fun getHeroStats(heroId: Int): NetworkResult<HeroStatsDomain> =
         safeApiCall { api.getHeroStats(heroId) }
