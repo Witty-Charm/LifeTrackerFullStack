@@ -56,7 +56,7 @@ fun GameTaskDomain.toUi(): TaskUi = TaskUi(
     rewardText = "+$baseXp XP +$baseGold Gold",
     penaltyText = "-$hpPenalty HP -$goldPenalty Gold",
     streakText = streak?.takeIf { it.currentDays > 0 }
-        ?.let { "\uD83D\uDD25 \${it.currentDays} days (+\${it.bonusXpPercent}%)" },
+        ?.let { "\uD83D\uDD25 ${it.currentDays} days (+${it.bonusXpPercent}%)" },
 )
 
 private fun Instant.toDisplayDate(): String {
