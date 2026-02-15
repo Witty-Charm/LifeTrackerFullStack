@@ -1,7 +1,5 @@
 package com.lifetracker.mobile.ui.model
 
-import com.lifetracker.mobile.data.Hero
-
 data class HeroScreenState(
     val hero: HeroUi? = null,
     val tasks: List<TaskUi> = emptyList(),
@@ -16,6 +14,8 @@ data class HeroUi(
     val level: Int,
     val xpText: String,
     val xpProgress: Float,
+    val hpText: String,
+    val hpProgress: Float,
     val goldText: String,
     val isDead: Boolean,
     val isInRecovery: Boolean,
