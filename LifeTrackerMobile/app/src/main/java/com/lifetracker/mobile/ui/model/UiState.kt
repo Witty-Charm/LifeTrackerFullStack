@@ -61,7 +61,7 @@ sealed interface UiError {
     ): UiError
 
     data class Network(
-        override val message: String = "Network error. CHeck your connection.",
+        override val message: String = "Network error. Check your connection.",
     ): UiError
 
     data class Generic(override val message: String) : UiError
