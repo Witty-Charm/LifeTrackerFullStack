@@ -16,7 +16,7 @@ import com.lifetracker.mobile.domain.model.TaskFailureResult
 import kotlin.time.Instant
 
 class TaskRepository(private val api: LifeTrackerApi) {
-    suspend fun getTasks(): NetworkResult<List<GameTaskDomain>> =
+    suspend fun getTasks(heroId: Int): NetworkResult<List<GameTaskDomain>> =
         safeApiCall { api.getTasks() }
             .map { list -> list.map { it.toDomain() } }
 
