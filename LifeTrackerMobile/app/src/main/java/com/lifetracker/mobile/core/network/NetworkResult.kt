@@ -31,28 +31,11 @@ inline fun <T> NetworkResult<T>.onSuccess(
     return this
 }
 
-inline fun <T> NetworkResult<T>.onError(
-    action: (code: Int, apiError: ApiError) -> Unit,
-): NetworkResult<T> {
-    if (this is NetworkResult.Error) action(code, apiError)
-    return this
-}
-
 inline fun <T> NetworkResult<T>.onFailure(
     action: () -> Unit
 ): NetworkResult<T> {
     if (this !is NetworkResult.Success) action()
     return this
 }
-
-inline fun <T> NetworkResult<T>.onException(
-    action: (Throwable) -> Unit,
-): NetworkResult<T> {
-    if (this is NetworkResult.Exception) action(throwable)
-    return this
-}
-
-fun <T> NetworkResult<T>.getOrNull(): T? =
-    (this as? NetworkResult.Success)?.data
 
 
