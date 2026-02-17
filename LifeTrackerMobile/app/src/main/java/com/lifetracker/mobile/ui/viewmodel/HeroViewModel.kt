@@ -2,9 +2,7 @@ package com.lifetracker.mobile.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.lifetracker.mobile.core.network.ApiError
 import com.lifetracker.mobile.core.network.NetworkResult
-import com.lifetracker.mobile.core.network.getOrNull
 import com.lifetracker.mobile.core.network.onSuccess
 import com.lifetracker.mobile.data.repository.HeroRepository
 import com.lifetracker.mobile.data.repository.TaskRepository
@@ -20,7 +18,9 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import com.lifetracker.mobile.core.network.onFailure
+import com.lifetracker.mobile.data.mapper.toDomain
 import com.lifetracker.mobile.data.remote.dto.CreateTaskRequest
+import com.lifetracker.mobile.ui.mapper.toUiError
 import timber.log.Timber
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -53,27 +53,23 @@ class HeroViewModel(
 
             val hero = fetchHero() ?: return@launch
 
-            val tasksDeferred = async { safeCall { taskRepo.getTasks(hero.id) } }
-            val overdueDeferred = async { safeCall { taskRepo.checkOverdueTasks(hero.id) } }
+            val tasksDeferred = async { executeAction { taskRepo.getTasks(hero.id) } }
+            val overdueDeferred = async { executeAction { taskRepo.checkOverdueTasks(hero.id) } }
 
-            val tasksResult = tasksDeferred.await()
+            val tasks = tasksDeferred.await()
 
             _state.update { current ->
                 current.copy(
                     hero = hero.toUi(),
-                    tasks = tasksResult.getOrNull()?.map { it.toUi() } ?: current.tasks,
+                    tasks = tasks?.map { it.toUi() } ?: current.tasks,
                     isLoading = false,
-                    error = tasksResult.toUiErrorOrNull(),
                 )
             }
 
-            overdueDeferred.await().onSuccess { overdue ->
-                if (overdue.overdueCount > 0) {
-                    _events.send(UiEvent.ShowSnackbar(overdue.message))
-                    refreshTasks(hero.id)
-                }
-            }.onFailure {
-                Timber.w("Overdue check failed for heroId=%d", hero.id)
+            val overdue = overdueDeferred.await()
+            if (overdue != null && overdue.overdueCount > 0) {
+                _events.send(UiEvent.ShowSnackbar(overdue.message))
+                refreshTasks(hero.id)
             }
         }
     }
@@ -126,7 +122,7 @@ class HeroViewModel(
     fun deleteTask(taskId: Int) {
         viewModelScope.launch {
             executeAction { taskRepo.deleteTask(taskId) }
-                ?.let { loadData() }
+            loadData()
         }
     }
 
@@ -162,21 +158,18 @@ class HeroViewModel(
         return safeCall(action).fold(
             onSuccess = { it },
             onError = { _, apiError ->
-                _state.update { it.copy(error = apiError.toUiError()) }
+                _state.update { it.copy(error = apiError.toDomain().toUiError()) }
                 null
             },
             onException = {
-                _state.update { it.copy(error = UiError.Network()) }
+                _state.update { it.copy(isLoading = false, error = UiError.Network) }
                 null
             },
         )
     }
 
     private suspend fun fetchHero(): HeroDomain? {
-        val result = safeCall { heroRepo.getFirstHero() }
-        if (result is NetworkResult.Success) return result.data
-        _state.update { it.copy(isLoading = false, error = result.toUiErrorOrNull()) }
-        return null
+        return executeAction { heroRepo.getFirstHero() }
     }
 
     private suspend fun refreshTasks(heroId: Int) {
@@ -189,12 +182,6 @@ class HeroViewModel(
             }
     }
 
-    private fun <T> NetworkResult<T>.toUiErrorOrNull(): UiError? = fold(
-        onSuccess = { null },
-        onError = { _, apiError -> apiError.toUiError() },
-        onException = { UiError.Network() },
-    )
-
     private suspend fun <T> safeCall(
         block: suspend () -> NetworkResult<T>,
     ): NetworkResult<T> {
@@ -205,26 +192,6 @@ class HeroViewModel(
         } catch (e: Exception) {
             Timber.e(e, "Unhandled exception in network call")
             NetworkResult.Exception(e)
-        }
-    }
-
-    private fun ApiError.toUiError(): UiError = when (errorCode) {
-        ApiError.HERO_DEAD,
-        ApiError.HERO_ALREADY_DEAD -> UiError.HeroDead()
-
-        ApiError.DAILY_LIMIT_REACHED -> UiError.DailyLimitReached(
-            message = displayMessage,
-            completions = dailyCompletions ?: 0,
-            max = maxDailyCompletions ?: 0,
-            resetTime = resetTime,
-        )
-
-        else -> when {
-            !errors.isNullOrEmpty() -> UiError.Validation(
-                message = displayMessage,
-                fieldErrors = errors,
-            )
-            else -> UiError.Generic(displayMessage)
         }
     }
 }

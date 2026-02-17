@@ -42,29 +42,17 @@ data class TaskUi(
 )
 
 sealed interface UiError {
-    val message: String
-
-    data class HeroDead(
-        override val message: String = "Your hero is dead! Respawn to continue.",
-    ): UiError
-
+    data object HeroDead : UiError
     data class DailyLimitReached(
-        override val message: String,
         val completions: Int,
         val max: Int,
-        val resetTime: String?
+        val resetTime: String?,
     ) : UiError
-
     data class Validation(
-        override val message: String,
         val fieldErrors: Map<String, List<String>>,
-    ): UiError
-
-    data class Network(
-        override val message: String = "Network error. Check your connection.",
-    ): UiError
-
-    data class Generic(override val message: String) : UiError
+    ) : UiError
+    data object Network : UiError
+    data class Generic(val message: String) : UiError
 }
 
 sealed interface UiEvent {

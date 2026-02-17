@@ -19,10 +19,4 @@ data class ApiError(
         const val HERO_ALREADY_DEAD = "HERO_ALREADY_DEAD"
         const val DAILY_LIMIT_REACHED = "DAILY_LIMIT_REACHED"
     }
-    val displayMessage: String
-        get() = message
-            ?: error
-            ?: title
-            ?: errors?.values?.flatten()?.firstOrNull()
-            ?: "Unknown error"
 }
