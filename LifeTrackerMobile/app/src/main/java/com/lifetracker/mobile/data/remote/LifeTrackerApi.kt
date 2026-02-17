@@ -28,9 +28,6 @@ interface LifeTrackerApi {
     @GET("api/Hero/{id}")
     suspend fun getHero(@Path("id") id: Int): Response<HeroDto>
 
-    @GET("api/Hero/1")
-    suspend fun getFirstHero(): Response<HeroDto>
-
     @POST("api/Hero")
     suspend fun createHero(@Body request: CreateHeroRequest): Response<HeroDto>
 

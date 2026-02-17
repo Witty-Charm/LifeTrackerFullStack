@@ -25,8 +25,8 @@ class HeroRepository(
             .map { it.toDomain() }
 
     suspend fun getFirstHero(): NetworkResult<HeroDomain> =
-        caller.safeApiCall { api.getFirstHero() }
-            .map { it.toDomain() }
+        caller.safeApiCall { api.getHeroes() }
+            .map { it.first().toDomain() }
 
     suspend fun createHero(
         name: String,

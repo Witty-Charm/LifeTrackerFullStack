@@ -42,20 +42,6 @@ public class HeroController : ControllerBase
         return Ok(MapToDto(hero));
     }
 
-    [HttpGet("1")]
-    public async Task<ActionResult<HeroDto>> GetFirstHero()
-    {
-        var hero = await _context.Heroes
-            .Include(h => h.EconomyBalance)
-            .Include(h => h.Streaks)
-            .FirstOrDefaultAsync();
-
-        if (hero == null)
-            return NotFound();
-
-        return Ok(MapToDto(hero));
-    }
-
     [HttpPost]
     public async Task<ActionResult<HeroDto>> PostHero([FromBody] CreateHeroRequest request)
     {
