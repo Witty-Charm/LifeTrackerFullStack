@@ -185,6 +185,7 @@ public class TaskController : ControllerBase
         if (hero.IsDead)
             return BadRequest(new
             {
+                errorCode = "HERO_DEAD",
                 error = "Hero is dead",
                 message = "Use /api/Hero/{id}/respawn to continue playing"
             });
@@ -201,6 +202,7 @@ public class TaskController : ControllerBase
         if (!economy.CanCompleteTask())
             return BadRequest(new
             {
+                errorCode = "DAILY_LIMIT_REACHED",
                 error = "Daily limit reached",
                 message =
                     $"You have completed {economy.DailyTaskCompletions}/{economy.MaxDailyCompletions} tasks today. Try again tomorrow!",
@@ -287,6 +289,7 @@ public class TaskController : ControllerBase
         if (hero.IsDead)
             return BadRequest(new
             {
+                errorCode = "HERO_ALREADY_DEAD",
                 error = "Hero is already dead",
                 message = "Use /api/Hero/{id}/respawn to continue playing"
             });
