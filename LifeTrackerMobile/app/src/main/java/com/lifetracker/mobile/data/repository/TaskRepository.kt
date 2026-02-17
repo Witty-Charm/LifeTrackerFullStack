@@ -16,7 +16,7 @@ class TaskRepository(
     private val caller: SafeApiCaller
 ) {
     suspend fun getTasks(heroId: Int): NetworkResult<List<GameTaskDomain>> =
-        caller.safeApiCall { api.getTasks() }
+        caller.safeApiCall { api.getTasks(heroId) }
             .map { list -> list.map { it.toDomain() } }
 
     suspend fun getTask(id: Int): NetworkResult<GameTaskDomain> =
