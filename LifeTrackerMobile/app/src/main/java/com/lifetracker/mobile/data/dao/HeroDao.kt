@@ -1,7 +1,6 @@
 package com.lifetracker.mobile.data.dao
 
 import androidx.room.*
-import com.lifetracker.mobile.data.Hero
 import kotlinx.coroutines.flow.Flow
 
 @Dao

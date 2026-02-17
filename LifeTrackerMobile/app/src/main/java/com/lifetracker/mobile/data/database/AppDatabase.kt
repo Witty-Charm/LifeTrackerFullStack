@@ -4,8 +4,6 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import com.lifetracker.mobile.data.Hero
-import com.lifetracker.mobile.data.GameTask
 import com.lifetracker.mobile.data.dao.HeroDao
 import com.lifetracker.mobile.data.dao.TaskDao
 
