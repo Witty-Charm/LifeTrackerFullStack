@@ -208,18 +208,23 @@ class HeroViewModel(
         }
     }
 
-    private fun ApiError.toUiError(): UiError = when {
-        isHeroDead || isHeroAlreadyDead -> UiError.HeroDead()
-        isDailyLimitReached -> UiError.DailyLimitReached(
+    private fun ApiError.toUiError(): UiError = when (errorCode) {
+        ApiError.HERO_DEAD,
+        ApiError.HERO_ALREADY_DEAD -> UiError.HeroDead()
+
+        ApiError.DAILY_LIMIT_REACHED -> UiError.DailyLimitReached(
             message = displayMessage,
             completions = dailyCompletions ?: 0,
             max = maxDailyCompletions ?: 0,
             resetTime = resetTime,
         )
-        isValidationError -> UiError.Validation(
-            message = displayMessage,
-            fieldErrors = errors.orEmpty(),
-        )
-        else -> UiError.Generic(displayMessage)
+
+        else -> when {
+            !errors.isNullOrEmpty() -> UiError.Validation(
+                message = displayMessage,
+                fieldErrors = errors,
+            )
+            else -> UiError.Generic(displayMessage)
+        }
     }
 }
