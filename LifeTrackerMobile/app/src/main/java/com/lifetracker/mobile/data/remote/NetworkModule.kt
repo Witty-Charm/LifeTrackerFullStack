@@ -19,9 +19,7 @@ object NetworkModule {
 
     val safeApiCaller: SafeApiCaller = SafeApiCaller(json)
 
-    fun provideOkHttpClient(
-        isDebug: Boolean = false,
-    ): OkHttpClient =
+    fun provideOkHttpClient(isDebug: Boolean = false): OkHttpClient =
         OkHttpClient.Builder()
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
@@ -37,21 +35,14 @@ object NetworkModule {
             }
             .build()
 
-    fun provideRetrofit(
-        baseUrl: String,
-        client: OkHttpClient = provideOkHttpClient(),
-    ): Retrofit {
-        val contentType = "application/json".toMediaType()
-        return Retrofit.Builder()
-            .baseUrl(baseUrl)
-            .client(client)
-            .addConverterFactory(json.asConverterFactory(contentType))
-            .build()
-    }
-
     fun provideApi(
         baseUrl: String,
-        client: OkHttpClient = provideOkHttpClient(),
+        client: OkHttpClient,
     ): LifeTrackerApi =
-        provideRetrofit(baseUrl, client).create(LifeTrackerApi::class.java)
+        Retrofit.Builder()
+            .baseUrl(baseUrl)
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(LifeTrackerApi::class.java)
 }
