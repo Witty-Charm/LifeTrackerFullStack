@@ -1,6 +1,7 @@
 package com.lifetracker.mobile.data.remote
 
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
+import com.lifetracker.mobile.core.network.SafeApiCaller
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -9,13 +10,14 @@ import retrofit2.Retrofit
 import java.util.concurrent.TimeUnit
 
 object NetworkModule {
-
     val json: Json = Json {
         ignoreUnknownKeys = true
         explicitNulls = false
         encodeDefaults = true
         coerceInputValues = true
     }
+
+    val safeApiCaller: SafeApiCaller = SafeApiCaller(json)
 
     fun provideOkHttpClient(
         isDebug: Boolean = false,

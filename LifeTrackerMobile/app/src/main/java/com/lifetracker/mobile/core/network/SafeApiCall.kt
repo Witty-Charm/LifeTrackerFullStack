@@ -1,55 +1,40 @@
 package com.lifetracker.mobile.core.network
 
-import com.lifetracker.mobile.data.remote.NetworkModule
+import kotlinx.serialization.json.Json
 import retrofit2.Response
+import kotlin.coroutines.cancellation.CancellationException
 
-suspend fun <T : Any> safeApiCall(
-    apiCall: suspend () -> Response<T>,
-): NetworkResult<T> = try {
-    val response = apiCall()
-    val code = response.code()
-
-    if (response.isSuccessful) {
-        val body = response.body()
-        if (body != null) {
+class SafeApiCaller(private val json: Json) {
+    suspend fun <T : Any> safeApiCall(
+        apiCall: suspend () -> Response<T>,
+    ): NetworkResult<T> = try {
+        val response = apiCall()
+        if (response.isSuccessful) {
+            @Suppress("UNCHECKED_CAST")
+            val body = response.body() ?: Unit as T
             NetworkResult.Success(body)
         } else {
-            NetworkResult.Error(code, ApiError(message = "Empty response for non-Unit type"))
+            NetworkResult.Error(response.code(), parseErrorBody(response))
         }
-    } else {
-        NetworkResult.Error(code, parseErrorBody(response))
-    }
-} catch (e: Exception) {
-    NetworkResult.Exception(e)
-}
-
-suspend fun safeApiCallUnit(
-    apiCall: suspend () -> Response<Unit>,
-): NetworkResult<Unit> = try {
-    val response = apiCall()
-    if (response.isSuccessful) {
-        NetworkResult.Success(Unit)
-    } else {
-        NetworkResult.Error(response.code(), parseErrorBody(response))
-    }
-} catch (e: Exception) {
-    NetworkResult.Exception(e)
-}
-
-
-private fun parseErrorBody(response: Response<*>): ApiError {
-    val raw = try {
-        response.errorBody()?.string()
+    } catch (e: CancellationException) {
+        throw e
     } catch (e: Exception) {
-        null
+        NetworkResult.Exception(e)
     }
 
-    if (raw.isNullOrBlank()) return ApiError(message = "HTTP ${response.code()}")
+    private fun parseErrorBody(response: Response<*>): ApiError {
+        val raw = try {
+            response.errorBody()?.string()
+        } catch (_: Exception) {
+            null
+        }
 
-    return try {
-        NetworkModule.json.decodeFromString<ApiError>(raw)
-    } catch (_: Exception) {
-        val cleaned = raw.trim().removeSurrounding("\"")
-        ApiError(message = cleaned)
+        if (raw.isNullOrBlank()) return ApiError(message = "HTTP ${response.code()}")
+
+        return try {
+            json.decodeFromString<ApiError>(raw)
+        } catch (_: Exception) {
+            ApiError(message = raw.trim().removeSurrounding("\""))
+        }
     }
 }
