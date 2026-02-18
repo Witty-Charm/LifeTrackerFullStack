@@ -40,5 +40,5 @@ class TaskRepository(
             .map { it.toDomain() }
 
     suspend fun deleteTask(taskId: Int): NetworkResult<Unit> =
-        caller.safeApiCall { api.deleteTask(taskId) }
+        caller.safeApiCallUnit { api.deleteTask(taskId) }
     }

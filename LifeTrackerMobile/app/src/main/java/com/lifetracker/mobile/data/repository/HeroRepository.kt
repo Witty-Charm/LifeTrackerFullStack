@@ -42,7 +42,7 @@ class HeroRepository(
         }.map { it.toDomain() }
 
     suspend fun updateHero(body: HeroUpdateBody): NetworkResult<Unit> =
-        caller.safeApiCall { api.updateHero(body.id, body) }
+        caller.safeApiCallUnit { api.updateHero(body.id, body) }
 
     suspend fun getHeroStats(heroId: Int): NetworkResult<HeroStatsDomain> =
         caller.safeApiCall { api.getHeroStats(heroId) }
