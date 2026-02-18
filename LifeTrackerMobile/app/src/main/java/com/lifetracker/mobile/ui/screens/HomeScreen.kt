@@ -25,7 +25,7 @@ fun HomeScreen(
 ) {
     Scaffold(
         floatingActionButton = {
-            FloatingActionButton(
+            FloatingActionButton    (
                 onClick = onAddTaskClick,
                 modifier = Modifier.padding(16.dp)
             ) {
