@@ -20,35 +20,3 @@
 | **XP (Experience)** | Начисляется за закрытые задачи | Dynamic Leveling System |
 | **Gold** | Валюта для покупки айтемов и наград | Database Persistent |
 | **Level Up** | Повышение уровня при достижении лимита XP | Full State Sync |
-
----
-
-## 🛠️ Архитектура и Стек
-
-
-
-### 📱 Mobile (Frontend)
-- **UI Framework:** Jetpack Compose (Modern Declarative UI)
-- **Networking:** Retrofit 2 + OkHttp 
-- **Architecture:** MVVM (Model-View-ViewModel)
-- **State Management:** StateFlow & Compose State
-
-### 🖥️ Backend (API)
-- **Framework:** ASP.NET Core 8.0 Web API
-- **ORM:** Entity Framework Core
-- **Database:** MS SQL Server (LocalDB)
-- **Security:** Серверная обработка всей логики наград и штрафов
-
----
-
-## 📂 Структура проекта
-
-```bash
-root/
-├── LifeTrackerMobile/     # 📱 Android приложение (Kotlin)
-│   ├── app/src/main/      # Исходный код и ресурсы
-│   └── build.gradle       # Конфигурация сборки
-└── LifeTrackerBackend/    # ⚙️ Серверная часть (C#)
-    ├── Controllers/       # Обработка API запросов
-    ├── Models/            # Сущности базы данных
-    └── appsettings.json   # Конфигурация сервера
