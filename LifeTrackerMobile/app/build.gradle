@@ -14,6 +14,7 @@ android {
         targetSdk 36
         versionCode 1
         versionName "1.0"
+        buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:5000/\"")
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -32,6 +33,7 @@ android {
 
     buildFeatures {
         compose true
+        buildConfig true
     }
     packaging {
         resources {
@@ -86,4 +88,7 @@ dependencies {
     testImplementation 'junit:junit:4.13.2'
 
     implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.7.1")
+
+    implementation("io.insert-koin:koin-android:4.1.1")
+    implementation("io.insert-koin:koin-androidx-compose:4.1.1")
 }
