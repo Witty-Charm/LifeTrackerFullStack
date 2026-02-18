@@ -51,7 +51,10 @@ class HeroViewModel(
         loadJob = viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
 
-            val hero = fetchHero() ?: return@launch
+            val hero = fetchHero() ?: run {
+                _state.update { it.copy(isLoading = false) }
+                return@launch
+            }
 
             val tasksDeferred = async { executeAction { taskRepo.getTasks(hero.id) } }
             val overdueDeferred = async { executeAction { taskRepo.checkOverdueTasks(hero.id) } }
@@ -122,7 +125,7 @@ class HeroViewModel(
     fun deleteTask(taskId: Int) {
         viewModelScope.launch {
             executeAction { taskRepo.deleteTask(taskId) }
-            loadData()
+                ?.let { loadData() }
         }
     }
 
