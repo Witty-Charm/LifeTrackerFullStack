@@ -55,6 +55,7 @@ data class RespawnResult(
     val maxHp: Int,
     val recoveryEndsAt: Instant?,
     val recoveryMultiplier: Double,
+    val recoveryDebuffActive: Boolean,
     val deathCount: Int,
     val message: String,
 )

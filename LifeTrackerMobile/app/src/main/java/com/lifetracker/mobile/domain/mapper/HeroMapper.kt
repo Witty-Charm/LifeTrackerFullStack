@@ -68,6 +68,7 @@ fun RespawnResponse.toDomain(): RespawnResult = RespawnResult(
     maxHp = maxHp,
     recoveryEndsAt = recoveryEndsAt,
     recoveryMultiplier = recoveryMultiplier,
+    recoveryDebuffActive = recoveryDebuffActive,
     deathCount = deathCount,
     message = message,
 )

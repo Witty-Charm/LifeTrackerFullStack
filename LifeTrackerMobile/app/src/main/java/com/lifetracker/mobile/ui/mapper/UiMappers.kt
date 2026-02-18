@@ -1,9 +1,6 @@
 package com.lifetracker.mobile.ui.mapper
 
-import android.content.Context
-import com.lifetracker.mobile.R
 import com.lifetracker.mobile.data.remote.dto.TaskDifficulty
-import com.lifetracker.mobile.data.remote.dto.TaskType
 import com.lifetracker.mobile.domain.model.GameTaskDomain
 import com.lifetracker.mobile.domain.model.HeroDomain
 import com.lifetracker.mobile.ui.model.HeroStatusBadge
@@ -14,6 +11,7 @@ import kotlinx.datetime.number
 import kotlinx.datetime.toLocalDateTime
 import java.text.NumberFormat
 import kotlin.time.Instant
+
 
 private val numFmt: NumberFormat = NumberFormat.getIntegerInstance()
 

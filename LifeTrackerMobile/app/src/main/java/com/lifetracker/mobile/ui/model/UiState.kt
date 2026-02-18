@@ -2,12 +2,19 @@ package com.lifetracker.mobile.ui.model
 
 import com.lifetracker.mobile.data.remote.dto.TaskDifficulty
 import com.lifetracker.mobile.data.remote.dto.TaskType
+import com.lifetracker.mobile.domain.model.HeroDomain
+import com.lifetracker.mobile.domain.model.TaskCompletionResult
+import com.lifetracker.mobile.domain.model.TaskFailureResult
+import kotlin.time.Instant
 
 data class HeroScreenState(
+    val heroDomain: HeroDomain? = null,
     val hero: HeroUi? = null,
     val tasks: List<TaskUi> = emptyList(),
     val isLoading: Boolean = false,
-    val error: UiError? = null,
+    val isActionLoading: Boolean = false,
+    val criticalError: UiError? = null,
+    val actionError: UiError? = null,
 )
 
 data class HeroUi(
@@ -58,22 +65,12 @@ sealed interface UiError {
 }
 
 sealed interface UiEvent {
-    data class TaskCompleted(
-        val taskTitle: String,
-        val xpGained: Long,
-        val goldGained: Int,
-        val leveledUp: Boolean,
-        val newLevel: Int,
+    data class ShowSnackbar(val message: String) : UiEvent
+    data class TaskCompleted(val result: TaskCompletionResult) : UiEvent
+    data class TaskFailed(val result: TaskFailureResult) : UiEvent
+    data class HeroRespawned(
         val message: String,
+        val recoveryEndsAt: Instant?,
     ) : UiEvent
-
-    data class TaskFailed(
-        val taskTitle: String,
-        val heroDied: Boolean,
-        val message: String,
-    ) : UiEvent
-
-    data class HeroRespawned(val message: String) : UiEvent
     data class HeroHealed(val message: String) : UiEvent
-    data class ShowSnackbar(val text: String) : UiEvent
 }

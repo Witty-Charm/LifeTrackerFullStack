@@ -3,12 +3,15 @@ package com.lifetracker.mobile.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lifetracker.mobile.core.network.NetworkResult
-import com.lifetracker.mobile.core.network.onSuccess
+import com.lifetracker.mobile.core.network.fold
+import com.lifetracker.mobile.data.mapper.toDomain
+import com.lifetracker.mobile.data.remote.dto.CreateTaskRequest
 import com.lifetracker.mobile.data.repository.HeroRepository
 import com.lifetracker.mobile.data.repository.TaskRepository
 import com.lifetracker.mobile.domain.model.HeroDomain
-import com.lifetracker.mobile.core.network.fold
+import com.lifetracker.mobile.domain.model.HeroSnapshot
 import com.lifetracker.mobile.ui.mapper.toUi
+import com.lifetracker.mobile.ui.mapper.toUiError
 import com.lifetracker.mobile.ui.model.HeroScreenState
 import com.lifetracker.mobile.ui.model.UiError
 import com.lifetracker.mobile.ui.model.UiEvent
@@ -17,17 +20,13 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
-import com.lifetracker.mobile.core.network.onFailure
-import com.lifetracker.mobile.data.mapper.toDomain
-import com.lifetracker.mobile.data.remote.dto.CreateTaskRequest
-import com.lifetracker.mobile.ui.mapper.toUiError
-import timber.log.Timber
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import timber.log.Timber
 
 class HeroViewModel(
     private val heroRepo: HeroRepository,
@@ -49,7 +48,7 @@ class HeroViewModel(
     fun loadData() {
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
-            _state.update { it.copy(isLoading = true, error = null) }
+            _state.update { it.copy(isLoading = true, criticalError = null) }
 
             val hero = fetchHero() ?: run {
                 _state.update { it.copy(isLoading = false) }
@@ -60,19 +59,21 @@ class HeroViewModel(
             val overdueDeferred = async { executeAction { taskRepo.checkOverdueTasks(hero.id) } }
 
             val tasks = tasksDeferred.await()
+            val overdue = overdueDeferred.await()
 
             _state.update { current ->
                 current.copy(
+                    heroDomain = hero,
                     hero = hero.toUi(),
+                    // tasks == null, with error - hero updates, tasks will be old
                     tasks = tasks?.map { it.toUi() } ?: current.tasks,
                     isLoading = false,
                 )
             }
 
-            val overdue = overdueDeferred.await()
             if (overdue != null && overdue.overdueCount > 0) {
                 _events.send(UiEvent.ShowSnackbar(overdue.message))
-                refreshTasks(hero.id)
+                refreshTasks()
             }
         }
     }
@@ -80,18 +81,10 @@ class HeroViewModel(
     fun completeTask(taskId: Int) {
         viewModelScope.launch {
             executeAction { taskRepo.completeTask(taskId) }
-                ?.let { data ->
-                    _events.send(
-                        UiEvent.TaskCompleted(
-                            taskTitle = data.taskTitle,
-                            xpGained = data.xpGained,
-                            goldGained = data.goldGained,
-                            leveledUp = data.leveledUp,
-                            newLevel = data.newLevel,
-                            message = data.message,
-                        )
-                    )
-                    loadData()
+                ?.let { result ->
+                    applySnapshot(result.heroSnapshot)
+                    refreshTasks()
+                    _events.send(UiEvent.TaskCompleted(result))
                 }
         }
     }
@@ -99,15 +92,10 @@ class HeroViewModel(
     fun failTask(taskId: Int) {
         viewModelScope.launch {
             executeAction { taskRepo.failTask(taskId) }
-                ?.let { data ->
-                    _events.send(
-                        UiEvent.TaskFailed(
-                            taskTitle = data.taskTitle,
-                            heroDied = data.heroDied,
-                            message = data.message,
-                        )
-                    )
-                    loadData()
+                ?.let { result ->
+                    applySnapshot(result.heroSnapshot)
+                    refreshTasks()
+                    _events.send(UiEvent.TaskFailed(result))
                 }
         }
     }
@@ -115,9 +103,11 @@ class HeroViewModel(
     fun createTask(request: CreateTaskRequest) {
         viewModelScope.launch {
             executeAction { taskRepo.createTask(request) }
-                ?.let { data ->
-                    _events.send(UiEvent.ShowSnackbar("Task '${data.title}' created!"))
-                    loadData()
+                ?.let { task ->
+                    _state.update { current ->
+                        current.copy(tasks = current.tasks + task.toUi())
+                    }
+                    _events.send(UiEvent.ShowSnackbar("Task '${task.title}' created!"))
                 }
         }
     }
@@ -125,76 +115,127 @@ class HeroViewModel(
     fun deleteTask(taskId: Int) {
         viewModelScope.launch {
             executeAction { taskRepo.deleteTask(taskId) }
-                ?.let { loadData() }
+                ?.let {
+                    _state.update { current ->
+                        current.copy(tasks = current.tasks.filter { it.id != taskId })
+                    }
+                }
         }
     }
 
     fun respawnHero() {
-        val heroId = _state.value.hero?.id ?: return
+        val heroId = _state.value.heroDomain?.id ?: return
         viewModelScope.launch {
             executeAction { heroRepo.respawnHero(heroId) }
-                ?.let { data ->
-                    _events.send(UiEvent.HeroRespawned(data.message))
-                    loadData()
+                ?.let { result ->
+                    updateHero {
+                        copy(
+                            currentHp = result.newHp,
+                            maxHp = result.maxHp,
+                            isDead = false,
+                            deathCount = result.deathCount,
+                            isInRecovery = result.recoveryDebuffActive,
+                            recoveryMultiplier = result.recoveryMultiplier,
+                        )
+                    }
+                    _events.send(
+                        UiEvent.HeroRespawned(
+                            message = result.message,
+                            recoveryEndsAt = result.recoveryEndsAt,
+                        )
+                    )
                 }
         }
     }
 
     fun healHero(amount: Int? = null) {
-        val heroId = _state.value.hero?.id ?: return
+        val heroId = _state.value.heroDomain?.id ?: return
         viewModelScope.launch {
             executeAction { heroRepo.healHero(heroId, amount) }
-                ?.let { data ->
-                    _events.send(UiEvent.HeroHealed(data.message))
-                    loadData()
+                ?.let { result ->
+                    updateHero {
+                        copy(
+                            currentHp = result.newHp,
+                            gold = result.newGold,
+                        )
+                    }
+                    _events.send(UiEvent.HeroHealed(result.message))
                 }
         }
     }
 
     fun clearError() {
-        _state.update { it.copy(error = null) }
+        _state.update { it.copy(criticalError = null, actionError = null) }
+    }
+
+    private fun updateHero(transform: HeroDomain.() -> HeroDomain) {
+        _state.update { current ->
+            val updated = current.heroDomain?.transform()
+            current.copy(heroDomain = updated, hero = updated?.toUi())
+        }
+    }
+
+    private fun applySnapshot(snapshot: HeroSnapshot) {
+        updateHero {
+            copy(
+                level = snapshot.level,
+                currentXp = snapshot.currentXp,
+                currentHp = snapshot.currentHp,
+                maxHp = snapshot.maxHp,
+                gold = snapshot.gold,
+                deathCount = snapshot.deathCount,
+                dailyCompletions = snapshot.dailyCompletions,
+                dailyCompletionsMax = snapshot.dailyCompletionsMax,
+            )
+        }
+    }
+
+    private suspend fun refreshTasks() {
+        val heroId = _state.value.heroDomain?.id ?: return
+        executeAction { taskRepo.getTasks(heroId) }
+            ?.let { data ->
+                _state.update { it.copy(tasks = data.map { t -> t.toUi() }) }
+            }
     }
 
     private suspend fun <T> executeAction(
+        isCritical: Boolean = false,
         action: suspend () -> NetworkResult<T>,
     ): T? {
         return safeCall(action).fold(
             onSuccess = { it },
             onError = { _, apiError ->
-                _state.update { it.copy(error = apiError.toDomain().toUiError()) }
+                val uiError = apiError.toDomain().toUiError()
+                if (isCritical) {
+                    _state.update { it.copy(isLoading = false, criticalError = uiError) }
+                } else {
+                    _state.update { it.copy(actionError = uiError) }
+                }
                 null
             },
             onException = {
-                _state.update { it.copy(isLoading = false, error = UiError.Network) }
+                val error = UiError.Network
+                if (isCritical) {
+                    _state.update { it.copy(isLoading = false, criticalError = error) }
+                } else {
+                    _state.update { it.copy(actionError = error) }
+                }
                 null
             },
         )
     }
 
-    private suspend fun fetchHero(): HeroDomain? {
-        return executeAction { heroRepo.getFirstHero() }
-    }
-
-    private suspend fun refreshTasks(heroId: Int) {
-        safeCall { taskRepo.getTasks(heroId) }
-            .onSuccess { data ->
-                _state.update { it.copy(tasks = data.map { t -> t.toUi() }) }
-            }
-            .onFailure {
-                Timber.w("Task refresh failed for heroId=%d", heroId)
-            }
-    }
+    private suspend fun fetchHero(): HeroDomain? =
+        executeAction(isCritical = true) { heroRepo.getFirstHero() }
 
     private suspend fun <T> safeCall(
         block: suspend () -> NetworkResult<T>,
-    ): NetworkResult<T> {
-        return try {
-            block()
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            Timber.e(e, "Unhandled exception in network call")
-            NetworkResult.Exception(e)
-        }
+    ): NetworkResult<T> = try {
+        block()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Timber.e(e, "Unhandled exception in network call")
+        NetworkResult.Exception(e)
     }
 }
