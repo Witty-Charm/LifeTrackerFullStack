@@ -66,6 +66,7 @@ data class CompleteTaskResponse(
     val streakMultiplier: Double,
     val dailyCompletions: Int,
     val maxDailyCompletions: Int,
+    val deathCount: Int,
     val message: String,
 )
 
@@ -84,6 +85,9 @@ data class FailTaskResponse(
     val currentXp: Long,
     val heroDied: Boolean,
     val deathCount: Int,
+    val xpForNextLevel: Long,
+    val dailyCompletions: Int,
+    val maxDailyCompletions: Int,
     val streakBroken: Boolean,
     val streakPenalty: StreakPenaltyDto? = null,
     val message: String,
