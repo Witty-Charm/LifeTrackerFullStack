@@ -9,21 +9,17 @@ import com.lifetracker.mobile.ui.model.TaskUi
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.number
 import kotlinx.datetime.toLocalDateTime
-import java.text.NumberFormat
 import kotlin.time.Instant
-
-
-private val numFmt: NumberFormat = NumberFormat.getIntegerInstance()
 
 fun HeroDomain.toUi(): HeroUi = HeroUi(
     id = id,
     name = name,
     level = level,
-    xpText = "${numFmt.format(currentXp)} / ${numFmt.format(maxXp)} XP",
+    xpText = "%,d / %,d XP".format(currentXp, maxXp),
     xpProgress = xpProgress,
     hpText = "$currentHp / $maxHp HP",
     hpProgress = hpProgress,
-    goldText = "${numFmt.format(gold)} Gold",
+    goldText = "%,d Gold".format(gold),
     isDead = isDead,
     isInRecovery = isInRecovery,
     dailyText = "$dailyCompletions / $dailyCompletionsMax tasks today",
