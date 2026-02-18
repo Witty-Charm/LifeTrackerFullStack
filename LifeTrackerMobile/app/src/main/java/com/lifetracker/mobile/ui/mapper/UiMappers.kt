@@ -1,5 +1,7 @@
 package com.lifetracker.mobile.ui.mapper
 
+import android.content.Context
+import com.lifetracker.mobile.R
 import com.lifetracker.mobile.data.remote.dto.TaskDifficulty
 import com.lifetracker.mobile.data.remote.dto.TaskType
 import com.lifetracker.mobile.domain.model.GameTaskDomain
@@ -39,11 +41,8 @@ fun GameTaskDomain.toUi(): TaskUi = TaskUi(
     id = id,
     title = title,
     description = description,
-    typeLabel = when (type) {
-        TaskType.Habit -> "Habit"
-        TaskType.OneTime -> "One-Time"
-    },
-    difficultyLabel = difficulty.name,
+    type = type,
+    difficulty = difficulty,
     difficultyColor = when (difficulty) {
         TaskDifficulty.Easy   -> 0xFF4CAF50
         TaskDifficulty.Medium -> 0xFFFFC107

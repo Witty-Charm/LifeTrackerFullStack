@@ -15,5 +15,8 @@
     <string name="error_network">Network error. Check your connection.</string>
     <string name="error_daily_limit">Daily limit: %1$d/%2$d</string>
     <string name="error_validation">Validation error</string>
+    <string name="habit">Habit</string>
+    <string name="one_time">One-Time</string>
+    <string name="unknown">Unknown</string>
 </resources>
 

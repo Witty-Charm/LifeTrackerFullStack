@@ -1,11 +1,13 @@
 package com.lifetracker.mobile.ui.model
 
+import com.lifetracker.mobile.data.remote.dto.TaskDifficulty
+import com.lifetracker.mobile.data.remote.dto.TaskType
+
 data class HeroScreenState(
     val hero: HeroUi? = null,
     val tasks: List<TaskUi> = emptyList(),
     val isLoading: Boolean = false,
     val error: UiError? = null,
-    val event: UiEvent? = null,
 )
 
 data class HeroUi(
@@ -30,8 +32,8 @@ data class TaskUi(
     val id: Int,
     val title: String,
     val description: String,
-    val typeLabel: String,
-    val difficultyLabel: String,
+    val type: TaskType,
+    val difficulty: TaskDifficulty,
     val difficultyColor: Long,
     val isCompleted: Boolean,
     val isOverdue: Boolean,
