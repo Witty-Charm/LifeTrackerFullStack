@@ -3,9 +3,9 @@ package com.lifetracker.mobile.data.repository
 import com.lifetracker.mobile.core.network.NetworkResult
 import com.lifetracker.mobile.core.network.SafeApiCaller
 import com.lifetracker.mobile.core.network.map
+import com.lifetracker.mobile.data.mapper.toDomain
 import com.lifetracker.mobile.data.remote.LifeTrackerApi
 import com.lifetracker.mobile.data.remote.dto.CreateTaskRequest
-import com.lifetracker.mobile.domain.mapper.toDomain
 import com.lifetracker.mobile.domain.model.GameTaskDomain
 import com.lifetracker.mobile.domain.model.OverdueResult
 import com.lifetracker.mobile.domain.model.TaskCompletionResult

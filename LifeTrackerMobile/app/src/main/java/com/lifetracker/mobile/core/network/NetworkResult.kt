@@ -38,4 +38,14 @@ inline fun <T> NetworkResult<T>.onFailure(
     return this
 }
 
+fun <T> NetworkResult<T>.dataOrNull(): T? = when (this) {
+    is NetworkResult.Success -> data
+    else -> null
+}
+
+fun <T> NetworkResult<T>.errorOrNull(): ApiError? = when (this) {
+    is NetworkResult.Error -> apiError
+    else -> null
+}
+
 
