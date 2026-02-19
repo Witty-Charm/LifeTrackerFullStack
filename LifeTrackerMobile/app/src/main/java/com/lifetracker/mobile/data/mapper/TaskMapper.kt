@@ -1,10 +1,11 @@
-package com.lifetracker.mobile.domain.mapper
+package com.lifetracker.mobile.data.mapper
 
 import com.lifetracker.mobile.data.remote.dto.CompleteTaskResponse
 import com.lifetracker.mobile.data.remote.dto.FailTaskResponse
 import com.lifetracker.mobile.data.remote.dto.OverdueCheckResponse
 import com.lifetracker.mobile.data.remote.dto.StreakInfoDto
 import com.lifetracker.mobile.data.remote.dto.TaskDto
+import com.lifetracker.mobile.domain.model.GameError
 import com.lifetracker.mobile.domain.model.GameTaskDomain
 import com.lifetracker.mobile.domain.model.HeroSnapshot
 import com.lifetracker.mobile.domain.model.OverduePenalty
@@ -12,15 +13,17 @@ import com.lifetracker.mobile.domain.model.OverdueResult
 import com.lifetracker.mobile.domain.model.StreakDomain
 import com.lifetracker.mobile.domain.model.StreakPenaltyInfo
 import com.lifetracker.mobile.domain.model.TaskCompletionResult
+import com.lifetracker.mobile.domain.model.TaskDifficulty
 import com.lifetracker.mobile.domain.model.TaskFailureResult
+import com.lifetracker.mobile.domain.model.TaskType
 
 fun TaskDto.toDomain(): GameTaskDomain = GameTaskDomain(
     id = id,
     heroId = heroId,
     title = title,
     description = description,
-    type = type,
-    difficulty = difficulty,
+    type = type.toDomain(),
+    difficulty = difficulty.toDomain(),
     isCompleted = isCompleted,
     isActive = isActive,
     dueDate = dueDate,
@@ -112,3 +115,16 @@ fun OverdueCheckResponse.toDomain(): OverdueResult = OverdueResult(
     } ?: emptyList(),
     message = message,
 )
+
+fun com.lifetracker.mobile.data.remote.dto.TaskType.toDomain(): com.lifetracker.mobile.domain.model.TaskType = when (this) {
+    com.lifetracker.mobile.data.remote.dto.TaskType.Habit -> com.lifetracker.mobile.domain.model.TaskType.Habit
+    com.lifetracker.mobile.data.remote.dto.TaskType.OneTime -> com.lifetracker.mobile.domain.model.TaskType.OneTime
+    com.lifetracker.mobile.data.remote.dto.TaskType.Unknown -> com.lifetracker.mobile.domain.model.TaskType.Unknown
+}
+
+fun com.lifetracker.mobile.data.remote.dto.TaskDifficulty.toDomain(): com.lifetracker.mobile.domain.model.TaskDifficulty = when (this) {
+    com.lifetracker.mobile.data.remote.dto.TaskDifficulty.Easy -> com.lifetracker.mobile.domain.model.TaskDifficulty.Easy
+    com.lifetracker.mobile.data.remote.dto.TaskDifficulty.Medium -> com.lifetracker.mobile.domain.model.TaskDifficulty.Medium
+    com.lifetracker.mobile.data.remote.dto.TaskDifficulty.Hard -> com.lifetracker.mobile.domain.model.TaskDifficulty.Hard
+    com.lifetracker.mobile.data.remote.dto.TaskDifficulty.Epic -> com.lifetracker.mobile.domain.model.TaskDifficulty.Epic
+}

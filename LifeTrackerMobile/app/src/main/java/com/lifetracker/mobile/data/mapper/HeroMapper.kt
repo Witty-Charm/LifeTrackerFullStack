@@ -1,4 +1,4 @@
-package com.lifetracker.mobile.domain.mapper
+package com.lifetracker.mobile.data.mapper
 
 import com.lifetracker.mobile.data.remote.dto.HealResponse
 import com.lifetracker.mobile.data.remote.dto.HeroDto
