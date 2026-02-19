@@ -3,6 +3,8 @@ package com.lifetracker.mobile.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lifetracker.mobile.core.network.NetworkResult
+import com.lifetracker.mobile.core.network.dataOrNull
+import com.lifetracker.mobile.core.network.errorOrNull
 import com.lifetracker.mobile.core.network.fold
 import com.lifetracker.mobile.data.mapper.toDomain
 import com.lifetracker.mobile.data.remote.dto.CreateTaskRequest
@@ -55,112 +57,149 @@ class HeroViewModel(
                 return@launch
             }
 
-            val tasksDeferred = async { executeAction { taskRepo.getTasks(hero.id) } }
-            val overdueDeferred = async { executeAction { taskRepo.checkOverdueTasks(hero.id) } }
-
-            val tasks = tasksDeferred.await()
-            val overdue = overdueDeferred.await()
+            val tasksResult = async { safeCall { taskRepo.getTasks(hero.id) } }
+            val overdueResult = async { safeCall { taskRepo.checkOverdueTasks(hero.id) } }
+            val tasks = tasksResult.await()
+            val overdue = overdueResult.await()
 
             _state.update { current ->
+                val newTasks = tasks.dataOrNull()?.map { it.toUi() } ?: current.tasks
+                val error = tasks.errorOrNull()?.toDomain()?.toUiError()
                 current.copy(
                     heroDomain = hero,
                     hero = hero.toUi(),
-                    // tasks == null, with error - hero updates, tasks will be old
-                    tasks = tasks?.map { it.toUi() } ?: current.tasks,
+                    tasks = newTasks,
                     isLoading = false,
+                    criticalError = error,
                 )
             }
 
-            if (overdue != null && overdue.overdueCount > 0) {
-                _events.send(UiEvent.ShowSnackbar(overdue.message))
-                refreshTasks()
+            overdue.dataOrNull()?.let {
+                if (it.overdueCount > 0) {
+                    _events.send(UiEvent.ShowSnackbar(it.message))
+                    refreshTasks()
+                }
             }
         }
     }
 
     fun completeTask(taskId: Int) {
         viewModelScope.launch {
-            executeAction { taskRepo.completeTask(taskId) }
-                ?.let { result ->
-                    applySnapshot(result.heroSnapshot)
-                    refreshTasks()
-                    _events.send(UiEvent.TaskCompleted(result))
-                }
+            _state.update { it.copy(isActionLoading = true, actionError = null) }
+            try {
+                executeAction { taskRepo.completeTask(taskId) }
+                    ?.let { result ->
+                        applySnapshot(result.heroSnapshot)
+                        refreshTasks()
+                        _events.send(UiEvent.TaskCompleted(result))
+                    }
+            } finally {
+                _state.update { it.copy(isActionLoading = false) }
+            }
         }
     }
 
     fun failTask(taskId: Int) {
         viewModelScope.launch {
-            executeAction { taskRepo.failTask(taskId) }
-                ?.let { result ->
-                    applySnapshot(result.heroSnapshot)
-                    refreshTasks()
-                    _events.send(UiEvent.TaskFailed(result))
-                }
+            _state.update { it.copy(isActionLoading = true, actionError = null) }
+            try {
+                executeAction { taskRepo.failTask(taskId) }
+                    ?.let { result ->
+                        applySnapshot(result.heroSnapshot)
+                        if (result.heroDied) {
+                            updateHero { copy(isDead = true) }
+                        }
+                        refreshTasks()
+                        _events.send(UiEvent.TaskFailed(result))
+                    }
+            } finally {
+                _state.update { it.copy(isActionLoading = false) }
+            }
         }
     }
 
     fun createTask(request: CreateTaskRequest) {
         viewModelScope.launch {
-            executeAction { taskRepo.createTask(request) }
-                ?.let { task ->
-                    _state.update { current ->
-                        current.copy(tasks = current.tasks + task.toUi())
+            _state.update { it.copy(isActionLoading = true, actionError = null) }
+            try {
+                executeAction { taskRepo.createTask(request) }
+                    ?.let { task ->
+                        _state.update { current ->
+                            current.copy(tasks = current.tasks + task.toUi())
+                        }
+                        _events.send(UiEvent.ShowSnackbar("Task '\${task.title}' created!"))
                     }
-                    _events.send(UiEvent.ShowSnackbar("Task '${task.title}' created!"))
-                }
+            } finally {
+                _state.update { it.copy(isActionLoading = false) }
+            }
         }
     }
 
     fun deleteTask(taskId: Int) {
         viewModelScope.launch {
-            executeAction { taskRepo.deleteTask(taskId) }
-                ?.let {
-                    _state.update { current ->
-                        current.copy(tasks = current.tasks.filter { it.id != taskId })
+            _state.update { it.copy(isActionLoading = true, actionError = null) }
+            try {
+                executeAction { taskRepo.deleteTask(taskId) }
+                    ?.let { task ->
+                        _state.update { current ->
+                            current.copy(tasks = current.tasks.filter { it.id != taskId })
+                        }
                     }
-                }
+            } finally {
+                _state.update { it.copy(isActionLoading = false) }
+            }
         }
     }
 
     fun respawnHero() {
         val heroId = _state.value.heroDomain?.id ?: return
         viewModelScope.launch {
-            executeAction { heroRepo.respawnHero(heroId) }
-                ?.let { result ->
-                    updateHero {
-                        copy(
-                            currentHp = result.newHp,
-                            maxHp = result.maxHp,
-                            isDead = false,
-                            deathCount = result.deathCount,
-                            isInRecovery = result.recoveryDebuffActive,
-                            recoveryMultiplier = result.recoveryMultiplier,
+            _state.update { it.copy(isActionLoading = true, actionError = null) }
+            try {
+                executeAction { heroRepo.respawnHero(heroId) }
+                    ?.let { result ->
+                        updateHero {
+                            copy(
+                                currentHp = result.newHp,
+                                maxHp = result.maxHp,
+                                isDead = false,
+                                deathCount = result.deathCount,
+                                isInRecovery = result.recoveryDebuffActive,
+                                recoveryMultiplier = result.recoveryMultiplier,
+                            )
+                        }
+                        _events.send(
+                            UiEvent.HeroRespawned(
+                                message = result.message,
+                                recoveryEndsAt = result.recoveryEndsAt,
+                            )
                         )
                     }
-                    _events.send(
-                        UiEvent.HeroRespawned(
-                            message = result.message,
-                            recoveryEndsAt = result.recoveryEndsAt,
-                        )
-                    )
-                }
+            } finally {
+                _state.update { it.copy(isActionLoading = false) }
+            }
         }
     }
 
     fun healHero(amount: Int? = null) {
         val heroId = _state.value.heroDomain?.id ?: return
         viewModelScope.launch {
-            executeAction { heroRepo.healHero(heroId, amount) }
-                ?.let { result ->
-                    updateHero {
-                        copy(
-                            currentHp = result.newHp,
-                            gold = result.newGold,
-                        )
+            _state.update { it.copy(isActionLoading = true, actionError = null) }
+            try {
+                executeAction { heroRepo.healHero(heroId, amount) }
+                    ?.let { result ->
+                        updateHero {
+                            copy(
+                                currentHp = result.newHp,
+                                maxHp = result.maxHp,
+                                gold = result.newGold,
+                            )
+                        }
+                        _events.send(UiEvent.HeroHealed(result.message))
                     }
-                    _events.send(UiEvent.HeroHealed(result.message))
-                }
+            } finally {
+                _state.update { it.copy(isActionLoading = false) }
+            }
         }
     }
 
@@ -180,6 +219,7 @@ class HeroViewModel(
             copy(
                 level = snapshot.level,
                 currentXp = snapshot.currentXp,
+                maxXp = snapshot.xpForNextLevel,
                 currentHp = snapshot.currentHp,
                 maxHp = snapshot.maxHp,
                 gold = snapshot.gold,
@@ -225,8 +265,35 @@ class HeroViewModel(
         )
     }
 
-    private suspend fun fetchHero(): HeroDomain? =
-        executeAction(isCritical = true) { heroRepo.getFirstHero() }
+    private suspend fun fetchHero(): HeroDomain? {
+        val result = safeCall { heroRepo.getFirstHero() }
+
+        return result.fold(
+            onSuccess = { hero ->
+                if (hero != null) {
+                    hero
+                } else {
+                    _state.update { it.copy(isLoading = false, needsHeroCreation = true) }
+                    null
+                }
+            },
+            onError = { _, apiError ->
+                _state.update {
+                    it.copy(
+                        isLoading = false,
+                        criticalError = apiError.toDomain().toUiError()
+                    )
+                }
+                null
+            },
+            onException = {
+                _state.update {
+                    it.copy(isLoading = false, criticalError = UiError.Network)
+                }
+                null
+            },
+        )
+    }
 
     private suspend fun <T> safeCall(
         block: suspend () -> NetworkResult<T>,

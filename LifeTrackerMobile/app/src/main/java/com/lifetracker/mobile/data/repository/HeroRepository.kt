@@ -3,10 +3,10 @@ package com.lifetracker.mobile.data.repository
 import com.lifetracker.mobile.core.network.NetworkResult
 import com.lifetracker.mobile.core.network.SafeApiCaller
 import com.lifetracker.mobile.core.network.map
+import com.lifetracker.mobile.data.mapper.toDomain
 import com.lifetracker.mobile.data.remote.LifeTrackerApi
 import com.lifetracker.mobile.data.remote.dto.CreateHeroRequest
 import com.lifetracker.mobile.data.remote.dto.HeroUpdateBody
-import com.lifetracker.mobile.domain.mapper.toDomain
 import com.lifetracker.mobile.domain.model.HealResult
 import com.lifetracker.mobile.domain.model.HeroDomain
 import com.lifetracker.mobile.domain.model.HeroStatsDomain
@@ -24,9 +24,9 @@ class HeroRepository(
         caller.safeApiCall { api.getHero(id) }
             .map { it.toDomain() }
 
-    suspend fun getFirstHero(): NetworkResult<HeroDomain> =
+    suspend fun getFirstHero(): NetworkResult<HeroDomain?> =
         caller.safeApiCall { api.getHeroes() }
-            .map { it.first().toDomain() }
+            .map { it.firstOrNull()?.toDomain() }
 
     suspend fun createHero(
         name: String,
