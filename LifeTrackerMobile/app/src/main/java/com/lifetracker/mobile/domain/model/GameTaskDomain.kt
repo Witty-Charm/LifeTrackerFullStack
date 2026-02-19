@@ -1,7 +1,5 @@
 package com.lifetracker.mobile.domain.model
 
-import com.lifetracker.mobile.data.remote.dto.TaskDifficulty
-import com.lifetracker.mobile.data.remote.dto.TaskType
 import kotlin.time.Instant
 
 data class GameTaskDomain(

@@ -1,6 +1,6 @@
 package com.lifetracker.mobile.constants
 
-import com.lifetracker.mobile.data.remote.dto.TaskDifficulty
+import com.lifetracker.mobile.domain.model.TaskDifficulty
 import kotlin.math.floor
 import kotlin.math.log2
 import kotlin.math.pow
