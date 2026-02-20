@@ -18,8 +18,6 @@ fun TaskDifficultyDto.toDomain(): TaskDifficulty = when (this) {
     TaskDifficultyDto.Epic   -> TaskDifficulty.Epic
 }
 
-// ── Domain → DTO ──
-
 fun TaskType.toDto(): TaskTypeDto = when (this) {
     TaskType.Habit   -> TaskTypeDto.Habit
     TaskType.OneTime -> TaskTypeDto.OneTime
