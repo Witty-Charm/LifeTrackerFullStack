@@ -36,6 +36,7 @@ object GameConstants {
         TaskDifficulty.Medium -> 1.5
         TaskDifficulty.Hard   -> 2.5
         TaskDifficulty.Epic   -> 4.0
+        TaskDifficulty.Unknown -> 1.0
     }
 
     fun getHabitReward(difficulty: TaskDifficulty): Reward = when (difficulty) {
@@ -43,6 +44,7 @@ object GameConstants {
         TaskDifficulty.Medium -> Reward(xp = 25, gold = 12)
         TaskDifficulty.Hard   -> Reward(xp = 50, gold = 25)
         TaskDifficulty.Epic   -> Reward(xp = 100, gold = 50)
+        TaskDifficulty.Unknown -> Reward(xp = 0, gold = 0)
     }
 
     fun getOneTimeReward(difficulty: TaskDifficulty): Reward = when (difficulty) {
@@ -50,6 +52,7 @@ object GameConstants {
         TaskDifficulty.Medium -> Reward(xp = 35, gold = 18)
         TaskDifficulty.Hard   -> Reward(xp = 70, gold = 35)
         TaskDifficulty.Epic   -> Reward(xp = 150, gold = 75)
+        TaskDifficulty.Unknown -> Reward(xp = 0, gold = 0)
     }
 
     fun getHabitPenalty(difficulty: TaskDifficulty): Penalty = when (difficulty) {
@@ -57,6 +60,7 @@ object GameConstants {
         TaskDifficulty.Medium -> Penalty(hpLoss = 10, goldLoss = 5)
         TaskDifficulty.Hard   -> Penalty(hpLoss = 20, goldLoss = 15)
         TaskDifficulty.Epic   -> Penalty(hpLoss = 35, goldLoss = 30)
+        TaskDifficulty.Unknown -> Penalty(hpLoss = 0, goldLoss = 0)
     }
 
     fun getOneTimePenalty(difficulty: TaskDifficulty): Penalty = when (difficulty) {
@@ -64,6 +68,7 @@ object GameConstants {
         TaskDifficulty.Medium -> Penalty(hpLoss = 7, goldLoss = 5)
         TaskDifficulty.Hard   -> Penalty(hpLoss = 15, goldLoss = 15)
         TaskDifficulty.Epic   -> Penalty(hpLoss = 25, goldLoss = 30)
+        TaskDifficulty.Unknown -> Penalty(hpLoss = 0, goldLoss = 0)
     }
 
     fun getStreakBreakPenalty(streakDays: Int): StreakBreakPenalty = when {

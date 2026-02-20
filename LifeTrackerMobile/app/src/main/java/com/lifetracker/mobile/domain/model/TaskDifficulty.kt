@@ -4,5 +4,6 @@ enum class TaskDifficulty {
     Easy,
     Medium,
     Hard,
-    Epic
+    Epic,
+    Unknown
 }
