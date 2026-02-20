@@ -8,6 +8,7 @@ sealed interface GameError {
         val resetAt: String?,
     ) : GameError
     data class Validation(val fields: Map<String, List<String>>) : GameError
+    data object Network : GameError
     data class Unknown(val message: String) : GameError
 }
 

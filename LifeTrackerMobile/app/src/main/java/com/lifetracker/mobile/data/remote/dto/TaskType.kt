@@ -1,5 +1,6 @@
 package com.lifetracker.mobile.data.remote.dto
 
+import com.lifetracker.mobile.domain.model.GameError
 import kotlinx.serialization.*
 import kotlinx.serialization.descriptors.*
 import kotlinx.serialization.encoding.*
@@ -21,12 +22,12 @@ enum class TaskDifficulty(val value: Int) {
     Easy(1),
     Medium(2),
     Hard(3),
-    Epic(4);
+    Epic(4),
+    Unknown(-1);
 
     companion object {
         fun fromValue(value: Int): TaskDifficulty =
-            entries.firstOrNull { it.value == value }
-                ?: throw SerializationException("Unknown TaskDifficulty: $value")
+            entries.firstOrNull { it.value == value } ?: Unknown
     }
 }
 

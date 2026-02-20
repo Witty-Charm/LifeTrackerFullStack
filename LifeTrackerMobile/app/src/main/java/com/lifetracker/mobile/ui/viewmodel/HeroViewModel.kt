@@ -2,21 +2,19 @@ package com.lifetracker.mobile.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.lifetracker.mobile.core.network.NetworkResult
-import com.lifetracker.mobile.core.network.dataOrNull
-import com.lifetracker.mobile.core.network.errorOrNull
-import com.lifetracker.mobile.core.network.fold
-import com.lifetracker.mobile.data.mapper.toDomain
-import com.lifetracker.mobile.data.remote.dto.CreateTaskRequest
 import com.lifetracker.mobile.data.repository.HeroRepository
 import com.lifetracker.mobile.data.repository.TaskRepository
-import com.lifetracker.mobile.domain.model.HeroDomain
 import com.lifetracker.mobile.domain.model.CreateTaskParams
+import com.lifetracker.mobile.domain.model.DomainResult
+import com.lifetracker.mobile.domain.model.GameError
+import com.lifetracker.mobile.domain.model.HeroDomain
 import com.lifetracker.mobile.domain.model.HeroSnapshot
+import com.lifetracker.mobile.domain.model.dataOrNull
+import com.lifetracker.mobile.domain.model.errorOrNull
+import com.lifetracker.mobile.domain.model.fold
 import com.lifetracker.mobile.ui.mapper.toUi
 import com.lifetracker.mobile.ui.mapper.toUiError
 import com.lifetracker.mobile.ui.model.HeroScreenState
-import com.lifetracker.mobile.ui.model.UiError
 import com.lifetracker.mobile.ui.model.UiEvent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -65,7 +63,7 @@ class HeroViewModel(
 
             _state.update { current ->
                 val newTasks = tasks.dataOrNull()?.map { it.toUi() } ?: current.tasks
-                val error = tasks.errorOrNull()?.toDomain()?.toUiError()
+                val error = tasks.errorOrNull()?.toUiError()
                 current.copy(
                     heroDomain = hero,
                     hero = hero.toUi(),
@@ -241,25 +239,16 @@ class HeroViewModel(
 
     private suspend fun <T> executeAction(
         isCritical: Boolean = false,
-        action: suspend () -> NetworkResult<T>,
+        action: suspend () -> DomainResult<T>,
     ): T? {
         return safeCall(action).fold(
             onSuccess = { it },
-            onError = { _, apiError ->
-                val uiError = apiError.toDomain().toUiError()
+            onFailure = { error ->
+                val uiError = error.toUiError()
                 if (isCritical) {
                     _state.update { it.copy(isLoading = false, criticalError = uiError) }
                 } else {
                     _state.update { it.copy(actionError = uiError) }
-                }
-                null
-            },
-            onException = {
-                val error = UiError.Network
-                if (isCritical) {
-                    _state.update { it.copy(isLoading = false, criticalError = error) }
-                } else {
-                    _state.update { it.copy(actionError = error) }
                 }
                 null
             },
@@ -278,18 +267,12 @@ class HeroViewModel(
                     null
                 }
             },
-            onError = { _, apiError ->
+            onFailure = { error ->
                 _state.update {
                     it.copy(
                         isLoading = false,
-                        criticalError = apiError.toDomain().toUiError()
+                        criticalError = error.toUiError()
                     )
-                }
-                null
-            },
-            onException = {
-                _state.update {
-                    it.copy(isLoading = false, criticalError = UiError.Network)
                 }
                 null
             },
@@ -297,13 +280,12 @@ class HeroViewModel(
     }
 
     private suspend fun <T> safeCall(
-        block: suspend () -> NetworkResult<T>,
-    ): NetworkResult<T> = try {
+        block: suspend () -> DomainResult<T>,
+    ): DomainResult<T> = try {
         block()
-    } catch (e: CancellationException) {
-        throw e
-    } catch (e: Exception) {
-        Timber.e(e, "Unhandled exception in network call")
-        NetworkResult.Exception(e)
+    } catch (e: CancellationException) { throw e }
+      catch (e: Exception) {
+        Timber.e(e, "Unhandled exception")
+        DomainResult.Failure(GameError.Network)
     }
 }

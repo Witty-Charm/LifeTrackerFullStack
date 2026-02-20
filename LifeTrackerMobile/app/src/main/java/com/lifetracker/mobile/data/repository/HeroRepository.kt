@@ -4,9 +4,11 @@ import com.lifetracker.mobile.core.network.NetworkResult
 import com.lifetracker.mobile.core.network.SafeApiCaller
 import com.lifetracker.mobile.core.network.map
 import com.lifetracker.mobile.data.mapper.toDomain
+import com.lifetracker.mobile.data.mapper.toDomainResult
 import com.lifetracker.mobile.data.remote.LifeTrackerApi
 import com.lifetracker.mobile.data.remote.dto.CreateHeroRequest
 import com.lifetracker.mobile.data.remote.dto.HeroUpdateBody
+import com.lifetracker.mobile.domain.model.DomainResult
 import com.lifetracker.mobile.domain.model.HealResult
 import com.lifetracker.mobile.domain.model.HeroDomain
 import com.lifetracker.mobile.domain.model.HeroStatsDomain
@@ -16,46 +18,49 @@ class HeroRepository(
     private val api: LifeTrackerApi,
     private val caller: SafeApiCaller
 ) {
-    suspend fun getHeroes(): NetworkResult<List<HeroDomain>> =
+    suspend fun getHeroes(): DomainResult<List<HeroDomain>> =
         caller.safeApiCall { api.getHeroes() }
             .map { list -> list.map { it.toDomain() } }
+            .toDomainResult()
 
-    suspend fun getHero(id: Int): NetworkResult<HeroDomain> =
+    suspend fun getHero(id: Int): DomainResult<HeroDomain> =
         caller.safeApiCall { api.getHero(id) }
             .map { it.toDomain() }
+            .toDomainResult()
 
-    suspend fun getFirstHero(): NetworkResult<HeroDomain?> =
+    suspend fun getFirstHero(): DomainResult<HeroDomain?> =
         caller.safeApiCall { api.getHeroes() }
             .map { it.firstOrNull()?.toDomain() }
+            .toDomainResult()
 
     suspend fun createHero(
         name: String,
         startingGold: Int? = null,
-    ): NetworkResult<HeroDomain> =
+    ): DomainResult<HeroDomain> =
         caller.safeApiCall {
-            api.createHero(
-                CreateHeroRequest(
-                    name = name,
-                    startingGold = startingGold
-                )
-            )
+            api.createHero(CreateHeroRequest(name = name, startingGold = startingGold))
         }.map { it.toDomain() }
+            .toDomainResult()
 
-    suspend fun updateHero(body: HeroUpdateBody): NetworkResult<Unit> =
+    suspend fun updateHero(body: HeroUpdateBody): DomainResult<Unit> =
         caller.safeApiCallUnit { api.updateHero(body.id, body) }
+            .toDomainResult()
 
-    suspend fun getHeroStats(heroId: Int): NetworkResult<HeroStatsDomain> =
+    suspend fun getHeroStats(heroId: Int): DomainResult<HeroStatsDomain> =
         caller.safeApiCall { api.getHeroStats(heroId) }
             .map { it.toDomain() }
+            .toDomainResult()
 
-    suspend fun respawnHero(heroId: Int): NetworkResult<RespawnResult> =
+    suspend fun respawnHero(heroId: Int): DomainResult<RespawnResult> =
         caller.safeApiCall { api.respawnHero(heroId) }
             .map { it.toDomain() }
+            .toDomainResult()
 
     suspend fun healHero(
         heroId: Int,
         amount: Int? = null,
-    ): NetworkResult<HealResult> =
+    ): DomainResult<HealResult> =
         caller.safeApiCall { api.healHero(heroId, amount) }
             .map { it.toDomain() }
+            .toDomainResult()
 }

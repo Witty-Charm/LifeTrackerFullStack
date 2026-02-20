@@ -1,6 +1,6 @@
 package com.lifetracker.mobile.ui.mapper
 
-import com.lifetracker.mobile.data.remote.dto.TaskDifficulty
+import com.lifetracker.mobile.domain.model.TaskDifficulty
 import com.lifetracker.mobile.domain.model.GameTaskDomain
 import com.lifetracker.mobile.domain.model.HeroDomain
 import com.lifetracker.mobile.ui.model.HeroStatusBadge
@@ -42,6 +42,7 @@ fun GameTaskDomain.toUi(): TaskUi = TaskUi(
         TaskDifficulty.Medium -> 0xFFFFC107
         TaskDifficulty.Hard   -> 0xFFFF5722
         TaskDifficulty.Epic   -> 0xFF9C27B0
+        TaskDifficulty.Unknown -> 0xFF9E9E9E
     },
     isCompleted = isCompleted,
     isOverdue = isOverdue,

@@ -13,6 +13,7 @@ fun GameError.toUiError(): UiError = when (this) {
         resetTime = resetAt,
     )
     is GameError.Validation -> UiError.Validation(fieldErrors = fields)
+    is GameError.Network -> UiError.Network
     is GameError.Unknown -> UiError.Generic(message)
 }
 
