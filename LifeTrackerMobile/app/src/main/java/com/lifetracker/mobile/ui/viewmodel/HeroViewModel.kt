@@ -11,6 +11,7 @@ import com.lifetracker.mobile.data.remote.dto.CreateTaskRequest
 import com.lifetracker.mobile.data.repository.HeroRepository
 import com.lifetracker.mobile.data.repository.TaskRepository
 import com.lifetracker.mobile.domain.model.HeroDomain
+import com.lifetracker.mobile.domain.model.CreateTaskParams
 import com.lifetracker.mobile.domain.model.HeroSnapshot
 import com.lifetracker.mobile.ui.mapper.toUi
 import com.lifetracker.mobile.ui.mapper.toUiError
@@ -118,11 +119,11 @@ class HeroViewModel(
         }
     }
 
-    fun createTask(request: CreateTaskRequest) {
+    fun createTask(params: CreateTaskParams) {
         viewModelScope.launch {
             _state.update { it.copy(isActionLoading = true, actionError = null) }
             try {
-                executeAction { taskRepo.createTask(request) }
+                executeAction { taskRepo.createTask(params) }
                     ?.let { task ->
                         _state.update { current ->
                             current.copy(tasks = current.tasks + task.toUi())

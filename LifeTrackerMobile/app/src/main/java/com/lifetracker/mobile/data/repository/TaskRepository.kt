@@ -4,8 +4,10 @@ import com.lifetracker.mobile.core.network.NetworkResult
 import com.lifetracker.mobile.core.network.SafeApiCaller
 import com.lifetracker.mobile.core.network.map
 import com.lifetracker.mobile.data.mapper.toDomain
+import com.lifetracker.mobile.data.mapper.toDto
 import com.lifetracker.mobile.data.remote.LifeTrackerApi
 import com.lifetracker.mobile.data.remote.dto.CreateTaskRequest
+import com.lifetracker.mobile.domain.model.CreateTaskParams
 import com.lifetracker.mobile.domain.model.GameTaskDomain
 import com.lifetracker.mobile.domain.model.OverdueResult
 import com.lifetracker.mobile.domain.model.TaskCompletionResult
@@ -23,9 +25,19 @@ class TaskRepository(
         caller.safeApiCall { api.getTask(id) }
             .map { it.toDomain() }
 
-    suspend fun createTask(request: CreateTaskRequest): NetworkResult<GameTaskDomain> =
-        caller.safeApiCall { api.createTask(request) }
-            .map { it.toDomain() }
+    suspend fun createTask(params: CreateTaskParams): NetworkResult<GameTaskDomain> =
+        caller.safeApiCall {
+            api.createTask(
+                CreateTaskRequest(
+                    heroId = params.heroId,
+                    title = params.title,
+                    description = params.description,
+                    type = params.type.toDto(),
+                    difficulty = params.difficulty.toDto(),
+                    dueDate = params.dueDate,
+                )
+                )
+        } .map { it.toDomain() }
 
     suspend fun completeTask(taskId: Int): NetworkResult<TaskCompletionResult> =
         caller.safeApiCall { api.completeTask(taskId) }

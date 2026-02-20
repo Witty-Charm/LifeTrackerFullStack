@@ -115,16 +115,3 @@ fun OverdueCheckResponse.toDomain(): OverdueResult = OverdueResult(
     } ?: emptyList(),
     message = message,
 )
-
-fun com.lifetracker.mobile.data.remote.dto.TaskType.toDomain(): com.lifetracker.mobile.domain.model.TaskType = when (this) {
-    com.lifetracker.mobile.data.remote.dto.TaskType.Habit -> com.lifetracker.mobile.domain.model.TaskType.Habit
-    com.lifetracker.mobile.data.remote.dto.TaskType.OneTime -> com.lifetracker.mobile.domain.model.TaskType.OneTime
-    com.lifetracker.mobile.data.remote.dto.TaskType.Unknown -> com.lifetracker.mobile.domain.model.TaskType.Unknown
-}
-
-fun com.lifetracker.mobile.data.remote.dto.TaskDifficulty.toDomain(): com.lifetracker.mobile.domain.model.TaskDifficulty = when (this) {
-    com.lifetracker.mobile.data.remote.dto.TaskDifficulty.Easy -> com.lifetracker.mobile.domain.model.TaskDifficulty.Easy
-    com.lifetracker.mobile.data.remote.dto.TaskDifficulty.Medium -> com.lifetracker.mobile.domain.model.TaskDifficulty.Medium
-    com.lifetracker.mobile.data.remote.dto.TaskDifficulty.Hard -> com.lifetracker.mobile.domain.model.TaskDifficulty.Hard
-    com.lifetracker.mobile.data.remote.dto.TaskDifficulty.Epic -> com.lifetracker.mobile.domain.model.TaskDifficulty.Epic
-}
