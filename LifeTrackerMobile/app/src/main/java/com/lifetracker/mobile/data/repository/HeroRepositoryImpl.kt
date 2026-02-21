@@ -11,48 +11,49 @@ import com.lifetracker.mobile.domain.model.HealResult
 import com.lifetracker.mobile.domain.model.HeroDomain
 import com.lifetracker.mobile.domain.model.HeroStatsDomain
 import com.lifetracker.mobile.domain.model.RespawnResult
+import com.lifetracker.mobile.domain.repository.HeroRepository
 
-class HeroRepository(
+class HeroRepositoryImpl(
     private val api: LifeTrackerApi,
     private val caller: SafeApiCaller
-) {
-    suspend fun getHeroes(): DomainResult<List<HeroDomain>> =
+) : HeroRepository {
+    override suspend fun getHeroes(): DomainResult<List<HeroDomain>> =
         caller.safeApiCall { api.getHeroes() }
             .map { list -> list.map { it.toDomain() } }
             .toDomainResult()
 
-    suspend fun getHero(id: Int): DomainResult<HeroDomain> =
+    override suspend fun getHero(id: Int): DomainResult<HeroDomain> =
         caller.safeApiCall { api.getHero(id) }
             .map { it.toDomain() }
             .toDomainResult()
 
-    suspend fun getFirstHero(): DomainResult<HeroDomain?> =
+    override suspend fun getFirstHero(): DomainResult<HeroDomain?> =
         caller.safeApiCall { api.getHeroes() }
             .map { it.firstOrNull()?.toDomain() }
             .toDomainResult()
 
-    suspend fun createHero(
+    override suspend fun createHero(
         name: String,
-        startingGold: Int? = null,
+        startingGold: Int?,
     ): DomainResult<HeroDomain> =
         caller.safeApiCall {
             api.createHero(CreateHeroRequest(name = name, startingGold = startingGold))
         }.map { it.toDomain() }
             .toDomainResult()
 
-    suspend fun getHeroStats(heroId: Int): DomainResult<HeroStatsDomain> =
+    override suspend fun getHeroStats(heroId: Int): DomainResult<HeroStatsDomain> =
         caller.safeApiCall { api.getHeroStats(heroId) }
             .map { it.toDomain() }
             .toDomainResult()
 
-    suspend fun respawnHero(heroId: Int): DomainResult<RespawnResult> =
+    override suspend fun respawnHero(heroId: Int): DomainResult<RespawnResult> =
         caller.safeApiCall { api.respawnHero(heroId) }
             .map { it.toDomain() }
             .toDomainResult()
 
-    suspend fun healHero(
+    override suspend fun healHero(
         heroId: Int,
-        amount: Int? = null,
+        amount: Int?,
     ): DomainResult<HealResult> =
         caller.safeApiCall { api.healHero(heroId, amount) }
             .map { it.toDomain() }

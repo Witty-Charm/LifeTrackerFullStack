@@ -2,8 +2,6 @@ package com.lifetracker.mobile.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.lifetracker.mobile.data.repository.HeroRepository
-import com.lifetracker.mobile.data.repository.TaskRepository
 import com.lifetracker.mobile.domain.model.CreateTaskParams
 import com.lifetracker.mobile.domain.model.DomainResult
 import com.lifetracker.mobile.domain.model.GameError
@@ -14,6 +12,8 @@ import com.lifetracker.mobile.domain.model.errorOrNull
 import com.lifetracker.mobile.domain.model.fold
 import com.lifetracker.mobile.domain.model.onFailure
 import com.lifetracker.mobile.domain.model.onSuccess
+import com.lifetracker.mobile.domain.repository.HeroRepository
+import com.lifetracker.mobile.domain.repository.TaskRepository
 import com.lifetracker.mobile.ui.mapper.toUi
 import com.lifetracker.mobile.ui.mapper.toUiError
 import com.lifetracker.mobile.ui.model.HeroScreenState
@@ -32,7 +32,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
 import timber.log.Timber
 
-class HeroViewModel(
+class   HeroViewModel(
     private val heroRepo: HeroRepository,
     private val taskRepo: TaskRepository,
 ) : ViewModel() {

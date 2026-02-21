@@ -1,6 +1,5 @@
 package com.lifetracker.mobile.data.repository
 
-import com.lifetracker.mobile.core.network.NetworkResult
 import com.lifetracker.mobile.core.network.SafeApiCaller
 import com.lifetracker.mobile.core.network.map
 import com.lifetracker.mobile.data.mapper.toDomain
@@ -14,22 +13,23 @@ import com.lifetracker.mobile.domain.model.GameTaskDomain
 import com.lifetracker.mobile.domain.model.OverdueResult
 import com.lifetracker.mobile.domain.model.TaskCompletionResult
 import com.lifetracker.mobile.domain.model.TaskFailureResult
+import com.lifetracker.mobile.domain.repository.TaskRepository
 
-class TaskRepository(
+class TaskRepositoryImpl(
     private val api: LifeTrackerApi,
     private val caller: SafeApiCaller
-) {
-    suspend fun getTasks(heroId: Int): DomainResult<List<GameTaskDomain>> =
+) : TaskRepository {
+    override suspend fun getTasks(heroId: Int): DomainResult<List<GameTaskDomain>> =
         caller.safeApiCall { api.getTasks(heroId) }
             .map { list -> list.map { it.toDomain() } }
             .toDomainResult()
 
-    suspend fun getTask(id: Int): DomainResult<GameTaskDomain> =
+    override suspend fun getTask(id: Int): DomainResult<GameTaskDomain> =
         caller.safeApiCall { api.getTask(id) }
             .map { it.toDomain() }
             .toDomainResult()
 
-    suspend fun createTask(params: CreateTaskParams): DomainResult<GameTaskDomain> =
+    override suspend fun createTask(params: CreateTaskParams): DomainResult<GameTaskDomain> =
         caller.safeApiCall {
             api.createTask(
                 CreateTaskRequest(
@@ -44,22 +44,22 @@ class TaskRepository(
         }.map { it.toDomain() }
             .toDomainResult()
 
-    suspend fun completeTask(taskId: Int): DomainResult<TaskCompletionResult> =
+    override suspend fun completeTask(taskId: Int): DomainResult<TaskCompletionResult> =
         caller.safeApiCall { api.completeTask(taskId) }
             .map { it.toDomain() }
             .toDomainResult()
 
-    suspend fun failTask(taskId: Int): DomainResult<TaskFailureResult> =
+    override suspend fun failTask(taskId: Int): DomainResult<TaskFailureResult> =
         caller.safeApiCall { api.failTask(taskId) }
             .map { it.toDomain() }
             .toDomainResult()
 
-    suspend fun checkOverdueTasks(heroId: Int): DomainResult<OverdueResult> =
+    override suspend fun checkOverdueTasks(heroId: Int): DomainResult<OverdueResult> =
         caller.safeApiCall { api.checkOverdueTasks(heroId) }
             .map { it.toDomain() }
             .toDomainResult()
 
-    suspend fun deleteTask(taskId: Int): DomainResult<Unit> =
+    override suspend fun deleteTask(taskId: Int): DomainResult<Unit> =
         caller.safeApiCallUnit { api.deleteTask(taskId) }
             .toDomainResult()
 }
