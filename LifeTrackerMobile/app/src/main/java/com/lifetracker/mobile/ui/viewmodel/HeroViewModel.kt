@@ -270,23 +270,17 @@ class HeroViewModel(
 
     private suspend fun fetchHero(): HeroDomain? {
         val result = safeCall { heroRepo.getFirstHero() }
-
         return result.fold(
             onSuccess = { hero ->
                 if (hero != null) {
                     hero
                 } else {
-                    _state.update { it.copy(isLoading = false, needsHeroCreation = true) }
+                    _state.update { it.copy(needsHeroCreation = true) }
                     null
                 }
             },
             onFailure = { error ->
-                _state.update {
-                    it.copy(
-                        isLoading = false,
-                        criticalError = error.toUiError()
-                    )
-                }
+                _state.update { it.copy(criticalError = error.toUiError()) }
                 null
             },
         )

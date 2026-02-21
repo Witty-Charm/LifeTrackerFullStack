@@ -14,52 +14,68 @@ import com.lifetracker.mobile.domain.model.OverdueResult
 import com.lifetracker.mobile.domain.model.TaskCompletionResult
 import com.lifetracker.mobile.domain.model.TaskFailureResult
 import com.lifetracker.mobile.domain.repository.TaskRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class TaskRepositoryImpl(
     private val api: LifeTrackerApi,
     private val caller: SafeApiCaller
 ) : TaskRepository {
     override suspend fun getTasks(heroId: Int): DomainResult<List<GameTaskDomain>> =
-        caller.safeApiCall { api.getTasks(heroId) }
-            .map { list -> list.map { it.toDomain() } }
-            .toDomainResult()
+        withContext(Dispatchers.IO) {
+            caller.safeApiCall { api.getTasks(heroId) }
+                .map { list -> list.map { it.toDomain() } }
+                .toDomainResult()
+        }
 
     override suspend fun getTask(id: Int): DomainResult<GameTaskDomain> =
-        caller.safeApiCall { api.getTask(id) }
-            .map { it.toDomain() }
-            .toDomainResult()
+        withContext(Dispatchers.IO) {
+            caller.safeApiCall { api.getTask(id) }
+                .map { it.toDomain() }
+                .toDomainResult()
+        }
 
     override suspend fun createTask(params: CreateTaskParams): DomainResult<GameTaskDomain> =
-        caller.safeApiCall {
-            api.createTask(
-                CreateTaskRequest(
-                    heroId = params.heroId,
-                    title = params.title,
-                    description = params.description,
-                    type = params.type.toDto(),
-                    difficulty = params.difficulty.toDto(),
-                    dueDate = params.dueDate,
+        withContext(Dispatchers.IO) {
+            caller.safeApiCall {
+                api.createTask(
+                    CreateTaskRequest(
+                        heroId = params.heroId,
+                        title = params.title,
+                        description = params.description,
+                        type = params.type.toDto(),
+                        difficulty = params.difficulty.toDto(),
+                        dueDate = params.dueDate,
+                    )
                 )
-            )
-        }.map { it.toDomain() }
-            .toDomainResult()
+            }.map { it.toDomain() }
+                .toDomainResult()
+        }
 
     override suspend fun completeTask(taskId: Int): DomainResult<TaskCompletionResult> =
-        caller.safeApiCall { api.completeTask(taskId) }
-            .map { it.toDomain() }
-            .toDomainResult()
+        withContext(Dispatchers.IO) {
+            caller.safeApiCall { api.completeTask(taskId) }
+                .map { it.toDomain() }
+                .toDomainResult()
+        }
 
     override suspend fun failTask(taskId: Int): DomainResult<TaskFailureResult> =
-        caller.safeApiCall { api.failTask(taskId) }
-            .map { it.toDomain() }
-            .toDomainResult()
+        withContext(Dispatchers.IO) {
+            caller.safeApiCall { api.failTask(taskId) }
+                .map { it.toDomain() }
+                .toDomainResult()
+        }
 
     override suspend fun checkOverdueTasks(heroId: Int): DomainResult<OverdueResult> =
-        caller.safeApiCall { api.checkOverdueTasks(heroId) }
-            .map { it.toDomain() }
-            .toDomainResult()
+        withContext(Dispatchers.IO) {
+            caller.safeApiCall { api.checkOverdueTasks(heroId) }
+                .map { it.toDomain() }
+                .toDomainResult()
+        }
 
     override suspend fun deleteTask(taskId: Int): DomainResult<Unit> =
-        caller.safeApiCallUnit { api.deleteTask(taskId) }
-            .toDomainResult()
+        withContext(Dispatchers.IO) {
+            caller.safeApiCallUnit { api.deleteTask(taskId) }
+                .toDomainResult()
+        }
 }
