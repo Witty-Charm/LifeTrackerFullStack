@@ -2,6 +2,7 @@ package com.lifetracker.mobile.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.lifetracker.mobile.BuildConfig
 import com.lifetracker.mobile.domain.model.CreateTaskParams
 import com.lifetracker.mobile.domain.model.DomainResult
 import com.lifetracker.mobile.domain.model.GameError
@@ -21,12 +22,11 @@ import com.lifetracker.mobile.ui.model.UiEvent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
-import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
@@ -40,8 +40,8 @@ class HeroViewModel(
     private val _state = MutableStateFlow(HeroScreenState())
     val state: StateFlow<HeroScreenState> = _state.asStateFlow()
 
-    private val _events = MutableSharedFlow<UiEvent>(extraBufferCapacity = 64)
-    val events: SharedFlow<UiEvent> = _events.asSharedFlow()
+    private val _events = Channel<UiEvent>(Channel.BUFFERED)
+    val events = _events.receiveAsFlow()
 
     private var loadJob: Job? = null
 
@@ -53,7 +53,6 @@ class HeroViewModel(
     }
 
     fun loadData() {
-        if (loadJob?.isActive == true) return
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
             _state.update { it.copy(isLoading = true, criticalError = null, actionError = null) }
@@ -89,7 +88,7 @@ class HeroViewModel(
 
                     overdue.dataOrNull()?.let {
                         if (it.overdueCount > 0) {
-                            _events.emit(UiEvent.ShowSnackbar(it.message))
+                            _events.send(UiEvent.ShowSnackbar(it.message))
                         }
                     }
                     overdue.errorOrNull()?.let {
@@ -110,7 +109,7 @@ class HeroViewModel(
                     ?.let { result ->
                         applySnapshot(result.heroSnapshot)
                         refreshTasks()
-                        _events.emit(UiEvent.TaskCompleted(result))
+                        _events.send(UiEvent.TaskCompleted(result))
                     }
             } finally {
                 _state.update { it.copy(isActionLoading = false) }
@@ -126,7 +125,7 @@ class HeroViewModel(
                     ?.let { result ->
                         applySnapshot(result.heroSnapshot)
                         refreshTasks()
-                        _events.emit(UiEvent.TaskFailed(result))
+                        _events.send(UiEvent.TaskFailed(result))
                     }
             } finally {
                 _state.update { it.copy(isActionLoading = false) }
@@ -135,15 +134,17 @@ class HeroViewModel(
     }
 
     fun createTask(params: CreateTaskParams) {
+        val id = heroId ?: return
+        val paramsWithHero = params.copy(heroId = id)
         viewModelScope.launch {
             _state.update { it.copy(isActionLoading = true, actionError = null) }
             try {
-                executeAction { taskRepo.createTask(params) }
+                executeAction { taskRepo.createTask(paramsWithHero) }
                     ?.let { task ->
                         _state.update { current ->
                             current.copy(tasks = current.tasks + task.toUi())
                         }
-                        _events.emit(UiEvent.ShowSnackbar("Task '${task.title}' created!"))
+                        _events.send(UiEvent.ShowSnackbar("Task '${task.title}' created!"))
                     }
             } finally {
                 _state.update { it.copy(isActionLoading = false) }
@@ -184,7 +185,7 @@ class HeroViewModel(
                                 recoveryMultiplier = result.recoveryMultiplier,
                             )
                         }
-                        _events.emit(
+                        _events.send(
                             UiEvent.HeroRespawned(
                                 message = result.message,
                                 recoveryEndsAt = result.recoveryEndsAt,
@@ -211,7 +212,7 @@ class HeroViewModel(
                                 gold = result.newGold,
                             )
                         }
-                        _events.emit(UiEvent.HeroHealed(result.message))
+                        _events.send(UiEvent.HeroHealed(result.message))
                     }
             } finally {
                 _state.update { it.copy(isActionLoading = false) }
@@ -256,18 +257,12 @@ class HeroViewModel(
     }
 
     private suspend fun <T> executeAction(
-        isCritical: Boolean = false,
         action: suspend () -> DomainResult<T>,
     ): T? {
         return safeCall(action).fold(
             onSuccess = { it },
             onFailure = { error ->
-                val uiError = error.toUiError()
-                if (isCritical) {
-                    _state.update { it.copy(isLoading = false, criticalError = uiError) }
-                } else {
-                    _state.update { it.copy(actionError = uiError) }
-                }
+                _state.update { it.copy(actionError = error.toUiError()) }
                 null
             },
         )
@@ -303,7 +298,12 @@ class HeroViewModel(
         block()
     } catch (e: CancellationException) { throw e }
       catch (e: java.io.IOException) {
-         Timber.w(e, "Network exception in safeCall")
-         DomainResult.Failure(GameError.Network)
+        Timber.w(e, "Network exception")
+        DomainResult.Failure(GameError.Network)
+    }
+      catch (e: Exception) {
+        Timber.e(e, "Unexpected exception in safeCall")
+        if (BuildConfig.DEBUG) throw e
+        DomainResult.Failure(GameError.Unknown(e.message ?: "Unexpected error"))
     }
 }
