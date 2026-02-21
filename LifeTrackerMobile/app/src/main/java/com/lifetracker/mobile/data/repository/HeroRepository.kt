@@ -1,13 +1,11 @@
 package com.lifetracker.mobile.data.repository
 
-import com.lifetracker.mobile.core.network.NetworkResult
 import com.lifetracker.mobile.core.network.SafeApiCaller
 import com.lifetracker.mobile.core.network.map
 import com.lifetracker.mobile.data.mapper.toDomain
 import com.lifetracker.mobile.data.mapper.toDomainResult
 import com.lifetracker.mobile.data.remote.LifeTrackerApi
 import com.lifetracker.mobile.data.remote.dto.CreateHeroRequest
-import com.lifetracker.mobile.data.remote.dto.HeroUpdateBody
 import com.lifetracker.mobile.domain.model.DomainResult
 import com.lifetracker.mobile.domain.model.HealResult
 import com.lifetracker.mobile.domain.model.HeroDomain

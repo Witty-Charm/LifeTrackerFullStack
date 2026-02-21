@@ -49,7 +49,7 @@ class HeroViewModel(
     fun loadData() {
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
-            _state.update { it.copy(isLoading = true, actionError = null) }
+            _state.update { it.copy(isLoading = true, criticalError = null, actionError = null) }
 
             val hero = fetchHero() ?: run {
                 _state.update { it.copy(isLoading = false) }
@@ -69,7 +69,7 @@ class HeroViewModel(
                     hero = hero.toUi(),
                     tasks = newTasks,
                     isLoading = false,
-                    criticalError = error,
+                    actionError = error,
                 )
             }
 
@@ -129,7 +129,7 @@ class HeroViewModel(
                         _state.update { current ->
                             current.copy(tasks = current.tasks + task.toUi())
                         }
-                        _events.send(UiEvent.ShowSnackbar("Task '\${task.title}' created!"))
+                        _events.send(UiEvent.ShowSnackbar("Task '${task.title}' created!"))
                     }
             } finally {
                 _state.update { it.copy(isActionLoading = false) }
@@ -142,7 +142,7 @@ class HeroViewModel(
             _state.update { it.copy(isActionLoading = true, actionError = null) }
             try {
                 executeAction { taskRepo.deleteTask(taskId) }
-                    ?.let { task ->
+                    ?.let {
                         _state.update { current ->
                             current.copy(tasks = current.tasks.filter { it.id != taskId })
                         }
