@@ -42,10 +42,6 @@ class HeroRepository(
         }.map { it.toDomain() }
             .toDomainResult()
 
-    suspend fun updateHero(body: HeroUpdateBody): DomainResult<Unit> =
-        caller.safeApiCallUnit { api.updateHero(body.id, body) }
-            .toDomainResult()
-
     suspend fun getHeroStats(heroId: Int): DomainResult<HeroStatsDomain> =
         caller.safeApiCall { api.getHeroStats(heroId) }
             .map { it.toDomain() }

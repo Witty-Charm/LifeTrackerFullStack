@@ -49,7 +49,7 @@ class HeroViewModel(
     fun loadData() {
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
-            _state.update { it.copy(isLoading = true, criticalError = null) }
+            _state.update { it.copy(isLoading = true, actionError = null) }
 
             val hero = fetchHero() ?: run {
                 _state.update { it.copy(isLoading = false) }
@@ -78,6 +78,9 @@ class HeroViewModel(
                     _events.send(UiEvent.ShowSnackbar(it.message))
                     refreshTasks()
                 }
+            }
+            overdue.errorOrNull()?.let {
+                Timber.w("checkOverdueTasks failed: $it")
             }
         }
     }

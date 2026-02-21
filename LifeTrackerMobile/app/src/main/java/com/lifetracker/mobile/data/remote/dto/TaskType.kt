@@ -1,6 +1,5 @@
 package com.lifetracker.mobile.data.remote.dto
 
-import com.lifetracker.mobile.domain.model.GameError
 import kotlinx.serialization.*
 import kotlinx.serialization.descriptors.*
 import kotlinx.serialization.encoding.*

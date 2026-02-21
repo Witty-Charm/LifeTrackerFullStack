@@ -16,6 +16,7 @@ fun TaskDifficultyDto.toDomain(): TaskDifficulty = when (this) {
     TaskDifficultyDto.Medium -> TaskDifficulty.Medium
     TaskDifficultyDto.Hard   -> TaskDifficulty.Hard
     TaskDifficultyDto.Epic   -> TaskDifficulty.Epic
+    TaskDifficultyDto.Unknown -> TaskDifficulty.Unknown
 }
 
 fun TaskType.toDto(): TaskTypeDto = when (this) {
@@ -29,4 +30,5 @@ fun TaskDifficulty.toDto(): TaskDifficultyDto = when (this) {
     TaskDifficulty.Medium -> TaskDifficultyDto.Medium
     TaskDifficulty.Hard   -> TaskDifficultyDto.Hard
     TaskDifficulty.Epic   -> TaskDifficultyDto.Epic
+    TaskDifficulty.Unknown -> TaskDifficultyDto.Unknown
 }
