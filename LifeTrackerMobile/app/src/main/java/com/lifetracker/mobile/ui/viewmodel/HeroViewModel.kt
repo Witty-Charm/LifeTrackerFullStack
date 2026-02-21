@@ -12,6 +12,8 @@ import com.lifetracker.mobile.domain.model.HeroSnapshot
 import com.lifetracker.mobile.domain.model.dataOrNull
 import com.lifetracker.mobile.domain.model.errorOrNull
 import com.lifetracker.mobile.domain.model.fold
+import com.lifetracker.mobile.domain.model.onFailure
+import com.lifetracker.mobile.domain.model.onSuccess
 import com.lifetracker.mobile.ui.mapper.toUi
 import com.lifetracker.mobile.ui.mapper.toUiError
 import com.lifetracker.mobile.ui.model.HeroScreenState
@@ -27,6 +29,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.supervisorScope
 import timber.log.Timber
 
 class HeroViewModel(
@@ -56,31 +59,33 @@ class HeroViewModel(
                 return@launch
             }
 
-            val tasksResult = async { safeCall { taskRepo.getTasks(hero.id) } }
-            val overdueResult = async { safeCall { taskRepo.checkOverdueTasks(hero.id) } }
-            val tasks = tasksResult.await()
-            val overdue = overdueResult.await()
+            supervisorScope {
+                val tasksResult = async { safeCall { taskRepo.getTasks(hero.id) } }
+                val overdueResult = async { safeCall { taskRepo.checkOverdueTasks(hero.id) } }
+                val tasks = tasksResult.await()
+                val overdue = overdueResult.await()
 
-            _state.update { current ->
-                val newTasks = tasks.dataOrNull()?.map { it.toUi() } ?: current.tasks
-                val error = tasks.errorOrNull()?.toUiError()
-                current.copy(
-                    heroDomain = hero,
-                    hero = hero.toUi(),
-                    tasks = newTasks,
-                    isLoading = false,
-                    actionError = error,
-                )
-            }
-
-            overdue.dataOrNull()?.let {
-                if (it.overdueCount > 0) {
-                    _events.send(UiEvent.ShowSnackbar(it.message))
-                    refreshTasks()
+                _state.update { current ->
+                    val newTasks = tasks.dataOrNull()?.map { it.toUi() } ?: current.tasks
+                    val error = tasks.errorOrNull()?.toUiError()
+                    current.copy(
+                        heroDomain = hero,
+                        hero = hero.toUi(),
+                        tasks = newTasks,
+                        isLoading = false,
+                        actionError = error,
+                    )
                 }
-            }
-            overdue.errorOrNull()?.let {
-                Timber.w("checkOverdueTasks failed: $it")
+
+                overdue.dataOrNull()?.let {
+                    if (it.overdueCount > 0) {
+                        _events.send(UiEvent.ShowSnackbar(it.message))
+                        refreshTasks()
+                    }
+                }
+                overdue.errorOrNull()?.let {
+                    Timber.w("checkOverdueTasks failed: $it")
+                }
             }
         }
     }
@@ -225,6 +230,9 @@ class HeroViewModel(
                 currentHp = snapshot.currentHp,
                 maxHp = snapshot.maxHp,
                 gold = snapshot.gold,
+                isDead = snapshot.isDead,
+                isInRecovery = snapshot.isInRecovery,
+                recoveryMultiplier = snapshot.recoveryMultiplier,
                 deathCount = snapshot.deathCount,
                 dailyCompletions = snapshot.dailyCompletions,
                 dailyCompletionsMax = snapshot.dailyCompletionsMax,
@@ -234,10 +242,11 @@ class HeroViewModel(
 
     private suspend fun refreshTasks() {
         val heroId = _state.value.heroDomain?.id ?: return
-        executeAction { taskRepo.getTasks(heroId) }
-            ?.let { data ->
+        safeCall { taskRepo.getTasks(heroId) }
+            .onSuccess { data ->
                 _state.update { it.copy(tasks = data.map { t -> t.toUi() }) }
             }
+            .onFailure { Timber.w("Background task refresh failed: $it") }
     }
 
     private suspend fun <T> executeAction(
@@ -287,8 +296,8 @@ class HeroViewModel(
     ): DomainResult<T> = try {
         block()
     } catch (e: CancellationException) { throw e }
-      catch (e: Exception) {
-        Timber.e(e, "Unhandled exception")
-        DomainResult.Failure(GameError.Network)
+      catch (e: java.io.IOException) {
+         Timber.w(e, "Network exception in safeCall")
+         DomainResult.Failure(GameError.Network)
     }
 }
