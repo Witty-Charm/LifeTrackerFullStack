@@ -14,7 +14,7 @@ import com.lifetracker.mobile.domain.model.fold
 import com.lifetracker.mobile.domain.model.onFailure
 import com.lifetracker.mobile.domain.model.onSuccess
 import com.lifetracker.mobile.domain.repository.HeroRepository
-import com.lifetracker.mobile.domain.repository.TaskRepository
+import com.lifetracker.mobile.domain.usecase.TaskUseCases
 import com.lifetracker.mobile.ui.mapper.toUi
 import com.lifetracker.mobile.ui.mapper.toUiError
 import com.lifetracker.mobile.ui.model.HeroScreenState
@@ -34,7 +34,7 @@ import timber.log.Timber
 
 class HeroViewModel(
     private val heroRepo: HeroRepository,
-    private val taskRepo: TaskRepository,
+    private val taskUseCases: TaskUseCases
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(HeroScreenState())
@@ -66,14 +66,14 @@ class HeroViewModel(
                 supervisorScope {
                     heroDomain = hero
 
-                    val tasksDefered = async { safeCall { taskRepo.getTasks(hero.id) } }
-                    val overdueDefered = async { safeCall { taskRepo.checkOverdueTasks(hero.id) } }
+                    val tasksDefered = async { safeCall { taskUseCases.getTasks(hero.id) } }
+                    val overdueDefered = async { safeCall { taskUseCases.checkOverdue(hero.id) } }
                     val overdue = overdueDefered.await()
                     val hasOverdue = overdue.dataOrNull()?.let { it.overdueCount > 0 } == true
 
                     val tasks = if (hasOverdue) {
                         tasksDefered.cancel()
-                        safeCall { taskRepo.getTasks(hero.id) }
+                        safeCall { taskUseCases.getTasks(hero.id) }
                     } else {
                         tasksDefered.await()
                     }
@@ -105,7 +105,7 @@ class HeroViewModel(
         viewModelScope.launch {
             _state.update { it.copy(isActionLoading = true, actionError = null) }
             try {
-                executeAction { taskRepo.completeTask(taskId) }
+                executeAction { taskUseCases.completeTask(taskId) }
                     ?.let { result ->
                         applySnapshot(result.heroSnapshot)
                         refreshTasks()
@@ -121,7 +121,7 @@ class HeroViewModel(
         viewModelScope.launch {
             _state.update { it.copy(isActionLoading = true, actionError = null) }
             try {
-                executeAction { taskRepo.failTask(taskId) }
+                executeAction { taskUseCases.failTask(taskId) }
                     ?.let { result ->
                         applySnapshot(result.heroSnapshot)
                         refreshTasks()
@@ -139,7 +139,7 @@ class HeroViewModel(
         viewModelScope.launch {
             _state.update { it.copy(isActionLoading = true, actionError = null) }
             try {
-                executeAction { taskRepo.createTask(paramsWithHero) }
+                executeAction { taskUseCases.createTask(paramsWithHero) }
                     ?.let { task ->
                         _state.update { current ->
                             current.copy(tasks = current.tasks + task.toUi())
@@ -156,7 +156,7 @@ class HeroViewModel(
         viewModelScope.launch {
             _state.update { it.copy(isActionLoading = true, actionError = null) }
             try {
-                executeAction { taskRepo.deleteTask(taskId) }
+                executeAction { taskUseCases.deleteTask(taskId) }
                     ?.let {
                         _state.update { current ->
                             current.copy(tasks = current.tasks.filter { it.id != taskId })
@@ -249,7 +249,7 @@ class HeroViewModel(
 
     private suspend fun refreshTasks() {
         val id = heroId ?: return
-        safeCall { taskRepo.getTasks(id) }
+        safeCall { taskUseCases.getTasks(id) }
             .onSuccess { data ->
                 _state.update { it.copy(tasks = data.map { t -> t.toUi() }) }
             }
