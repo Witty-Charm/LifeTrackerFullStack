@@ -1,6 +1,5 @@
 package com.lifetracker.mobile.ui.model
 
-import com.lifetracker.mobile.domain.model.HeroDomain
 import com.lifetracker.mobile.domain.model.TaskCompletionResult
 import com.lifetracker.mobile.domain.model.TaskDifficulty
 import com.lifetracker.mobile.domain.model.TaskFailureResult
@@ -8,7 +7,6 @@ import com.lifetracker.mobile.domain.model.TaskType
 import kotlin.time.Instant
 
 data class HeroScreenState(
-    val heroDomain: HeroDomain? = null,
     val hero: HeroUi? = null,
     val tasks: List<TaskUi> = emptyList(),
     val isLoading: Boolean = false,

@@ -39,8 +39,6 @@ data class HeroSnapshot(
     val dailyCompletions: Int,
     val dailyCompletionsMax: Int,
     val isDead: Boolean,
-    val isInRecovery: Boolean,
-    val recoveryMultiplier: Double,
 )
 
 data class StreakPenaltyInfo(

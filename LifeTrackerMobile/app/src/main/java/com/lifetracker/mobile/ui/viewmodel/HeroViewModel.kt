@@ -32,7 +32,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
 import timber.log.Timber
 
-class   HeroViewModel(
+class HeroViewModel(
     private val heroRepo: HeroRepository,
     private val taskRepo: TaskRepository,
 ) : ViewModel() {
@@ -44,6 +44,9 @@ class   HeroViewModel(
     val events: Flow<UiEvent> = _events.receiveAsFlow()
 
     private var loadJob: Job? = null
+
+    private var heroDomain: HeroDomain? = null
+    private val heroId: Int? get() = heroDomain?.id
 
     init {
         loadData()
@@ -59,33 +62,41 @@ class   HeroViewModel(
                 return@launch
             }
 
-            supervisorScope {
-                val tasksResult = async { safeCall { taskRepo.getTasks(hero.id) } }
-                val overdueResult = async { safeCall { taskRepo.checkOverdueTasks(hero.id) } }
-                val tasks = tasksResult.await()
-                val overdue = overdueResult.await()
+            try {
+                supervisorScope {
+                    heroDomain = hero
 
-                _state.update { current ->
-                    val newTasks = tasks.dataOrNull()?.map { it.toUi() } ?: current.tasks
-                    val error = tasks.errorOrNull()?.toUiError()
-                    current.copy(
-                        heroDomain = hero,
-                        hero = hero.toUi(),
-                        tasks = newTasks,
-                        isLoading = false,
-                        actionError = error,
-                    )
-                }
+                    val tasksDefered = async { safeCall { taskRepo.getTasks(hero.id) } }
+                    val overdueDefered = async { safeCall { taskRepo.checkOverdueTasks(hero.id) } }
+                    val overdue = overdueDefered.await()
+                    val hasOverdue = overdue.dataOrNull()?.let { it.overdueCount > 0 } == true
 
-                overdue.dataOrNull()?.let {
-                    if (it.overdueCount > 0) {
-                        _events.send(UiEvent.ShowSnackbar(it.message))
-                        refreshTasks()
+                    val tasks = if (hasOverdue) {
+                        tasksDefered.cancel()
+                        safeCall { taskRepo.getTasks(hero.id) }
+                    } else {
+                        tasksDefered.await()
+                    }
+
+                    _state.update { current ->
+                        current.copy(
+                            hero = hero.toUi(),
+                            tasks = tasks.dataOrNull()?.map { it.toUi() } ?: current.tasks,
+                            actionError = tasks.errorOrNull()?.toUiError(),
+                        )
+                    }
+
+                    overdue.dataOrNull()?.let {
+                        if (it.overdueCount > 0) {
+                            _events.send(UiEvent.ShowSnackbar(it.message))
+                        }
+                    }
+                    overdue.errorOrNull()?.let {
+                        Timber.w("checkOverdueTasks failed: $it")
                     }
                 }
-                overdue.errorOrNull()?.let {
-                    Timber.w("checkOverdueTasks failed: $it")
-                }
+            } finally {
+                _state.update { it.copy(isLoading = false) }
             }
         }
     }
@@ -113,9 +124,6 @@ class   HeroViewModel(
                 executeAction { taskRepo.failTask(taskId) }
                     ?.let { result ->
                         applySnapshot(result.heroSnapshot)
-                        if (result.heroDied) {
-                            updateHero { copy(isDead = true) }
-                        }
                         refreshTasks()
                         _events.send(UiEvent.TaskFailed(result))
                     }
@@ -159,11 +167,11 @@ class   HeroViewModel(
     }
 
     fun respawnHero() {
-        val heroId = _state.value.heroDomain?.id ?: return
+        val id = heroId ?: return
         viewModelScope.launch {
             _state.update { it.copy(isActionLoading = true, actionError = null) }
             try {
-                executeAction { heroRepo.respawnHero(heroId) }
+                executeAction { heroRepo.respawnHero(id) }
                     ?.let { result ->
                         updateHero {
                             copy(
@@ -189,11 +197,11 @@ class   HeroViewModel(
     }
 
     fun healHero(amount: Int? = null) {
-        val heroId = _state.value.heroDomain?.id ?: return
+        val id = heroId ?: return
         viewModelScope.launch {
             _state.update { it.copy(isActionLoading = true, actionError = null) }
             try {
-                executeAction { heroRepo.healHero(heroId, amount) }
+                executeAction { heroRepo.healHero(id, amount) }
                     ?.let { result ->
                         updateHero {
                             copy(
@@ -215,10 +223,9 @@ class   HeroViewModel(
     }
 
     private fun updateHero(transform: HeroDomain.() -> HeroDomain) {
-        _state.update { current ->
-            val updated = current.heroDomain?.transform()
-            current.copy(heroDomain = updated, hero = updated?.toUi())
-        }
+        val updated = heroDomain?.transform() ?: return
+        heroDomain = updated
+        _state.update { it.copy(hero = updated.toUi()) }
     }
 
     private fun applySnapshot(snapshot: HeroSnapshot) {
@@ -231,8 +238,6 @@ class   HeroViewModel(
                 maxHp = snapshot.maxHp,
                 gold = snapshot.gold,
                 isDead = snapshot.isDead,
-                isInRecovery = snapshot.isInRecovery,
-                recoveryMultiplier = snapshot.recoveryMultiplier,
                 deathCount = snapshot.deathCount,
                 dailyCompletions = snapshot.dailyCompletions,
                 dailyCompletionsMax = snapshot.dailyCompletionsMax,
@@ -241,8 +246,8 @@ class   HeroViewModel(
     }
 
     private suspend fun refreshTasks() {
-        val heroId = _state.value.heroDomain?.id ?: return
-        safeCall { taskRepo.getTasks(heroId) }
+        val id = heroId ?: return
+        safeCall { taskRepo.getTasks(id) }
             .onSuccess { data ->
                 _state.update { it.copy(tasks = data.map { t -> t.toUi() }) }
             }
