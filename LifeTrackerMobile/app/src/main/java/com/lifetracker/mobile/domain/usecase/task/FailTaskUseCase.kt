@@ -1,4 +1,4 @@
-package com.lifetracker.mobile.domain.usecase
+package com.lifetracker.mobile.domain.usecase.task
 
 import com.lifetracker.mobile.domain.model.DomainResult
 import com.lifetracker.mobile.domain.model.TaskFailureResult

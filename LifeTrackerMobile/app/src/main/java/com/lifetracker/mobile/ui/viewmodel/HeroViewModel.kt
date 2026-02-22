@@ -2,7 +2,6 @@ package com.lifetracker.mobile.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.lifetracker.mobile.BuildConfig
 import com.lifetracker.mobile.domain.model.CreateTaskParams
 import com.lifetracker.mobile.domain.model.DomainResult
 import com.lifetracker.mobile.domain.model.GameError
@@ -13,8 +12,8 @@ import com.lifetracker.mobile.domain.model.errorOrNull
 import com.lifetracker.mobile.domain.model.fold
 import com.lifetracker.mobile.domain.model.onFailure
 import com.lifetracker.mobile.domain.model.onSuccess
-import com.lifetracker.mobile.domain.usecase.HeroUseCases
-import com.lifetracker.mobile.domain.usecase.TaskUseCases
+import com.lifetracker.mobile.domain.usecase.hero.HeroUseCases
+import com.lifetracker.mobile.domain.usecase.task.TaskUseCases
 import com.lifetracker.mobile.ui.mapper.toUi
 import com.lifetracker.mobile.ui.mapper.toUiError
 import com.lifetracker.mobile.ui.model.HeroScreenState

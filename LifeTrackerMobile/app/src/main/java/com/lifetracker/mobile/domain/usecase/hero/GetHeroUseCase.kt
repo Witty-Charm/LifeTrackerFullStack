@@ -1,12 +1,12 @@
-package com.lifetracker.mobile.domain.usecase
+package com.lifetracker.mobile.domain.usecase.hero
 
 import com.lifetracker.mobile.domain.model.DomainResult
 import com.lifetracker.mobile.domain.model.HeroDomain
 import com.lifetracker.mobile.domain.repository.HeroRepository
 
-class GetFirstHeroUseCase(
+class GetHeroUseCase(
     private val repository: HeroRepository
 ) {
-    suspend operator fun invoke(): DomainResult<HeroDomain?> =
-        repository.getFirstHero()
+    suspend operator fun invoke(id: Int): DomainResult<HeroDomain> =
+        repository.getHero(id)
 }

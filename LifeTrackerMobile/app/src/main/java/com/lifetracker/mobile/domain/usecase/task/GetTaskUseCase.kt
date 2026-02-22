@@ -1,12 +1,12 @@
-package com.lifetracker.mobile.domain.usecase
+package com.lifetracker.mobile.domain.usecase.task
 
 import com.lifetracker.mobile.domain.model.DomainResult
 import com.lifetracker.mobile.domain.model.GameTaskDomain
 import com.lifetracker.mobile.domain.repository.TaskRepository
 
-class GetTasksUseCase(
+class GetTaskUseCase(
     private val repository: TaskRepository
 ) {
-    suspend operator fun invoke(heroId: Int): DomainResult<List<GameTaskDomain>> =
-        repository.getTasks(heroId)
+    suspend operator fun invoke(id: Int): DomainResult<GameTaskDomain> =
+        repository.getTask(id)
 }

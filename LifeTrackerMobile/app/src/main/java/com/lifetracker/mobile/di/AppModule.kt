@@ -7,8 +7,8 @@ import com.lifetracker.mobile.data.repository.HeroRepositoryImpl
 import com.lifetracker.mobile.data.repository.TaskRepositoryImpl
 import com.lifetracker.mobile.domain.repository.HeroRepository
 import com.lifetracker.mobile.domain.repository.TaskRepository
-import com.lifetracker.mobile.domain.usecase.HeroUseCases
-import com.lifetracker.mobile.domain.usecase.TaskUseCases
+import com.lifetracker.mobile.domain.usecase.hero.HeroUseCases
+import com.lifetracker.mobile.domain.usecase.task.TaskUseCases
 import com.lifetracker.mobile.ui.viewmodel.HeroViewModel
 import kotlinx.serialization.json.Json
 import org.koin.core.module.dsl.viewModel

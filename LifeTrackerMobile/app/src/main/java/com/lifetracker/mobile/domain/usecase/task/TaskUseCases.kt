@@ -1,4 +1,4 @@
-package com.lifetracker.mobile.domain.usecase
+package com.lifetracker.mobile.domain.usecase.task
 
 data class TaskUseCases(
     val getTasks: GetTasksUseCase,

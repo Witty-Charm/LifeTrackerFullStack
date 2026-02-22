@@ -1,4 +1,4 @@
-package com.lifetracker.mobile.domain.usecase
+package com.lifetracker.mobile.domain.usecase.hero
 
 data class HeroUseCases(
     val getHeroes: GetHeroesUseCase,
