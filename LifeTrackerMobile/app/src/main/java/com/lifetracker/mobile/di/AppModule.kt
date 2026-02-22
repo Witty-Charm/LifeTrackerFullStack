@@ -7,7 +7,21 @@ import com.lifetracker.mobile.data.repository.HeroRepositoryImpl
 import com.lifetracker.mobile.data.repository.TaskRepositoryImpl
 import com.lifetracker.mobile.domain.repository.HeroRepository
 import com.lifetracker.mobile.domain.repository.TaskRepository
+import com.lifetracker.mobile.domain.usecase.hero.CreateHeroUseCase
+import com.lifetracker.mobile.domain.usecase.hero.GetFirstHeroUseCase
+import com.lifetracker.mobile.domain.usecase.hero.GetHeroStatsUseCase
+import com.lifetracker.mobile.domain.usecase.hero.GetHeroUseCase
+import com.lifetracker.mobile.domain.usecase.hero.GetHeroesUseCase
+import com.lifetracker.mobile.domain.usecase.hero.HealHeroUseCase
 import com.lifetracker.mobile.domain.usecase.hero.HeroUseCases
+import com.lifetracker.mobile.domain.usecase.hero.RespawnHeroUseCase
+import com.lifetracker.mobile.domain.usecase.task.CheckOverdueTasksUseCase
+import com.lifetracker.mobile.domain.usecase.task.CompleteTaskUseCase
+import com.lifetracker.mobile.domain.usecase.task.CreateTaskUseCase
+import com.lifetracker.mobile.domain.usecase.task.DeleteTaskUseCase
+import com.lifetracker.mobile.domain.usecase.task.FailTaskUseCase
+import com.lifetracker.mobile.domain.usecase.task.GetTaskUseCase
+import com.lifetracker.mobile.domain.usecase.task.GetTasksUseCase
 import com.lifetracker.mobile.domain.usecase.task.TaskUseCases
 import com.lifetracker.mobile.ui.viewmodel.HeroViewModel
 import kotlinx.serialization.json.Json
@@ -36,25 +50,27 @@ val appModule = module {
         )
     }
     factory {
+        val heroRepo: HeroRepository = get()
         HeroUseCases(
-            getHeroes = get(),
-            getHero = get(),
-            getFirstHero = get(),
-            createHero = get(),
-            getHeroStats = get(),
-            respawnHero = get(),
-            healHero = get()
+            getHeroes = GetHeroesUseCase(heroRepo),
+            getHero = GetHeroUseCase(heroRepo),
+            getFirstHero = GetFirstHeroUseCase(heroRepo),
+            createHero = CreateHeroUseCase(heroRepo),
+            getHeroStats = GetHeroStatsUseCase(heroRepo),
+            respawnHero = RespawnHeroUseCase(heroRepo),
+            healHero = HealHeroUseCase(heroRepo),
         )
     }
     factory {
+        val taskRepo: TaskRepository = get()
         TaskUseCases(
-            getTask = get(),
-            getTasks = get(),
-            completeTask = get(),
-            createTask = get(),
-            failTask = get(),
-            deleteTask = get(),
-            checkOverdue = get()
+            getTask = GetTaskUseCase(taskRepo),
+            getTasks = GetTasksUseCase(taskRepo),
+            completeTask = CompleteTaskUseCase(taskRepo),
+            createTask = CreateTaskUseCase(taskRepo),
+            failTask = FailTaskUseCase(taskRepo),
+            deleteTask = DeleteTaskUseCase(taskRepo),
+            checkOverdue = CheckOverdueTasksUseCase(taskRepo),
         )
     }
 }

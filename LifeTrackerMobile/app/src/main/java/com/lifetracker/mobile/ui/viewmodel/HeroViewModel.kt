@@ -20,7 +20,6 @@ import com.lifetracker.mobile.ui.model.HeroScreenState
 import com.lifetracker.mobile.ui.model.UiEvent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -28,7 +27,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.supervisorScope
 import timber.log.Timber
 
 class HeroViewModel(
@@ -58,24 +56,15 @@ class HeroViewModel(
             _state.update { it.copy(isLoading = true, criticalError = null, actionError = null) }
 
             val hero = fetchHero() ?: run {
+                _state.update { it.copy(isLoading = false) }
                 return@launch
             }
 
             try {
-                supervisorScope {
                     heroDomain = hero
 
-                    val tasksDefered = async { safeCall { taskUseCases.getTasks(hero.id) } }
-                    val overdueDefered = async { safeCall { taskUseCases.checkOverdue(hero.id) } }
-                    val overdue = overdueDefered.await()
-                    val hasOverdue = overdue.dataOrNull()?.let { it.overdueCount > 0 } == true
-
-                    val tasks = if (hasOverdue) {
-                        tasksDefered.cancel()
-                        safeCall { taskUseCases.getTasks(hero.id) }
-                    } else {
-                        tasksDefered.await()
-                    }
+                    val overdue = safeCall { taskUseCases.checkOverdue(hero.id) }
+                    val tasks = safeCall { taskUseCases.getTasks(hero.id) }
 
                     _state.update { current ->
                         current.copy(
@@ -84,7 +73,6 @@ class HeroViewModel(
                             actionError = tasks.errorOrNull()?.toUiError(),
                         )
                     }
-
                     overdue.dataOrNull()?.let {
                         if (it.overdueCount > 0) {
                             _events.send(UiEvent.ShowSnackbar(it.message))
@@ -93,7 +81,7 @@ class HeroViewModel(
                     overdue.errorOrNull()?.let {
                         Timber.w("checkOverdueTasks failed: $it")
                     }
-                }
+
             } finally {
                 _state.update { it.copy(isLoading = false) }
             }
@@ -271,15 +259,14 @@ class HeroViewModel(
         val result = safeCall { heroUseCases.getFirstHero() }
         return result.fold(
             onSuccess = { hero ->
-                if (hero != null) {
-                    hero
-                } else {
+                if (hero != null) hero
+                    else {
                     _state.update { it.copy(needsHeroCreation = true) }
                     null
                 }
             },
             onFailure = { error ->
-                _state.update { it.copy(isLoading = false, criticalError = error.toUiError()) }
+                _state.update { it.copy(criticalError = error.toUiError()) }
                 null
             },
         )

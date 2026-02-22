@@ -5,7 +5,6 @@ import com.lifetracker.mobile.data.remote.dto.FailTaskResponse
 import com.lifetracker.mobile.data.remote.dto.OverdueCheckResponse
 import com.lifetracker.mobile.data.remote.dto.StreakInfoDto
 import com.lifetracker.mobile.data.remote.dto.TaskDto
-import com.lifetracker.mobile.domain.model.GameError
 import com.lifetracker.mobile.domain.model.GameTaskDomain
 import com.lifetracker.mobile.domain.model.HeroSnapshot
 import com.lifetracker.mobile.domain.model.OverduePenalty
@@ -13,9 +12,7 @@ import com.lifetracker.mobile.domain.model.OverdueResult
 import com.lifetracker.mobile.domain.model.StreakDomain
 import com.lifetracker.mobile.domain.model.StreakPenaltyInfo
 import com.lifetracker.mobile.domain.model.TaskCompletionResult
-import com.lifetracker.mobile.domain.model.TaskDifficulty
 import com.lifetracker.mobile.domain.model.TaskFailureResult
-import com.lifetracker.mobile.domain.model.TaskType
 
 fun TaskDto.toDomain(): GameTaskDomain = GameTaskDomain(
     id = id,
