@@ -6,8 +6,8 @@ import com.lifetracker.mobile.domain.model.GameTaskDomain
 import com.lifetracker.mobile.domain.repository.TaskRepository
 
 class CreateTaskUseCase(
-    private val taskRepository: TaskRepository
+    private val repository: TaskRepository
 ) {
     suspend operator fun invoke(params: CreateTaskParams): DomainResult<GameTaskDomain> =
-        taskRepository.createTask(params)
+        repository.createTask(params)
 }

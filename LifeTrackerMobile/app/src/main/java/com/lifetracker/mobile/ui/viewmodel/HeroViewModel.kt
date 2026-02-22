@@ -13,7 +13,7 @@ import com.lifetracker.mobile.domain.model.errorOrNull
 import com.lifetracker.mobile.domain.model.fold
 import com.lifetracker.mobile.domain.model.onFailure
 import com.lifetracker.mobile.domain.model.onSuccess
-import com.lifetracker.mobile.domain.repository.HeroRepository
+import com.lifetracker.mobile.domain.usecase.HeroUseCases
 import com.lifetracker.mobile.domain.usecase.TaskUseCases
 import com.lifetracker.mobile.ui.mapper.toUi
 import com.lifetracker.mobile.ui.mapper.toUiError
@@ -33,8 +33,9 @@ import kotlinx.coroutines.supervisorScope
 import timber.log.Timber
 
 class HeroViewModel(
-    private val heroRepo: HeroRepository,
-    private val taskUseCases: TaskUseCases
+    private val heroUseCases: HeroUseCases,
+    private val taskUseCases: TaskUseCases,
+    private val isDebug: Boolean = false,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(HeroScreenState())
@@ -58,7 +59,6 @@ class HeroViewModel(
             _state.update { it.copy(isLoading = true, criticalError = null, actionError = null) }
 
             val hero = fetchHero() ?: run {
-                _state.update { it.copy(isLoading = false) }
                 return@launch
             }
 
@@ -173,7 +173,7 @@ class HeroViewModel(
         viewModelScope.launch {
             _state.update { it.copy(isActionLoading = true, actionError = null) }
             try {
-                executeAction { heroRepo.respawnHero(id) }
+                executeAction { heroUseCases.respawnHero(id) }
                     ?.let { result ->
                         updateHero {
                             copy(
@@ -203,7 +203,7 @@ class HeroViewModel(
         viewModelScope.launch {
             _state.update { it.copy(isActionLoading = true, actionError = null) }
             try {
-                executeAction { heroRepo.healHero(id, amount) }
+                executeAction { heroUseCases.healHero(id, amount) }
                     ?.let { result ->
                         updateHero {
                             copy(
@@ -269,7 +269,7 @@ class HeroViewModel(
     }
 
     private suspend fun fetchHero(): HeroDomain? {
-        val result = safeCall { heroRepo.getFirstHero() }
+        val result = safeCall { heroUseCases.getFirstHero() }
         return result.fold(
             onSuccess = { hero ->
                 if (hero != null) {
@@ -280,7 +280,7 @@ class HeroViewModel(
                 }
             },
             onFailure = { error ->
-                _state.update { it.copy(criticalError = error.toUiError()) }
+                _state.update { it.copy(isLoading = false, criticalError = error.toUiError()) }
                 null
             },
         )
@@ -297,7 +297,7 @@ class HeroViewModel(
     }
       catch (e: Exception) {
         Timber.e(e, "Unexpected exception in safeCall")
-        if (BuildConfig.DEBUG) throw e
+        if (isDebug) throw e
         DomainResult.Failure(GameError.Unknown(e.message ?: "Unexpected error"))
     }
 }

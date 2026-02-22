@@ -5,8 +5,8 @@ import com.lifetracker.mobile.domain.model.OverdueResult
 import com.lifetracker.mobile.domain.repository.TaskRepository
 
 class CheckOverdueTasksUseCase(
-    private val taskRepository: TaskRepository
+    private val repository: TaskRepository
 ) {
     suspend operator fun invoke(heroId: Int): DomainResult<OverdueResult> =
-        taskRepository.checkOverdueTasks(heroId)
+        repository.checkOverdueTasks(heroId)
 }

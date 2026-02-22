@@ -7,13 +7,7 @@ import com.lifetracker.mobile.data.repository.HeroRepositoryImpl
 import com.lifetracker.mobile.data.repository.TaskRepositoryImpl
 import com.lifetracker.mobile.domain.repository.HeroRepository
 import com.lifetracker.mobile.domain.repository.TaskRepository
-import com.lifetracker.mobile.domain.usecase.CheckOverdueTasksUseCase
-import com.lifetracker.mobile.domain.usecase.CompleteTaskUseCase
-import com.lifetracker.mobile.domain.usecase.CreateTaskUseCase
-import com.lifetracker.mobile.domain.usecase.DeleteTaskUseCase
-import com.lifetracker.mobile.domain.usecase.FailTaskUseCase
-import com.lifetracker.mobile.domain.usecase.GetTaskUseCase
-import com.lifetracker.mobile.domain.usecase.GetTasksUseCase
+import com.lifetracker.mobile.domain.usecase.HeroUseCases
 import com.lifetracker.mobile.domain.usecase.TaskUseCases
 import com.lifetracker.mobile.ui.viewmodel.HeroViewModel
 import kotlinx.serialization.json.Json
@@ -36,17 +30,31 @@ val appModule = module {
     single<TaskRepository> { TaskRepositoryImpl(api = get(), caller = get()) }
     viewModel {
         HeroViewModel(
-            heroRepo = get(),
-            taskUseCases = get()
+            heroUseCases = get(),
+            taskUseCases = get(),
+            isDebug = BuildConfig.DEBUG,
         )
     }
-    factory { TaskUseCases(
-        getTask = get(),
-        getTasks = get(),
-        completeTask = get(),
-        createTask = get(),
-        failTask = get(),
-        deleteTask = get(),
-        checkOverdue = get()
-    ) }
+    factory {
+        HeroUseCases(
+            getHeroes = get(),
+            getHero = get(),
+            getFirstHero = get(),
+            createHero = get(),
+            getHeroStats = get(),
+            respawnHero = get(),
+            healHero = get()
+        )
+    }
+    factory {
+        TaskUseCases(
+            getTask = get(),
+            getTasks = get(),
+            completeTask = get(),
+            createTask = get(),
+            failTask = get(),
+            deleteTask = get(),
+            checkOverdue = get()
+        )
+    }
 }
