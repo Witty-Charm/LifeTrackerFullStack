@@ -12,8 +12,6 @@ import com.lifetracker.mobile.domain.model.HeroDomain
 import com.lifetracker.mobile.domain.model.HeroStatsDomain
 import com.lifetracker.mobile.domain.model.RespawnResult
 import com.lifetracker.mobile.domain.repository.HeroRepository
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 class HeroRepositoryImpl(
     private val api: LifeTrackerApi,

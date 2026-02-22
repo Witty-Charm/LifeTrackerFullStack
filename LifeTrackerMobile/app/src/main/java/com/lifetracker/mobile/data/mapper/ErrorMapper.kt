@@ -3,11 +3,16 @@ package com.lifetracker.mobile.data.mapper
 import com.lifetracker.mobile.core.network.ApiError
 import com.lifetracker.mobile.domain.model.GameError
 
+private object GameErrorCodes {
+    const val HERO_DEAD = "HERO_DEAD"
+    const val HERO_ALREADY_DEAD = "HERO_ALREADY_DEAD"
+    const val DAILY_LIMIT_REACHED = "DAILY_LIMIT_REACHED"
+}
 fun ApiError.toDomain(): GameError = when (errorCode) {
-    ApiError.HERO_DEAD,
-    ApiError.HERO_ALREADY_DEAD -> GameError.HeroDead
+    GameErrorCodes.HERO_DEAD,
+    GameErrorCodes.HERO_ALREADY_DEAD -> GameError.HeroDead
 
-    ApiError.DAILY_LIMIT_REACHED -> GameError.DailyLimit(
+    GameErrorCodes.DAILY_LIMIT_REACHED -> GameError.DailyLimit(
         completions = dailyCompletions ?: 0,
         max = maxDailyCompletions ?: 0,
         resetAt = resetTime,

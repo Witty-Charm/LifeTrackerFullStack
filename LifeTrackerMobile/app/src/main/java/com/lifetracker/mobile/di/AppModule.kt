@@ -49,7 +49,7 @@ val appModule = module {
             isDebug = BuildConfig.DEBUG,
         )
     }
-    factory {
+    single {
         val heroRepo: HeroRepository = get()
         HeroUseCases(
             getHeroes = GetHeroesUseCase(heroRepo),
@@ -61,7 +61,7 @@ val appModule = module {
             healHero = HealHeroUseCase(heroRepo),
         )
     }
-    factory {
+    single  {
         val taskRepo: TaskRepository = get()
         TaskUseCases(
             getTask = GetTaskUseCase(taskRepo),

@@ -14,8 +14,6 @@ import com.lifetracker.mobile.domain.model.OverdueResult
 import com.lifetracker.mobile.domain.model.TaskCompletionResult
 import com.lifetracker.mobile.domain.model.TaskFailureResult
 import com.lifetracker.mobile.domain.repository.TaskRepository
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 class TaskRepositoryImpl(
     private val api: LifeTrackerApi,

@@ -13,10 +13,4 @@ data class ApiError(
     val dailyCompletions: Int? = null,
     val maxDailyCompletions: Int? = null,
     val resetTime: String? = null,
-) {
-    companion object {
-        const val HERO_DEAD = "HERO_DEAD"
-        const val HERO_ALREADY_DEAD = "HERO_ALREADY_DEAD"
-        const val DAILY_LIMIT_REACHED = "DAILY_LIMIT_REACHED"
-    }
-}
+)
