@@ -7,8 +7,11 @@ import com.lifetracker.mobile.ui.model.HeroStatusBadge
 import com.lifetracker.mobile.ui.model.HeroUi
 import com.lifetracker.mobile.ui.model.TaskUi
 import kotlinx.datetime.TimeZone
-import kotlinx.datetime.number
+import kotlinx.datetime.toJavaLocalDate
 import kotlinx.datetime.toLocalDateTime
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
+import java.util.Locale
 import kotlin.time.Instant
 
 fun HeroDomain.toUi(): HeroUi = HeroUi(
@@ -54,6 +57,10 @@ fun GameTaskDomain.toUi(): TaskUi = TaskUi(
 )
 
 private fun Instant.toDisplayDate(): String {
-    val ld = toLocalDateTime(TimeZone.currentSystemDefault())
-    return "%02d/%02d/%d".format(ld.month.number, ld.day, ld.year)
+    val javaDate = this.toLocalDateTime(TimeZone.currentSystemDefault()).date.toJavaLocalDate()
+
+    return DateTimeFormatter
+        .ofLocalizedDate(FormatStyle.SHORT)
+        .withLocale(Locale.getDefault())
+        .format(javaDate)
 }

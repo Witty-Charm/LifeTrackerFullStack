@@ -22,60 +22,46 @@ class TaskRepositoryImpl(
     private val caller: SafeApiCaller
 ) : TaskRepository {
     override suspend fun getTasks(heroId: Int): DomainResult<List<GameTaskDomain>> =
-        withContext(Dispatchers.IO) {
-            caller.safeApiCall { api.getTasks(heroId) }
-                .map { list -> list.map { it.toDomain() } }
-                .toDomainResult()
-        }
+        caller.safeApiCall { api.getTasks(heroId) }
+            .map { list -> list.map { it.toDomain() } }
+            .toDomainResult()
 
     override suspend fun getTask(id: Int): DomainResult<GameTaskDomain> =
-        withContext(Dispatchers.IO) {
-            caller.safeApiCall { api.getTask(id) }
-                .map { it.toDomain() }
-                .toDomainResult()
-        }
+        caller.safeApiCall { api.getTask(id) }
+            .map { it.toDomain() }
+            .toDomainResult()
 
     override suspend fun createTask(params: CreateTaskParams): DomainResult<GameTaskDomain> =
-        withContext(Dispatchers.IO) {
-            caller.safeApiCall {
-                api.createTask(
-                    CreateTaskRequest(
-                        heroId = params.heroId,
-                        title = params.title,
-                        description = params.description,
-                        type = params.type.toDto(),
-                        difficulty = params.difficulty.toDto(),
-                        dueDate = params.dueDate,
-                    )
+        caller.safeApiCall {
+            api.createTask(
+                CreateTaskRequest(
+                    heroId = params.heroId,
+                    title = params.title,
+                    description = params.description,
+                    type = params.type.toDto(),
+                    difficulty = params.difficulty.toDto(),
+                    dueDate = params.dueDate,
                 )
-            }.map { it.toDomain() }
-                .toDomainResult()
-        }
+            )
+        }.map { it.toDomain() }
+            .toDomainResult()
 
     override suspend fun completeTask(taskId: Int): DomainResult<TaskCompletionResult> =
-        withContext(Dispatchers.IO) {
-            caller.safeApiCall { api.completeTask(taskId) }
-                .map { it.toDomain() }
-                .toDomainResult()
-        }
+        caller.safeApiCall { api.completeTask(taskId) }
+            .map { it.toDomain() }
+            .toDomainResult()
 
     override suspend fun failTask(taskId: Int): DomainResult<TaskFailureResult> =
-        withContext(Dispatchers.IO) {
-            caller.safeApiCall { api.failTask(taskId) }
-                .map { it.toDomain() }
-                .toDomainResult()
-        }
+        caller.safeApiCall { api.failTask(taskId) }
+            .map { it.toDomain() }
+            .toDomainResult()
 
     override suspend fun checkOverdueTasks(heroId: Int): DomainResult<OverdueResult> =
-        withContext(Dispatchers.IO) {
-            caller.safeApiCall { api.checkOverdueTasks(heroId) }
-                .map { it.toDomain() }
-                .toDomainResult()
-        }
+        caller.safeApiCall { api.checkOverdueTasks(heroId) }
+            .map { it.toDomain() }
+            .toDomainResult()
 
     override suspend fun deleteTask(taskId: Int): DomainResult<Unit> =
-        withContext(Dispatchers.IO) {
-            caller.safeApiCallUnit { api.deleteTask(taskId) }
-                .toDomainResult()
-        }
+        caller.safeApiCallUnit { api.deleteTask(taskId) }
+            .toDomainResult()
 }

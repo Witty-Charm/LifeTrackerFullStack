@@ -7,5 +7,10 @@ import com.lifetracker.mobile.domain.model.GameError
 fun <T> NetworkResult<T>.toDomainResult(): DomainResult<T> = when (this) {
     is NetworkResult.Success -> DomainResult.Success(data)
     is NetworkResult.Error -> DomainResult.Failure(apiError.toDomain())
-    is NetworkResult.Exception -> DomainResult.Failure(GameError.Network)
+    is NetworkResult.Exception -> DomainResult.Failure(
+        when (throwable) {
+            is java.io.IOException -> GameError.Network
+            else -> GameError.Unknown(throwable.message ?: "Unexpected error")
+        }
+    )
 }
