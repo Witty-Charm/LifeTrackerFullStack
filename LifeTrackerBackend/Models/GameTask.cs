@@ -20,16 +20,16 @@ public class GameTask
     public TaskDifficulty Difficulty { get; set; } = TaskDifficulty.Easy;
 
     public bool IsActive { get; set; } = true;
-    public DateTime? DueDate { get; set; }
+    public DateTimeOffset? DueDate { get; set; }
     public string? RepeatPattern { get; set; }
 
     public bool IsCompleted { get; set; } = false;
     public int CompletionCount { get; set; } = 0;
     public int FailCount { get; set; } = 0;
 
-    public DateTime? LastCompletedAt { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public DateTimeOffset? LastCompletedAt { get; set; }
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
 
     public Hero? Hero { get; set; }
     public Streak? Streak { get; set; }

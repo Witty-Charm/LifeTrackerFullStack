@@ -137,8 +137,8 @@ public class TaskController : ControllerBase
             IsActive = true,
             CompletionCount = 0,
             FailCount = 0,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
         };
 
         _context.GameTasks.Add(task);
@@ -152,8 +152,8 @@ public class TaskController : ControllerBase
                 TaskId = task.Id,
                 CurrentDays = 0,
                 LongestDays = 0,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
+                CreatedAt = DateTimeOffset.UtcNow,
+                UpdatedAt = DateTimeOffset.UtcNow
             };
             _context.Streaks.Add(streak);
             await _context.SaveChangesAsync();
@@ -492,11 +492,11 @@ public class TaskDto
     public TaskDifficulty Difficulty { get; set; }
     public bool IsCompleted { get; set; }
     public bool IsActive { get; set; }
-    public DateTime? DueDate { get; set; }
+    public DateTimeOffset? DueDate { get; set; }
     public bool IsOverdue { get; set; }
     public int CompletionCount { get; set; }
     public int FailCount { get; set; }
-    public DateTime? LastCompletedAt { get; set; }
+    public DateTimeOffset? LastCompletedAt { get; set; }
     public int BaseXp { get; set; }
     public int BaseGold { get; set; }
     public int HpPenalty { get; set; }
@@ -520,7 +520,7 @@ public class CreateTaskRequest
     public string? Description { get; set; }
     public TaskType Type { get; set; } = TaskType.OneTime;
     public TaskDifficulty Difficulty { get; set; } = TaskDifficulty.Easy;
-    public DateTime? DueDate { get; set; }
+    public DateTimeOffset? DueDate { get; set; }
     public string? RepeatPattern { get; set; }
 }
 
@@ -591,7 +591,7 @@ public class OverdueTaskPenalty
 {
     public int TaskId { get; set; }
     public string TaskTitle { get; set; } = string.Empty;
-    public DateTime DueDate { get; set; }
+    public DateTimeOffset DueDate { get; set; }
     public int HpLost { get; set; }
     public int GoldLost { get; set; }
     public bool HeroDied { get; set; }

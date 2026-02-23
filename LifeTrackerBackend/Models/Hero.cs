@@ -15,13 +15,13 @@ public class Hero
     public int Gold { get; set; } = 0;
 
     public bool IsDead { get; set; } = false;
-    public DateTime? DeathTime { get; set; }
+    public DateTimeOffset? DeathTime { get; set; }
     public int DeathCount { get; set; } = 0;
 
-    public DateTime? RecoveryEndsAt { get; set; }
+    public DateTimeOffset? RecoveryEndsAt { get; set; }
 
-    public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
-    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public DateTimeOffset CreatedDate { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
 
     public ICollection<GameTask> Tasks { get; set; } = new List<GameTask>();
     public ICollection<Streak> Streaks { get; set; } = new List<Streak>();

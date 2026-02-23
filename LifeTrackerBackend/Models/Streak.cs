@@ -10,19 +10,19 @@ public class Streak
 
     public int CurrentDays { get; set; }
     public int LongestDays { get; set; }
-    public DateTime? StartDate { get; set; }
-    public DateTime? LastCheckIn { get; set; }
+    public DateTimeOffset? StartDate { get; set; }
+    public DateTimeOffset? LastCheckIn { get; set; }
 
     public int FreezeCharges { get; set; } = 0;
-    public DateTime? FreezeActiveUntil { get; set; }
+    public DateTimeOffset? FreezeActiveUntil { get; set; }
     public bool IsShieldActive { get; set; } = false;
-    public DateTime? ShieldExpiresAt { get; set; }
+    public DateTimeOffset? ShieldExpiresAt { get; set; }
 
     public int TotalBreaks { get; set; } = 0;
-    public DateTime? LastBreakDate { get; set; }
+    public DateTimeOffset? LastBreakDate { get; set; }
 
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
 
     public Hero? Hero { get; set; }
     public GameTask? Task { get; set; }

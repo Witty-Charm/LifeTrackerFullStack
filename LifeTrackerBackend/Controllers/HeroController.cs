@@ -57,8 +57,8 @@ public class HeroController : ControllerBase
             CurrentXp = 0,
             TotalXpEarned = 0,
             Gold = request.StartingGold ?? 100,
-            CreatedDate = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            CreatedDate = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
         };
 
         _context.Heroes.Add(hero);
@@ -69,9 +69,9 @@ public class HeroController : ControllerBase
             HeroId = hero.Id,
             TotalGoldEarned = hero.Gold,
             MaxDailyCompletions = GameConstants.DailyTaskCap,
-            DailyResetAt = DateTime.UtcNow.Date,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            DailyResetAt = DateTimeOffset.UtcNow.Date,
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
         };
 
         _context.EconomyBalances.Add(economy);
@@ -322,22 +322,22 @@ public class HeroStatsDto
     public long TotalGoldSpent { get; set; }
     public bool IsDead { get; set; }
     public int DeathCount { get; set; }
-    public DateTime? DeathTime { get; set; }
+    public DateTimeOffset? DeathTime { get; set; }
     public int DailyCompletions { get; set; }
     public int DailyCompletionsMax { get; set; }
     public double DailyProgress { get; set; }
-    public DateTime DailyResetTime { get; set; }
+    public DateTimeOffset DailyResetTime { get; set; }
     public double XpMultiplier { get; set; }
     public double GoldMultiplier { get; set; }
     public bool IsInPenaltyPeriod { get; set; }
-    public DateTime? PenaltyEndsAt { get; set; }
+    public DateTimeOffset? PenaltyEndsAt { get; set; }
     public bool IsInRecovery { get; set; }
-    public DateTime? RecoveryEndsAt { get; set; }
+    public DateTimeOffset? RecoveryEndsAt { get; set; }
     public double RecoveryMultiplier { get; set; }
     public int ActiveStreaks { get; set; }
     public int LongestStreak { get; set; }
-    public DateTime CreatedDate { get; set; }
-    public DateTime UpdatedAt { get; set; }
+    public DateTimeOffset CreatedDate { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
 }
 
 public class RespawnResponse
@@ -349,7 +349,7 @@ public class RespawnResponse
     public int NewHp { get; set; }
     public int MaxHp { get; set; }
     public bool RecoveryDebuffActive { get; set; }
-    public DateTime? RecoveryEndsAt { get; set; }
+    public DateTimeOffset? RecoveryEndsAt { get; set; }
     public double RecoveryMultiplier { get; set; }
     public int DeathCount { get; set; }
     public string Message { get; set; } = string.Empty;
