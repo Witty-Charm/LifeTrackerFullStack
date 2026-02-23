@@ -7,72 +7,110 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
+import com.lifetracker.mobile.navigation.Screen
 import com.lifetracker.mobile.ui.components.HeroCard
 import com.lifetracker.mobile.ui.components.TaskItem
+import com.lifetracker.mobile.ui.model.HeroScreenState
+import com.lifetracker.mobile.ui.viewmodel.HeroViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    hero: Hero?,
-    tasks: List<GameTask>,
-    onAddTaskClick: () -> Unit,
-    onCompleteTask: (GameTask) -> Unit
+    state: HeroScreenState,
+    vm: HeroViewModel,
+    navController: NavController
 ) {
     Scaffold(
         floatingActionButton = {
-            FloatingActionButton    (
-                onClick = onAddTaskClick,
+            FloatingActionButton(
+                onClick = { navController.navigate(Screen.CreateTask.route) },
                 modifier = Modifier.padding(16.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
-                    contentDescription = "Добавить задачу"
+                    contentDescription = "Add task"
                 )
             }
         }
     ) { paddingValues ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp)
+                .padding(top = paddingValues.calculateTopPadding(),
+                    bottom = paddingValues.calculateBottomPadding(),
+                    start = 16.dp,
+                    end = 16.dp)
         ) {
-            hero?.let {
-                HeroCard(
-                    hero = it,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-
-            if (tasks.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Нет активных задач",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+            when {
+                state.isLoading -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
                 }
-            } else {
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    items(tasks, key = { it.localId }) { task ->
-                        TaskItem(
-                            task = task,
-                            onCompleteClick = { onCompleteTask(task) }
+
+                state.criticalError != null -> {
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Loading error",
+                            style = MaterialTheme.typography.titleMedium
                         )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Button(onClick = { vm.loadData() }) {
+                            Text("Retry")
+                        }
+                    }
+                }
+
+                else -> {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        state.hero?.let { hero ->
+                            HeroCard(
+                                hero = hero,
+                                onRespawn = { vm.respawnHero() },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                        }
+
+                        if (state.tasks.isEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .weight(1f),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "No tasks",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        } else {
+                            LazyColumn(
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.fillMaxSize()
+                            ) {
+                                items(state.tasks, key = { it.id }) { task ->
+                                    TaskItem(
+                                        task = task,
+                                        isActionLoading = state.isActionLoading,
+                                        onCompleteClick = { vm.completeTask(task.id) },
+                                        onFailClick = { vm.failTask(task.id) }
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }

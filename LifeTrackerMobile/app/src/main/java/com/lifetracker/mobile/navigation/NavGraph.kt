@@ -1,51 +1,54 @@
 package com.lifetracker.mobile.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.lifetracker.mobile.ui.screens.AddTaskScreen
+import com.lifetracker.mobile.ui.screens.CreateHeroScreen
+import com.lifetracker.mobile.ui.screens.CreateTaskScreen
 import com.lifetracker.mobile.ui.screens.HomeScreen
+import com.lifetracker.mobile.ui.model.HeroScreenState
+import com.lifetracker.mobile.ui.viewmodel.HeroViewModel
 
 sealed class Screen(val route: String) {
     object Home : Screen("home")
-    object AddTask : Screen("add_task")
+    object CreateHero : Screen("create_hero")
+    object CreateTask : Screen("create_task")
 }
 
 @Composable
 fun NavGraph(
     navController: NavHostController,
-    hero: com.lifetracker.mobile.data.Hero?,
-    tasks: List<com.lifetracker.mobile.data.GameTask>,
-    onAddTask: (String, String?, Int) -> Unit,
-    onCompleteTask: (com.lifetracker.mobile.data.GameTask) -> Unit
+    vm: HeroViewModel,
+    state: HeroScreenState
 ) {
+    LaunchedEffect(state.needsHeroCreation) {
+        if (state.needsHeroCreation) {
+            navController.navigate(Screen.CreateHero.route) {
+                popUpTo(Screen.Home.route) { inclusive = true }
+            }
+        }
+    }
+
     NavHost(
         navController = navController,
         startDestination = Screen.Home.route
     ) {
         composable(Screen.Home.route) {
             HomeScreen(
-                hero = hero,
-                tasks = tasks,
-                onAddTaskClick = {
-                    navController.navigate(Screen.AddTask.route)
-                },
-                onCompleteTask = onCompleteTask
+                state = state,
+                vm = vm,
+                navController = navController
             )
         }
-        
-        composable(Screen.AddTask.route) {
-            AddTaskScreen(
-                onSave = { title, description, xpReward ->
-                    onAddTask(title, description, xpReward)
-                    navController.popBackStack()
-                },
-                onCancel = {
-                    navController.popBackStack()
-                }
-            )
+
+        composable(Screen.CreateTask.route) {
+            CreateTaskScreen(state = state, vm = vm, navController = navController)
+        }
+
+        composable(Screen.CreateHero.route) {
+            CreateHeroScreen(state = state, vm = vm, navController = navController)
         }
     }
 }
-

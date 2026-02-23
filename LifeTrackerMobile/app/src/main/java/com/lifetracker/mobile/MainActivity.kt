@@ -3,9 +3,19 @@ package com.lifetracker.mobile
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.navigation.compose.rememberNavController
+import com.lifetracker.mobile.navigation.NavGraph
 import com.lifetracker.mobile.ui.model.UiEvent
 import com.lifetracker.mobile.ui.theme.LifeTrackerMobileTheme
 import com.lifetracker.mobile.ui.viewmodel.HeroViewModel
@@ -18,13 +28,30 @@ class MainActivity : ComponentActivity() {
             LifeTrackerMobileTheme {
                 val vm: HeroViewModel = koinViewModel()
                 val state by vm.state.collectAsState()
+                val navController = rememberNavController()
+                val snackbarHostState = remember { SnackbarHostState() }
+
                 LaunchedEffect(Unit) {
                     vm.events.collect { event ->
                         when (event) {
-                            is UiEvent.ShowSnackbar -> {  }
-                            is UiEvent.TaskCompleted -> { }
-                            else -> { }
+                            is UiEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
+                            is UiEvent.TaskCompleted -> snackbarHostState.showSnackbar(event.result.message)
+                            is UiEvent.TaskFailed -> snackbarHostState.showSnackbar(event.result.message)
+                            is UiEvent.HeroRespawned -> snackbarHostState.showSnackbar(event.message)
+                            is UiEvent.HeroHealed -> snackbarHostState.showSnackbar(event.message)
                         }
+                    }
+                }
+
+                Scaffold(
+                    snackbarHost = { SnackbarHost(snackbarHostState) }
+                ) { paddingValues ->
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(paddingValues)
+                    ) {
+                        NavGraph(navController = navController, vm = vm, state = state)
                     }
                 }
             }

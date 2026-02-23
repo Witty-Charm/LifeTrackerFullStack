@@ -7,6 +7,7 @@ import com.lifetracker.mobile.domain.model.DomainResult
 import com.lifetracker.mobile.domain.model.GameError
 import com.lifetracker.mobile.domain.model.HeroDomain
 import com.lifetracker.mobile.domain.model.HeroSnapshot
+import com.lifetracker.mobile.domain.model.TaskType
 import com.lifetracker.mobile.domain.model.dataOrNull
 import com.lifetracker.mobile.domain.model.errorOrNull
 import com.lifetracker.mobile.domain.model.fold
@@ -77,7 +78,9 @@ class HeroViewModel(
                 _state.update { current ->
                     current.copy(
                         hero = hero.toUi(),
-                        tasks = tasks.dataOrNull()?.map { it.toUi() } ?: current.tasks,
+                        tasks = tasks.dataOrNull()
+                            ?.filter { !it.isCompleted || it.type == TaskType.Habit }
+                            ?.map { it.toUi() } ?: current.tasks,
                         actionError = tasks.errorOrNull()?.toUiError(),
                     )
                 }
@@ -228,7 +231,10 @@ class HeroViewModel(
         val id = heroId ?: return
         safeCall { taskUseCases.getTasks(id) }
             .onSuccess { data ->
-                _state.update { it.copy(tasks = data.map { t -> t.toUi() }) }
+                _state.update { it.copy(tasks = data
+                    .filter { !it.isCompleted || it.type == TaskType.Habit }
+                    .map { t -> t.toUi() }
+                )}
             }
             .onFailure { Timber.w("Background task refresh failed: $it") }
     }
