@@ -43,7 +43,7 @@ class HeroViewModel(
 
     private var loadJob: Job? = null
 
-    // confined to Main thread via viewModelScope — do not read/write from IO/Default context
+    // confined to Main thread via viewModelScope - do not read/write from IO/Default context
     private var heroDomain: HeroDomain? = null
     private val heroId: Int? get() = heroDomain?.id
 
@@ -199,8 +199,11 @@ class HeroViewModel(
     private fun launchAction(block: suspend () -> Unit) {
         viewModelScope.launch {
             _state.update { it.copy(isActionLoading = true, actionError = null) }
-            try { block() }
-            finally { _state.update { it.copy(isActionLoading = false) } }
+            try {
+                block()
+            } finally {
+                _state.update { it.copy(isActionLoading = false) }
+            }
         }
     }
 
