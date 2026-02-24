@@ -16,7 +16,8 @@ fun TaskItem(
     onCompleteClick: () -> Unit,
     onFailClick: () -> Unit,
     isActionLoading: Boolean,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onDeleteClick: () -> Unit,
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -115,6 +116,15 @@ fun TaskItem(
                     enabled = canAct
                 ) {
                     Text("Complete")
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                Button(
+                    onClick = onDeleteClick,
+                    enabled = canAct
+                ) {
+                    Text("Delete")
                 }
             }
         }

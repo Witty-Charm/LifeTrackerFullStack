@@ -106,7 +106,8 @@ fun HomeScreen(
                                         task = task,
                                         isActionLoading = state.isActionLoading,
                                         onCompleteClick = { vm.completeTask(task.id) },
-                                        onFailClick = { vm.failTask(task.id) }
+                                        onFailClick = { vm.failTask(task.id) },
+                                        onDeleteClick = { vm.deleteTask(task.id)}
                                     )
                                 }
                             }
