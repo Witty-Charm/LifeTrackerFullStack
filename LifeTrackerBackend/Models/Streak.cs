@@ -84,7 +84,7 @@ public class Streak
         CurrentDays = 0;
         StartDate = null;
         TotalBreaks++;
-        LastBreakDate = DateTime.UtcNow;
-        UpdatedAt = DateTime.UtcNow;
+        LastBreakDate = DateTimeOffset.UtcNow;
+        UpdatedAt = DateTimeOffset.UtcNow;
     }
 }

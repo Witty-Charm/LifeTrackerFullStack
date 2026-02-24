@@ -35,7 +35,7 @@ public class Hero
 
         CurrentXp += amount;
         TotalXpEarned += amount;
-        UpdatedAt = DateTime.UtcNow;
+        UpdatedAt = DateTimeOffset.UtcNow;
 
         while (CurrentXp >= GetXpRequiredForNextLevel() && Level < GameConstants.MaxLevel)
         {
@@ -52,7 +52,7 @@ public class Hero
         if (IsDead) return;
 
         CurrentHp -= damage;
-        UpdatedAt = DateTime.UtcNow;
+        UpdatedAt = DateTimeOffset.UtcNow;
 
         if (CurrentHp <= 0)
         {
@@ -64,7 +64,7 @@ public class Hero
     public void Die()
     {
         IsDead = true;
-        DeathTime = DateTime.UtcNow;
+        DeathTime = DateTimeOffset.UtcNow;
         DeathCount++;
 
         CurrentHp = (int)(MaxHp * GameConstants.DeathHpResetPercent);
@@ -83,12 +83,12 @@ public class Hero
         if (!IsDead) return;
 
         IsDead = false;
-        RecoveryEndsAt = DateTime.UtcNow.AddHours(GameConstants.RecoveryDebuffHours);
-        UpdatedAt = DateTime.UtcNow;
+        RecoveryEndsAt = DateTimeOffset.UtcNow.AddHours(GameConstants.RecoveryDebuffHours);
+        UpdatedAt = DateTimeOffset.UtcNow;
     }
 
     public bool IsInRecovery() =>
-        RecoveryEndsAt.HasValue && DateTime.UtcNow < RecoveryEndsAt.Value;
+        RecoveryEndsAt.HasValue && DateTimeOffset.UtcNow < RecoveryEndsAt.Value;
 
     public double GetRecoveryMultiplier() =>
         IsInRecovery() ? GameConstants.RecoveryDebuffMultiplier : 1.0;

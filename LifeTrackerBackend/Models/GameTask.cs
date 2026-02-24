@@ -67,5 +67,5 @@ public class GameTask
     }
 
     public bool IsOverdue() =>
-        DueDate.HasValue && DateTime.UtcNow > DueDate.Value && !IsCompleted;
+        DueDate.HasValue && DateTimeOffset.UtcNow > DueDate.Value && !IsCompleted;
 }

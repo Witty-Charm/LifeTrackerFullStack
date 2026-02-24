@@ -14,6 +14,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<GameTask> GameTasks { get; set; }
     public DbSet<Streak> Streaks { get; set; }
     public DbSet<EconomyBalance> EconomyBalances { get; set; }
+    public DbSet<ShopItem> ShopItems { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

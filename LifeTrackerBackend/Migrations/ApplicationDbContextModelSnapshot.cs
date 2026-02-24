@@ -23,10 +23,10 @@ namespace LifeTracker.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime>("DailyResetAt")
+                    b.Property<DateTimeOffset>("DailyResetAt")
                         .HasColumnType("TEXT");
 
                     b.Property<int>("DailyTaskCompletions")
@@ -44,10 +44,10 @@ namespace LifeTracker.Migrations
                     b.Property<int>("MaxDailyCompletions")
                         .HasColumnType("INTEGER");
 
-                    b.Property<DateTime?>("MultiplierExpiresAt")
+                    b.Property<DateTimeOffset?>("MultiplierExpiresAt")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime?>("PenaltyEndsAt")
+                    b.Property<DateTimeOffset?>("PenaltyEndsAt")
                         .HasColumnType("TEXT");
 
                     b.Property<decimal>("PenaltyMultiplier")
@@ -62,7 +62,7 @@ namespace LifeTracker.Migrations
                     b.Property<long>("TotalXpEarned")
                         .HasColumnType("INTEGER");
 
-                    b.Property<DateTime>("UpdatedAt")
+                    b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("TEXT");
 
                     b.Property<decimal>("XpMultiplier")
@@ -85,7 +85,7 @@ namespace LifeTracker.Migrations
                     b.Property<int>("CompletionCount")
                         .HasColumnType("INTEGER");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Description")
@@ -95,7 +95,7 @@ namespace LifeTracker.Migrations
                     b.Property<int>("Difficulty")
                         .HasColumnType("INTEGER");
 
-                    b.Property<DateTime?>("DueDate")
+                    b.Property<DateTimeOffset?>("DueDate")
                         .HasColumnType("TEXT");
 
                     b.Property<int>("FailCount")
@@ -110,7 +110,7 @@ namespace LifeTracker.Migrations
                     b.Property<bool>("IsCompleted")
                         .HasColumnType("INTEGER");
 
-                    b.Property<DateTime?>("LastCompletedAt")
+                    b.Property<DateTimeOffset?>("LastCompletedAt")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("RepeatPattern")
@@ -123,7 +123,7 @@ namespace LifeTracker.Migrations
                     b.Property<int>("Type")
                         .HasColumnType("INTEGER");
 
-                    b.Property<DateTime>("UpdatedAt")
+                    b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -139,7 +139,7 @@ namespace LifeTracker.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<DateTime>("CreatedDate")
+                    b.Property<DateTimeOffset>("CreatedDate")
                         .HasColumnType("TEXT");
 
                     b.Property<int>("CurrentHp")
@@ -151,7 +151,7 @@ namespace LifeTracker.Migrations
                     b.Property<int>("DeathCount")
                         .HasColumnType("INTEGER");
 
-                    b.Property<DateTime?>("DeathTime")
+                    b.Property<DateTimeOffset?>("DeathTime")
                         .HasColumnType("TEXT");
 
                     b.Property<int>("Gold")
@@ -170,18 +170,46 @@ namespace LifeTracker.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime?>("RecoveryEndsAt")
+                    b.Property<DateTimeOffset?>("RecoveryEndsAt")
                         .HasColumnType("TEXT");
 
                     b.Property<long>("TotalXpEarned")
                         .HasColumnType("INTEGER");
 
-                    b.Property<DateTime>("UpdatedAt")
+                    b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
                     b.ToTable("Heroes");
+                });
+
+            modelBuilder.Entity("LifeTracker.Models.ShopItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("EffectValue")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ItemType")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Price")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ShopItems");
                 });
 
             modelBuilder.Entity("LifeTracker.Models.Streak", b =>
@@ -190,13 +218,13 @@ namespace LifeTracker.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("TEXT");
 
                     b.Property<int>("CurrentDays")
                         .HasColumnType("INTEGER");
 
-                    b.Property<DateTime?>("FreezeActiveUntil")
+                    b.Property<DateTimeOffset?>("FreezeActiveUntil")
                         .HasColumnType("TEXT");
 
                     b.Property<int>("FreezeCharges")
@@ -208,19 +236,19 @@ namespace LifeTracker.Migrations
                     b.Property<bool>("IsShieldActive")
                         .HasColumnType("INTEGER");
 
-                    b.Property<DateTime?>("LastBreakDate")
+                    b.Property<DateTimeOffset?>("LastBreakDate")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime?>("LastCheckIn")
+                    b.Property<DateTimeOffset?>("LastCheckIn")
                         .HasColumnType("TEXT");
 
                     b.Property<int>("LongestDays")
                         .HasColumnType("INTEGER");
 
-                    b.Property<DateTime?>("ShieldExpiresAt")
+                    b.Property<DateTimeOffset?>("ShieldExpiresAt")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime?>("StartDate")
+                    b.Property<DateTimeOffset?>("StartDate")
                         .HasColumnType("TEXT");
 
                     b.Property<int?>("TaskId")
@@ -229,7 +257,7 @@ namespace LifeTracker.Migrations
                     b.Property<int>("TotalBreaks")
                         .HasColumnType("INTEGER");
 
-                    b.Property<DateTime>("UpdatedAt")
+                    b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
