@@ -5,6 +5,12 @@ plugins {
     id 'org.jetbrains.kotlin.plugin.serialization'
 }
 
+def localProps = new Properties()
+def localPropsFile = rootProject.file("local.properties")
+if (localPropsFile.exists()) {
+    localProps.load(new FileInputStream(localPropsFile))
+}
+
 android {
     namespace 'com.lifetracker.mobile'
     compileSdk = 36
@@ -14,15 +20,16 @@ android {
         targetSdk 36
         versionCode 1
         versionName "1.0"
-        buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:5000/\"")
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
+        debug {
+            buildConfigField("String", "BASE_URL", "\"${localProps.getProperty('dev.base_url', 'http://10.0.2.2:5000/')}\"")
+        }
         release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:5000/\"")
         }
     }
 

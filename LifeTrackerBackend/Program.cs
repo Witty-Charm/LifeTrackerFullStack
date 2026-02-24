@@ -69,5 +69,5 @@ using (var scope = app.Services.CreateScope())
         logger.LogError(ex, "An error occurred while initializing the database.");
     }
 }
-
+app.Urls.Add("http://0.0.0.0:5000");
 app.Run();
