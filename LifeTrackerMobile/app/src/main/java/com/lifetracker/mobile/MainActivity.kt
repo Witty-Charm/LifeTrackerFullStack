@@ -5,15 +5,17 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.rememberNavController
 import com.lifetracker.mobile.navigation.NavGraph
 import com.lifetracker.mobile.ui.model.UiEvent
@@ -43,16 +45,15 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                Scaffold(
-                    snackbarHost = { SnackbarHost(snackbarHostState) }
-                ) { paddingValues ->
-                    Box(
+                Box(modifier = Modifier.fillMaxSize()) {
+                    NavGraph(navController = navController, vm = vm, state = state)
+                    SnackbarHost(
+                        hostState = snackbarHostState,
                         modifier = Modifier
-                            .fillMaxSize()
-                            .padding(paddingValues)
-                    ) {
-                        NavGraph(navController = navController, vm = vm, state = state)
-                    }
+                            .align(Alignment.BottomCenter)
+                            .navigationBarsPadding()
+                            .padding(bottom = 80.dp)
+                    )
                 }
             }
         }
