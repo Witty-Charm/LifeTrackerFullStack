@@ -21,7 +21,7 @@ public static class GameConstants
     public const int MaxFreezeCharges = 3;
     public const int StreakTierDays = 30;
 
-    public const int DailyTaskCap = 50;
+    public const int DailyTaskCap = 20;
 
     public static double GetDifficultyMultiplier(TaskDifficulty difficulty) => difficulty switch
     {

@@ -224,10 +224,10 @@ public class HeroController : ControllerBase
         if (hero.CurrentHp >= hero.MaxHp)
             return BadRequest("Hero is already at full HP");
 
-        int healAmount = amount > 0 ? amount : (hero.MaxHp - hero.CurrentHp);
+        int healAmount = amount > 0 ? amount : Math.Max(1, hero.MaxHp / 4);
         healAmount = Math.Min(healAmount, hero.MaxHp - hero.CurrentHp);
 
-        int goldCost = healAmount;
+        int goldCost = (int)Math.Ceiling(healAmount * 4.0);
 
         if (hero.Gold < goldCost)
             return BadRequest($"Not enough gold. Need {goldCost} gold to heal {healAmount} HP.");
