@@ -42,8 +42,8 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(top = paddingValues.calculateTopPadding(),
                     bottom = paddingValues.calculateBottomPadding(),
-                    start = 16.dp,
-                    end = 16.dp)
+                    start = 5.dp,
+                    end = 5.dp)
         ) {
             when {
                 state.isLoading -> {
@@ -78,6 +78,7 @@ fun HomeScreen(
                             HeroCard(
                                 hero = hero,
                                 onRespawn = { vm.respawnHero() },
+                                onHeal = { vm.healHero() },
                                 modifier = Modifier.fillMaxWidth()
                             )
                             Spacer(modifier = Modifier.height(10.dp))

@@ -19,6 +19,7 @@ import com.lifetracker.mobile.ui.model.HeroUi
 fun HeroCard(
     hero: HeroUi,
     onRespawn: () -> Unit,
+    onHeal: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -139,6 +140,14 @@ fun HeroCard(
                     modifier = Modifier.align(Alignment.End)
                 ) {
                     Text("Respawn")
+                }
+            } else {
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(
+                    onClick = onHeal,
+                    modifier = Modifier.align(Alignment.End)
+                ) {
+                    Text("Heal")
                 }
             }
         }
