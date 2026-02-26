@@ -52,7 +52,7 @@ fun HeroSection(
         ) {
             Column(
                 modifier = Modifier.weight(0.45f),
-                horizontalAlignment = Alignment.CenterHorizontally
+                horizontalAlignment = Alignment.Start
             ) {
                 Box(
                     modifier = Modifier
