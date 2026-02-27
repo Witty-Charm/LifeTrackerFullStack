@@ -1,7 +1,9 @@
 package com.lifetracker.mobile.di
 
+import androidx.room.Room
 import com.lifetracker.mobile.BuildConfig
 import com.lifetracker.mobile.core.network.SafeApiCaller
+import com.lifetracker.mobile.data.local.AppDatabase
 import com.lifetracker.mobile.data.remote.NetworkModule
 import com.lifetracker.mobile.data.repository.HeroRepositoryImpl
 import com.lifetracker.mobile.data.repository.TaskRepositoryImpl
@@ -26,6 +28,7 @@ import com.lifetracker.mobile.domain.usecase.task.TaskUseCases
 import com.lifetracker.mobile.ui.viewmodel.HeroViewModel
 import kotlinx.serialization.json.Json
 import org.koin.core.module.dsl.viewModel
+import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 
 val appModule = module {
@@ -40,8 +43,8 @@ val appModule = module {
     single { SafeApiCaller(json = get()) }
     single { NetworkModule.provideOkHttpClient(isDebug = BuildConfig.DEBUG) }
     single { NetworkModule.provideApi(baseUrl = BuildConfig.BASE_URL, client = get(), json = get()) }
-    single<HeroRepository> { HeroRepositoryImpl(api = get(), caller = get()) }
-    single<TaskRepository> { TaskRepositoryImpl(api = get(), caller = get()) }
+    single<HeroRepository> { HeroRepositoryImpl(api = get(), caller = get(), heroDao = get()) }
+    single<TaskRepository> { TaskRepositoryImpl(api = get(), caller = get(), taskDao = get()) }
     viewModel {
         HeroViewModel(
             heroUseCases = get(),
@@ -73,4 +76,15 @@ val appModule = module {
             checkOverdue = CheckOverdueTasksUseCase(taskRepo),
         )
     }
+
+    single {
+        Room.databaseBuilder(
+            androidContext(),
+            AppDatabase::class.java,
+            "lifetracker.db"
+        ).build()
+    }
+
+    single { get<AppDatabase>().heroDao() }
+    single { get<AppDatabase>().taskDao() }
 }

@@ -2,9 +2,11 @@ package com.lifetracker.mobile.data.repository
 
 import com.lifetracker.mobile.core.network.SafeApiCaller
 import com.lifetracker.mobile.core.network.map
+import com.lifetracker.mobile.data.local.dao.TaskDao
 import com.lifetracker.mobile.data.mapper.toDomain
 import com.lifetracker.mobile.data.mapper.toDomainResult
 import com.lifetracker.mobile.data.mapper.toDto
+import com.lifetracker.mobile.data.mapper.toEntity
 import com.lifetracker.mobile.data.remote.LifeTrackerApi
 import com.lifetracker.mobile.data.remote.dto.CreateTaskRequest
 import com.lifetracker.mobile.domain.model.CreateTaskParams
@@ -14,23 +16,56 @@ import com.lifetracker.mobile.domain.model.OverdueResult
 import com.lifetracker.mobile.domain.model.TaskCompletionResult
 import com.lifetracker.mobile.domain.model.TaskFailureResult
 import com.lifetracker.mobile.domain.repository.TaskRepository
+import timber.log.Timber
 
 class TaskRepositoryImpl(
     private val api: LifeTrackerApi,
-    private val caller: SafeApiCaller
+    private val caller: SafeApiCaller,
+    private val taskDao: TaskDao,
 ) : TaskRepository {
-    override suspend fun getTasks(heroId: Int): DomainResult<List<GameTaskDomain>> =
-        caller.safeApiCall { api.getTasks(heroId) }
+
+    override suspend fun getTasks(heroId: Int): DomainResult<List<GameTaskDomain>> {
+        val local = taskDao.getByHeroId(heroId).map { it.toDomain() }
+
+        val remote = caller.safeApiCall { api.getTasks(heroId) }
             .map { list -> list.map { it.toDomain() } }
             .toDomainResult()
 
-    override suspend fun getTask(id: Int): DomainResult<GameTaskDomain> =
-        caller.safeApiCall { api.getTask(id) }
+        return when (remote) {
+            is DomainResult.Success -> {
+                taskDao.upsertAll(remote.data.map { it.toEntity() })
+                remote
+            }
+            is DomainResult.Failure -> {
+                if (local.isNotEmpty()) {
+                    Timber.w("getTasks: network failed, returning ${local.size} cached tasks")
+                    DomainResult.Success(local)
+                } else {
+                    remote
+                }
+            }
+        }
+    }
+
+    override suspend fun getTask(id: Int): DomainResult<GameTaskDomain> {
+        val remote = caller.safeApiCall { api.getTask(id) }
             .map { it.toDomain() }
             .toDomainResult()
 
-    override suspend fun createTask(params: CreateTaskParams): DomainResult<GameTaskDomain> =
-        caller.safeApiCall {
+        return when (remote) {
+            is DomainResult.Success -> {
+                taskDao.upsert(remote.data.toEntity())
+                remote
+            }
+            is DomainResult.Failure -> {
+                val local = taskDao.getById(id)?.toDomain()
+                if (local != null) DomainResult.Success(local) else remote
+            }
+        }
+    }
+
+    override suspend fun createTask(params: CreateTaskParams): DomainResult<GameTaskDomain> {
+        val remote = caller.safeApiCall {
             api.createTask(
                 CreateTaskRequest(
                     heroId = params.heroId,
@@ -41,25 +76,54 @@ class TaskRepositoryImpl(
                     dueDate = params.dueDate,
                 )
             )
-        }.map { it.toDomain() }
-            .toDomainResult()
+        }.map { it.toDomain() }.toDomainResult()
 
-    override suspend fun completeTask(taskId: Int): DomainResult<TaskCompletionResult> =
-        caller.safeApiCall { api.completeTask(taskId) }
+        return when (remote) {
+            is DomainResult.Success -> {
+                taskDao.upsert(remote.data.toEntity(pendingSync = false))
+                remote
+            }
+            is DomainResult.Failure -> remote
+        }
+    }
+
+    override suspend fun completeTask(taskId: Int): DomainResult<TaskCompletionResult> {
+        val remote = caller.safeApiCall { api.completeTask(taskId) }
             .map { it.toDomain() }
             .toDomainResult()
 
-    override suspend fun failTask(taskId: Int): DomainResult<TaskFailureResult> =
-        caller.safeApiCall { api.failTask(taskId) }
+        if (remote is DomainResult.Success) {
+            taskDao.getById(taskId)?.let { entity ->
+                taskDao.upsert(entity.copy(isCompleted = true, pendingSync = false))
+            }
+        }
+
+        return remote
+    }
+
+    override suspend fun failTask(taskId: Int): DomainResult<TaskFailureResult> {
+        val remote = caller.safeApiCall { api.failTask(taskId) }
             .map { it.toDomain() }
             .toDomainResult()
+
+        if (remote is DomainResult.Success) {
+            taskDao.getById(taskId)?.let { entity ->
+                taskDao.upsert(entity.copy(failCount = entity.failCount + 1, pendingSync = false))
+            }
+        }
+
+        return remote
+    }
 
     override suspend fun checkOverdueTasks(heroId: Int): DomainResult<OverdueResult> =
         caller.safeApiCall { api.checkOverdueTasks(heroId) }
             .map { it.toDomain() }
             .toDomainResult()
 
-    override suspend fun deleteTask(taskId: Int): DomainResult<Unit> =
-        caller.safeApiCallUnit { api.deleteTask(taskId) }
+    override suspend fun deleteTask(taskId: Int): DomainResult<Unit> {
+        taskDao.deleteById(taskId)
+
+        return caller.safeApiCallUnit { api.deleteTask(taskId) }
             .toDomainResult()
+    }
 }

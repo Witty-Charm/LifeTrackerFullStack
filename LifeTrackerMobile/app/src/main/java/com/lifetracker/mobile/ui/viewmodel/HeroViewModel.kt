@@ -21,6 +21,7 @@ import com.lifetracker.mobile.ui.model.HeroScreenState
 import com.lifetracker.mobile.ui.model.UiEvent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -72,8 +73,11 @@ class HeroViewModel(
             try {
                 heroDomain = hero
 
-                val overdue = safeCall { taskUseCases.checkOverdue(hero.id) }
-                val tasks = safeCall { taskUseCases.getTasks(hero.id) }
+                val overdueDeferred = async { safeCall { taskUseCases.checkOverdue(hero.id) } }
+                val tasksDeferred = async { safeCall { taskUseCases.getTasks(hero.id) } }
+
+                val overdue = overdueDeferred.await()
+                val tasks = tasksDeferred.await()
 
                 _state.update { current ->
                     current.copy(

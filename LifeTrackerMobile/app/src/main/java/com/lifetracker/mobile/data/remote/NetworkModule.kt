@@ -11,9 +11,9 @@ import java.util.concurrent.TimeUnit
 object NetworkModule {
     fun provideOkHttpClient(isDebug: Boolean = false): OkHttpClient =
         OkHttpClient.Builder()
-            .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
-            .writeTimeout(30, TimeUnit.SECONDS)
+            .connectTimeout(5, TimeUnit.SECONDS)
+            .readTimeout(10, TimeUnit.SECONDS)
+            .writeTimeout(10, TimeUnit.SECONDS)
             .apply {
                 if (isDebug) {
                     addInterceptor(
