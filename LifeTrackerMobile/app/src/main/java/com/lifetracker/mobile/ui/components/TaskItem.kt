@@ -167,7 +167,7 @@ private fun TaskCardContent(
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text = task.difficulty.name,
+                text = task.difficultyLabel,
                 style = MaterialTheme.typography.bodySmall,
                 color = Color(task.difficultyColor)
             )

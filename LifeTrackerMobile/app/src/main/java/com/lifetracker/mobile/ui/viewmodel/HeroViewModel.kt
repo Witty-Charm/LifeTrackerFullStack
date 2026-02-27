@@ -104,7 +104,7 @@ class HeroViewModel(
             ?.let { result ->
                 applySnapshot(result.heroSnapshot)
                 refreshTasks()
-                _events.send(UiEvent.TaskCompleted(result))
+                _events.send(UiEvent.TaskCompleted(result.message))
             }
     }
 
@@ -113,7 +113,7 @@ class HeroViewModel(
             ?.let { result ->
                 applySnapshot(result.heroSnapshot)
                 refreshTasks()
-                _events.send(UiEvent.TaskFailed(result))
+                _events.send(UiEvent.TaskFailed(result.message))
 
             }
     }

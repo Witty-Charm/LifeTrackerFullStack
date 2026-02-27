@@ -24,7 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.lifetracker.mobile.domain.model.TaskType
+import com.lifetracker.mobile.ui.model.UiTaskType
 import com.lifetracker.mobile.navigation.Screen
 import com.lifetracker.mobile.ui.components.DailyObjectiveCard
 import com.lifetracker.mobile.ui.components.GameBottomNavigationBar
@@ -105,8 +105,8 @@ fun HomeScreen(
                     }
 
                     val filteredTasks = when (selectedTab) {
-                        HomeTab.Habits -> state.tasks.filter { it.type == TaskType.Habit }
-                        HomeTab.ToDos -> state.tasks.filter { it.type == TaskType.OneTime }
+                        HomeTab.Habits -> state.tasks.filter { it.type == UiTaskType.Habit }
+                        HomeTab.ToDos -> state.tasks.filter { it.type == UiTaskType.OneTime }
                         else -> emptyList()
                     }
 

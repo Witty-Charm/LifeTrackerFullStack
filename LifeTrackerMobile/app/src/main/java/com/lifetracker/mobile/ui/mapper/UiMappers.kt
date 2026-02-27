@@ -1,8 +1,10 @@
 package com.lifetracker.mobile.ui.mapper
 
-import com.lifetracker.mobile.domain.model.TaskDifficulty
 import com.lifetracker.mobile.domain.model.GameTaskDomain
 import com.lifetracker.mobile.domain.model.HeroDomain
+import com.lifetracker.mobile.domain.model.TaskDifficulty
+import com.lifetracker.mobile.domain.model.TaskType
+import com.lifetracker.mobile.ui.model.UiTaskType
 import com.lifetracker.mobile.ui.model.HeroStatusBadge
 import com.lifetracker.mobile.ui.model.HeroUi
 import com.lifetracker.mobile.ui.model.TaskUi
@@ -38,8 +40,18 @@ fun GameTaskDomain.toUi(): TaskUi = TaskUi(
     id = id,
     title = title,
     description = description,
-    type = type,
-    difficulty = difficulty,
+    type = when (type) {
+        TaskType.Habit   -> UiTaskType.Habit
+        TaskType.OneTime -> UiTaskType.OneTime
+        TaskType.Unknown -> UiTaskType.Unknown
+    },
+    difficultyLabel = when (difficulty) {
+        TaskDifficulty.Easy    -> "Easy"
+        TaskDifficulty.Medium  -> "Medium"
+        TaskDifficulty.Hard    -> "Hard"
+        TaskDifficulty.Epic    -> "Epic"
+        TaskDifficulty.Unknown -> "Unknown"
+    },
     difficultyColor = when (difficulty) {
         TaskDifficulty.Easy   -> 0xFF4CAF50
         TaskDifficulty.Medium -> 0xFFFFC107

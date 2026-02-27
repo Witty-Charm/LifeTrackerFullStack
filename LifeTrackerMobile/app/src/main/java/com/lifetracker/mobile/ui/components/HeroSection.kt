@@ -18,27 +18,24 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lifetracker.mobile.ui.model.HeroUi
-import com.lifetracker.mobile.ui.theme.CardBackground
 import com.lifetracker.mobile.ui.theme.CardBorder
 import com.lifetracker.mobile.ui.theme.GoldYellow
 import com.lifetracker.mobile.ui.theme.HealthRed
 import com.lifetracker.mobile.ui.theme.HeroTileGradientEnd
 import com.lifetracker.mobile.ui.theme.HeroTileGradientStart
-import com.lifetracker.mobile.ui.theme.OnGoldText
 import com.lifetracker.mobile.ui.theme.PurpleAccent
 import com.lifetracker.mobile.ui.theme.TextPrimary
 import com.lifetracker.mobile.ui.theme.TextSecondary
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.style.TextOverflow
 
 @Composable
 fun HeroSection(
-    hero: HeroUi,
-    onHeal: () -> Unit,
-    onRespawn: () -> Unit,
-    modifier: Modifier = Modifier
+    hero: HeroUi, onHeal: () -> Unit, onRespawn: () -> Unit, modifier: Modifier = Modifier
 ) {
     Column(
         modifier = modifier
@@ -51,8 +48,7 @@ fun HeroSection(
             verticalAlignment = Alignment.Top
         ) {
             Column(
-                modifier = Modifier.weight(0.45f),
-                horizontalAlignment = Alignment.Start
+                modifier = Modifier.weight(0.40f), horizontalAlignment = Alignment.Start
             ) {
                 Box(
                     modifier = Modifier
@@ -61,23 +57,16 @@ fun HeroSection(
                         .background(
                             brush = Brush.verticalGradient(
                                 colors = listOf(
-                                    HeroTileGradientStart,
-                                    HeroTileGradientEnd
+                                    HeroTileGradientStart, HeroTileGradientEnd
                                 )
                             )
-                        ),
-                    contentAlignment = Alignment.Center
+                        ), contentAlignment = Alignment.Center
                 ) {
                     val initial = hero.name.firstOrNull()?.uppercaseChar()?.toString().orEmpty()
                     Text(
-                        text = initial,
-                        style = MaterialTheme.typography.displaySmall.copy(
-                            fontSize = 48.sp,
-                            fontWeight = FontWeight.ExtraBold
-                        ),
-                        color = TextPrimary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Clip
+                        text = initial, style = MaterialTheme.typography.displaySmall.copy(
+                            fontSize = 48.sp, fontWeight = FontWeight.ExtraBold
+                        ), color = TextPrimary, maxLines = 1, overflow = TextOverflow.Clip
                     )
                 }
 
@@ -93,7 +82,7 @@ fun HeroSection(
                         color = TextSecondary
                     )
                     Spacer(modifier = Modifier.width(12.dp))
-                    androidx.compose.material3.Icon(
+                    Icon(
                         imageVector = Icons.Default.MonetizationOn,
                         contentDescription = null,
                         tint = GoldYellow,
@@ -110,8 +99,8 @@ fun HeroSection(
 
             Column(
                 modifier = Modifier
-                    .weight(0.55f)
-                    .padding(start = 12.dp),
+                    .weight(0.60f)
+                    .padding(start = 0.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 StatBar(
@@ -134,8 +123,7 @@ fun HeroSection(
         if (hero.isDead || hero.isInRecovery) {
             Spacer(modifier = Modifier.height(8.dp))
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
+                modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End
             ) {
                 if (hero.isDead) {
                     Button(
@@ -159,45 +147,39 @@ fun HeroSection(
 
 @Composable
 private fun StatBar(
-    icon: String,
-    progress: Float,
-    fractionText: String,
-    label: String,
-    barColor: Color
+    icon: String, progress: Float, fractionText: String, label: String, barColor: Color
 ) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = icon,
-            fontSize = 16.sp
-        )
-        Spacer(modifier = Modifier.width(6.dp))
-        Box(
-            modifier = Modifier.weight(1f)
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically
         ) {
+            Text(text = icon, fontSize = 16.sp)
+            Spacer(modifier = Modifier.width(6.dp))
             LinearProgressIndicator(
-                progress = { progress },
+                progress = { progress.coerceIn(0f, 1f) },
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(16.dp)
+                    .weight(1f)
+                    .height(10.dp)
                     .clip(CircleShape),
                 color = barColor,
-                trackColor = CardBorder
-            )
+                trackColor = CardBorder,
+                strokeCap = StrokeCap.Butt,
+                gapSize = 0.dp,
+                drawStopIndicator = {})
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween
+        ) {
             Text(
                 text = fractionText,
                 style = MaterialTheme.typography.bodySmall,
-                color = TextPrimary,
-                modifier = Modifier.align(Alignment.Center)
+                color = TextSecondary
+            )
+            Text(
+                text = label, style = MaterialTheme.typography.bodySmall, color = TextSecondary
             )
         }
-        Spacer(modifier = Modifier.width(6.dp))
-        Text(
-            text = label,
-            style = MaterialTheme.typography.titleSmall,
-            color = TextSecondary
-        )
     }
 }
 

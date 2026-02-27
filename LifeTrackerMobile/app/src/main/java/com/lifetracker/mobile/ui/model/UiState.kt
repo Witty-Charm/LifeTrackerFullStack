@@ -1,9 +1,5 @@
 package com.lifetracker.mobile.ui.model
 
-import com.lifetracker.mobile.domain.model.TaskCompletionResult
-import com.lifetracker.mobile.domain.model.TaskDifficulty
-import com.lifetracker.mobile.domain.model.TaskFailureResult
-import com.lifetracker.mobile.domain.model.TaskType
 import kotlin.time.Instant
 
 data class HeroScreenState(
@@ -34,12 +30,14 @@ data class HeroUi(
 
 enum class HeroStatusBadge { Alive, Recovery, Dead }
 
+enum class UiTaskType { Habit, OneTime, Unknown}
+
 data class TaskUi(
     val id: Int,
     val title: String,
     val description: String,
-    val type: TaskType,
-    val difficulty: TaskDifficulty,
+    val type: UiTaskType,
+    val difficultyLabel: String,
     val difficultyColor: Long,
     val isCompleted: Boolean,
     val isOverdue: Boolean,
@@ -65,8 +63,8 @@ sealed interface UiError {
 
 sealed interface UiEvent {
     data class ShowSnackbar(val message: String) : UiEvent
-    data class TaskCompleted(val result: TaskCompletionResult) : UiEvent
-    data class TaskFailed(val result: TaskFailureResult) : UiEvent
+    data class TaskCompleted(val message: String) : UiEvent
+    data class TaskFailed(val message: String) : UiEvent
     data class HeroRespawned(
         val message: String,
         val recoveryEndsAt: Instant?,

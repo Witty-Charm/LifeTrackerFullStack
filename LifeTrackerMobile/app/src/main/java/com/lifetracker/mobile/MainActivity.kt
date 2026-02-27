@@ -37,8 +37,8 @@ class MainActivity : ComponentActivity() {
                     vm.events.collect { event ->
                         when (event) {
                             is UiEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
-                            is UiEvent.TaskCompleted -> snackbarHostState.showSnackbar(event.result.message)
-                            is UiEvent.TaskFailed -> snackbarHostState.showSnackbar(event.result.message)
+                            is UiEvent.TaskCompleted -> snackbarHostState.showSnackbar(event.message)
+                            is UiEvent.TaskFailed -> snackbarHostState.showSnackbar(event.message)
                             is UiEvent.HeroRespawned -> snackbarHostState.showSnackbar(event.message)
                             is UiEvent.HeroHealed -> snackbarHostState.showSnackbar(event.message)
                         }
