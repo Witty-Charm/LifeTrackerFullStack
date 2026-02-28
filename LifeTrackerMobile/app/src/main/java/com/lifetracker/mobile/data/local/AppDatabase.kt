@@ -8,12 +8,9 @@ import com.lifetracker.mobile.data.local.entity.HeroEntity
 import com.lifetracker.mobile.data.local.entity.TaskEntity
 
 @Database(
-    entities = [
-        HeroEntity::class,
-        TaskEntity::class,
-    ],
+    entities = [HeroEntity::class, TaskEntity::class],
     version = 1,
-    exportSchema = false
+    exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun heroDao(): HeroDao

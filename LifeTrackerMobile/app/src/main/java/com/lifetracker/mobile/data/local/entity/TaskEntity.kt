@@ -1,9 +1,16 @@
 package com.lifetracker.mobile.data.local.entity
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "tasks")
+@Entity(
+    tableName = "tasks",
+    indices = [
+        Index("heroId"),
+        Index("pendingSync"),
+    ]
+)
 data class TaskEntity(
     @PrimaryKey val id: Int,
     val heroId: Int,

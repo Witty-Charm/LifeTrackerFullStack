@@ -82,7 +82,9 @@ val appModule = module {
             androidContext(),
             AppDatabase::class.java,
             "lifetracker.db"
-        ).build()
+        )
+            .fallbackToDestructiveMigration()
+            .build()
     }
 
     single { get<AppDatabase>().heroDao() }

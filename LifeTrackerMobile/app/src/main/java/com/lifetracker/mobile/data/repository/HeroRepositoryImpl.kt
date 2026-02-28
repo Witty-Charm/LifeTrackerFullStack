@@ -62,9 +62,6 @@ class HeroRepositoryImpl(
     }
 
     override suspend fun getFirstHero(): DomainResult<HeroDomain?> {
-        val local = heroDao.getAll().firstOrNull()?.toDomain()
-        if (local != null) return DomainResult.Success(local)
-
         val remote = caller.safeApiCall { api.getHeroes() }
             .map { it.firstOrNull()?.toDomain() }
             .toDomainResult()
@@ -75,7 +72,8 @@ class HeroRepositoryImpl(
                 remote
             }
             is DomainResult.Failure -> {
-                DomainResult.Success(null)
+                val local = heroDao.getAll().firstOrNull()?.toDomain()
+                if (local != null) DomainResult.Success(local) else remote
             }
         }
     }

@@ -121,9 +121,12 @@ class TaskRepositoryImpl(
             .toDomainResult()
 
     override suspend fun deleteTask(taskId: Int): DomainResult<Unit> {
-        taskDao.deleteById(taskId)
-
-        return caller.safeApiCallUnit { api.deleteTask(taskId) }
+        val remote = caller.safeApiCallUnit { api.deleteTask(taskId) }
             .toDomainResult()
+
+        if (remote is DomainResult.Success) {
+            taskDao.deleteById(taskId)
+        }
+        return remote
     }
 }

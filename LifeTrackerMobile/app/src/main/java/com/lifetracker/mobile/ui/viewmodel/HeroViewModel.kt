@@ -141,7 +141,6 @@ class HeroViewModel(
                     current.copy(tasks = current.tasks.filter { it.id != taskId })
                 }
             }
-
     }
 
     fun respawnHero() = launchAction {
@@ -204,6 +203,7 @@ class HeroViewModel(
     }
 
     private fun launchAction(block: suspend () -> Unit) {
+        if(_state.value.isActionLoading) return
         viewModelScope.launch {
             _state.update { it.copy(isActionLoading = true, actionError = null) }
             try {
