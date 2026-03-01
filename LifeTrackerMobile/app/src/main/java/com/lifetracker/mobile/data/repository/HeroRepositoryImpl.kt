@@ -72,7 +72,7 @@ class HeroRepositoryImpl(
                 remote
             }
             is DomainResult.Failure -> {
-                val local = heroDao.getAll().firstOrNull()?.toDomain()
+                val local = heroDao.getFirst()?.toDomain()
                 if (local != null) DomainResult.Success(local) else remote
             }
         }

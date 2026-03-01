@@ -5,8 +5,9 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.googlefonts.GoogleFont
-import androidx.compose.ui.text.googlefonts.Font
+import androidx.compose.ui.text.googlefonts.Font as GoogleFontLoader
 import com.lifetracker.mobile.R
 
 val provider = GoogleFont.Provider(
@@ -18,11 +19,16 @@ val provider = GoogleFont.Provider(
 val NunitoFont = GoogleFont("Nunito")
 
 val NunitoFontFamily = FontFamily(
-    Font(googleFont = NunitoFont, fontProvider = provider, weight = FontWeight.Normal),
-    Font(googleFont = NunitoFont, fontProvider = provider, weight = FontWeight.Medium),
-    Font(googleFont = NunitoFont, fontProvider = provider, weight = FontWeight.SemiBold),
-    Font(googleFont = NunitoFont, fontProvider = provider, weight = FontWeight.Bold),
-    Font(googleFont = NunitoFont, fontProvider = provider, weight = FontWeight.ExtraBold)
+    GoogleFontLoader(googleFont = NunitoFont, fontProvider = provider, weight = FontWeight.Normal),
+    GoogleFontLoader(googleFont = NunitoFont, fontProvider = provider, weight = FontWeight.Medium),
+    GoogleFontLoader(googleFont = NunitoFont, fontProvider = provider, weight = FontWeight.SemiBold),
+    GoogleFontLoader(googleFont = NunitoFont, fontProvider = provider, weight = FontWeight.Bold),
+    GoogleFontLoader(googleFont = NunitoFont, fontProvider = provider, weight = FontWeight.ExtraBold),
+    Font(resId = R.font.nunito_regular, weight = FontWeight.Normal),
+    Font(resId = R.font.nunito_regular, weight = FontWeight.Medium),
+    Font(resId = R.font.nunito_regular, weight = FontWeight.SemiBold),
+    Font(resId = R.font.nunito_bold, weight = FontWeight.Bold),
+    Font(resId = R.font.nunito_bold, weight = FontWeight.ExtraBold),
 )
 
 val Typography = Typography(

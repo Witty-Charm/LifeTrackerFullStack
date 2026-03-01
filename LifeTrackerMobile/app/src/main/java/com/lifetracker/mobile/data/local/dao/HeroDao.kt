@@ -13,6 +13,9 @@ interface HeroDao {
     @Query("SELECT * FROM heroes WHERE id = :id")
     suspend fun getById(id: Int): HeroEntity?
 
+    @Query("SELECT * FROM heroes LIMIT 1")
+    suspend fun getFirst(): HeroEntity?
+
     @Upsert
     suspend fun upsert(hero: HeroEntity)
 }

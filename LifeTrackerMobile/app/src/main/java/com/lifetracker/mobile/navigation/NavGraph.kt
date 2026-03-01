@@ -11,10 +11,11 @@ import com.lifetracker.mobile.ui.screens.HomeScreen
 import com.lifetracker.mobile.ui.model.HeroScreenState
 import com.lifetracker.mobile.ui.viewmodel.HeroViewModel
 
-sealed class Screen(val route: String) {
-    object Home : Screen("home")
-    object CreateHero : Screen("create_hero")
-    object CreateTask : Screen("create_task")
+sealed interface Screen {
+    val route: String
+    data object Home : Screen { override val route = "home" }
+    data object CreateHero : Screen { override val route = "create_hero" }
+    data object CreateTask : Screen { override val route = "create_task" }
 }
 
 @Composable
