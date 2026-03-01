@@ -4,6 +4,7 @@ import com.lifetracker.mobile.domain.model.GameTaskDomain
 import com.lifetracker.mobile.domain.model.HeroDomain
 import com.lifetracker.mobile.domain.model.TaskDifficulty
 import com.lifetracker.mobile.domain.model.TaskType
+import com.lifetracker.mobile.ui.model.UiDifficulty
 import com.lifetracker.mobile.ui.model.UiTaskType
 import com.lifetracker.mobile.ui.model.HeroStatusBadge
 import com.lifetracker.mobile.ui.model.HeroUi
@@ -67,6 +68,19 @@ fun GameTaskDomain.toUi(): TaskUi = TaskUi(
     streakText = streak?.takeIf { it.currentDays > 0 }
         ?.let { "\uD83D\uDD25 ${it.currentDays} days (+${it.bonusXpPercent}%)" },
 )
+
+fun UiTaskType.toDomain(): TaskType = when (this) {
+    UiTaskType.Habit   -> TaskType.Habit
+    UiTaskType.OneTime -> TaskType.OneTime
+    UiTaskType.Unknown -> TaskType.Unknown
+}
+
+fun UiDifficulty.toDomain(): TaskDifficulty = when (this) {
+    UiDifficulty.Easy   -> TaskDifficulty.Easy
+    UiDifficulty.Medium -> TaskDifficulty.Medium
+    UiDifficulty.Hard   -> TaskDifficulty.Hard
+    UiDifficulty.Epic   -> TaskDifficulty.Epic
+}
 
 private fun Instant.toDisplayDate(): String {
     val javaDate = this.toLocalDateTime(TimeZone.currentSystemDefault()).date.toJavaLocalDate()

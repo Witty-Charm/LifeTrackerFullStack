@@ -33,12 +33,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.lifetracker.mobile.domain.model.CreateTaskParams
-import com.lifetracker.mobile.domain.model.TaskDifficulty
-import com.lifetracker.mobile.domain.model.TaskType
 import com.lifetracker.mobile.ui.model.HeroScreenState
-import com.lifetracker.mobile.ui.model.UiError
+import com.lifetracker.mobile.ui.mapper.toMessage
+import com.lifetracker.mobile.ui.model.UiDifficulty
+import com.lifetracker.mobile.ui.model.UiEvent
+import com.lifetracker.mobile.ui.model.UiTaskType
 import com.lifetracker.mobile.ui.viewmodel.HeroViewModel
+import androidx.compose.ui.platform.LocalContext
 import kotlin.time.Instant
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -50,19 +51,16 @@ fun CreateTaskScreen(
 ) {
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
-    var selectedType by remember { mutableStateOf(TaskType.OneTime) }
-    var selectedDifficulty by remember { mutableStateOf(TaskDifficulty.Easy) }
+    var selectedType by remember { mutableStateOf(UiTaskType.OneTime) }
+    var selectedDifficulty by remember { mutableStateOf(UiDifficulty.Easy) }
     var dueDate by remember { mutableStateOf<Instant?>(null) }
     var showDatePicker by remember { mutableStateOf(false) }
 
     val datePickerState = rememberDatePickerState()
 
-    var didSubmit by remember { mutableStateOf(false) }
-    var submittedTaskCountBaseline by remember { mutableStateOf(0) }
-
-    LaunchedEffect(state.tasks.size, didSubmit) {
-        if (didSubmit && state.tasks.size > submittedTaskCountBaseline) {
-            navController.popBackStack()
+    LaunchedEffect(Unit) {
+        vm.events.collect { event ->
+            if (event is UiEvent.TaskCreated) navController.popBackStack()
         }
     }
 
@@ -111,14 +109,14 @@ fun CreateTaskScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 FilterChip(
-                    selected = selectedType == TaskType.Habit,
-                    onClick = { selectedType = TaskType.Habit },
-                    label = { Text("Habbit") }
+                    selected = selectedType == UiTaskType.Habit,
+                    onClick = { selectedType = UiTaskType.Habit },
+                    label = { Text("Habit") }
                 )
                 FilterChip(
-                    selected = selectedType == TaskType.OneTime,
-                    onClick = { selectedType = TaskType.OneTime },
-                    label = { Text("OneTime") }
+                    selected = selectedType == UiTaskType.OneTime,
+                    onClick = { selectedType = UiTaskType.OneTime },
+                    label = { Text("One Time") }
                 )
             }
 
@@ -127,10 +125,10 @@ fun CreateTaskScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 listOf(
-                    TaskDifficulty.Easy to "Easy",
-                    TaskDifficulty.Medium to "Medium",
-                    TaskDifficulty.Hard to "Hard",
-                    TaskDifficulty.Epic to "Epic",
+                    UiDifficulty.Easy to "Easy",
+                    UiDifficulty.Medium to "Medium",
+                    UiDifficulty.Hard to "Hard",
+                    UiDifficulty.Epic to "Epic",
                 ).forEach { (difficulty, label) ->
                     FilterChip(
                         selected = selectedDifficulty == difficulty,
@@ -159,15 +157,8 @@ fun CreateTaskScreen(
                 }
             }
 
-            val errorText = state.actionError?.let { error ->
-                when (error) {
-                    is UiError.HeroDead -> "Hero is dead"
-                    is UiError.DailyLimitReached -> "Daily limit reached (${error.completions}/${error.max})"
-                    is UiError.Validation -> error.fieldErrors.values.flatten().joinToString(". ")
-                    is UiError.Network -> "Network error"
-                    is UiError.Generic -> error.message
-                }
-            }
+            val context = LocalContext.current
+            val errorText = state.actionError?.toMessage(context)
 
             if (errorText != null) {
                 Text(
@@ -181,16 +172,12 @@ fun CreateTaskScreen(
 
             Button(
                 onClick = {
-                    didSubmit = true
-                    submittedTaskCountBaseline = state.tasks.size
                     vm.createTask(
-                        CreateTaskParams(
-                            title = title,
-                            description = description.ifBlank { null },
-                            type = selectedType,
-                            difficulty = selectedDifficulty,
-                            dueDate = dueDate
-                        )
+                        title = title,
+                        description = description.ifBlank { null },
+                        type = selectedType,
+                        difficulty = selectedDifficulty,
+                        dueDate = dueDate,
                     )
                 },
                 enabled = title.isNotBlank() && !state.isActionLoading,

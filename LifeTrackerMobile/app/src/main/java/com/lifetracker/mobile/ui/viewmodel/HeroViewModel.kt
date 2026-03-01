@@ -3,6 +3,8 @@ package com.lifetracker.mobile.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lifetracker.mobile.domain.model.CreateTaskParams
+import com.lifetracker.mobile.ui.model.UiDifficulty
+import com.lifetracker.mobile.ui.model.UiTaskType
 import com.lifetracker.mobile.domain.model.DomainResult
 import com.lifetracker.mobile.domain.model.GameError
 import com.lifetracker.mobile.domain.model.HeroDomain
@@ -15,6 +17,7 @@ import com.lifetracker.mobile.domain.model.onFailure
 import com.lifetracker.mobile.domain.model.onSuccess
 import com.lifetracker.mobile.domain.usecase.hero.HeroUseCases
 import com.lifetracker.mobile.domain.usecase.task.TaskUseCases
+import com.lifetracker.mobile.ui.mapper.toDomain
 import com.lifetracker.mobile.ui.mapper.toUi
 import com.lifetracker.mobile.ui.mapper.toUiError
 import com.lifetracker.mobile.ui.model.HeroScreenState
@@ -122,15 +125,28 @@ class HeroViewModel(
             }
     }
 
-    fun createTask(params: CreateTaskParams) = launchAction {
+    fun createTask(
+        title: String,
+        description: String?,
+        type: UiTaskType,
+        difficulty: UiDifficulty,
+        dueDate: kotlin.time.Instant?,
+    ) = launchAction {
         val id = heroId ?: return@launchAction
-        val paramsWithHero = params.copy(heroId = id)
-        executeAction { taskUseCases.createTask(paramsWithHero) }
+        val params = CreateTaskParams(
+            heroId = id,
+            title = title,
+            description = description,
+            type = type.toDomain(),
+            difficulty = difficulty.toDomain(),
+            dueDate = dueDate,
+        )
+        executeAction { taskUseCases.createTask(params) }
             ?.let { task ->
                 _state.update { current ->
                     current.copy(tasks = current.tasks + task.toUi())
                 }
-                _events.send(UiEvent.ShowSnackbar("Task '${task.title}' created!"))
+                _events.send(UiEvent.TaskCreated)
             }
     }
 

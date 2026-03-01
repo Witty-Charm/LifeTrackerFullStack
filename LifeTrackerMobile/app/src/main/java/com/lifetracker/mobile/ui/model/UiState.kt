@@ -30,7 +30,9 @@ data class HeroUi(
 
 enum class HeroStatusBadge { Alive, Recovery, Dead }
 
-enum class UiTaskType { Habit, OneTime, Unknown}
+enum class UiTaskType { Habit, OneTime, Unknown }
+
+enum class UiDifficulty { Easy, Medium, Hard, Epic }
 
 data class TaskUi(
     val id: Int,
@@ -63,6 +65,7 @@ sealed interface UiError {
 
 sealed interface UiEvent {
     data class ShowSnackbar(val message: String) : UiEvent
+    data object TaskCreated : UiEvent
     data class TaskCompleted(val message: String) : UiEvent
     data class TaskFailed(val message: String) : UiEvent
     data class HeroRespawned(

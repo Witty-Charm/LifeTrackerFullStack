@@ -49,10 +49,8 @@ fun TaskItem(
         confirmValueChange = { value ->
             if (value == SwipeToDismissBoxValue.EndToStart && canAct) {
                 onDeleteClick()
-                true
-            } else {
-                false
             }
+            false
         }
     )
 

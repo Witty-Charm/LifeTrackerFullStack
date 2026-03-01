@@ -23,11 +23,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.lifetracker.mobile.navigation.Screen
+import com.lifetracker.mobile.ui.mapper.toMessage
 import com.lifetracker.mobile.ui.model.HeroScreenState
-import com.lifetracker.mobile.ui.model.UiError
 import com.lifetracker.mobile.ui.viewmodel.HeroViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -70,15 +71,8 @@ fun CreateHeroScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            val errorText = state.actionError?.let { error ->
-                when (error) {
-                    is UiError.HeroDead -> "Hero dead"
-                    is UiError.DailyLimitReached -> "Daily limit reached (${error.completions}/${error.max})"
-                    is UiError.Validation -> error.fieldErrors.values.flatten().joinToString(". ")
-                    is UiError.Network -> "Network error"
-                    is UiError.Generic -> error.message
-                }
-            }
+            val context = LocalContext.current
+            val errorText = state.actionError?.toMessage(context)
 
             if (errorText != null) {
                 Text(
