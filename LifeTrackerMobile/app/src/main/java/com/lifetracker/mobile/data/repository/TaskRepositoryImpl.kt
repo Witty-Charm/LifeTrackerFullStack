@@ -83,7 +83,31 @@ class TaskRepositoryImpl(
                 taskDao.upsert(remote.data.toEntity(pendingSync = false))
                 remote
             }
-            is DomainResult.Failure -> remote
+            is DomainResult.Failure -> {
+                val tempId = -(System.currentTimeMillis().toInt())
+                val localTask = GameTaskDomain(
+                    id = tempId,
+                    heroId = params.heroId,
+                    title = params.title,
+                    description = params.description ?: "",
+                    type = params.type,
+                    difficulty = params.difficulty,
+                    isCompleted = false,
+                    isActive = true,
+                    dueDate = params.dueDate,
+                    isOverdue = false,
+                    completionCount = 0,
+                    failCount = 0,
+                    lastCompletedAt = null,
+                    baseXp = 0,
+                    baseGold = 0,
+                    hpPenalty = 0,
+                    goldPenalty = 0,
+                    streak = null,
+                )
+                taskDao.upsert(localTask.toEntity(pendingSync = true))
+                DomainResult.Success(localTask)
+            }
         }
     }
 

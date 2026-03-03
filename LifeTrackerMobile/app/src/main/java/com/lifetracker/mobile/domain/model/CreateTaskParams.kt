@@ -3,7 +3,7 @@ package com.lifetracker.mobile.domain.model
 import kotlin.time.Instant
 
 data class CreateTaskParams(
-    val heroId: Int? = null,
+    val heroId: Int,
     val title: String,
     val description: String? = null,
     val type: TaskType = TaskType.OneTime,
