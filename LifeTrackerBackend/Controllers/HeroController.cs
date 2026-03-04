@@ -25,6 +25,9 @@ public class HeroController : ControllerBase
             .Include(h => h.Streaks)
             .ToListAsync();
 
+        heroes.ForEach(h => h.EconomyBalance?.CheckDailyReset());
+        await _context.SaveChangesAsync();
+
         return Ok(heroes.Select(h => MapToDto(h)));
     }
 
@@ -38,6 +41,9 @@ public class HeroController : ControllerBase
 
         if (hero == null)
             return NotFound();
+
+        hero.EconomyBalance?.CheckDailyReset();
+        await _context.SaveChangesAsync();
 
         return Ok(MapToDto(hero));
     }
@@ -98,6 +104,7 @@ public class HeroController : ControllerBase
         double xpProgress = xpForNextLevel > 0 ? (double)hero.CurrentXp / xpForNextLevel : 0.0;
 
         economy.CheckDailyReset();
+        await _context.SaveChangesAsync();
 
         return Ok(new HeroStatsDto
         {
@@ -231,7 +238,6 @@ public class HeroController : ControllerBase
     private HeroDto MapToDto(Hero hero)
     {
         var economy = hero.EconomyBalance ?? new EconomyBalance { HeroId = hero.Id };
-        economy.CheckDailyReset();
 
         return new HeroDto
         {
