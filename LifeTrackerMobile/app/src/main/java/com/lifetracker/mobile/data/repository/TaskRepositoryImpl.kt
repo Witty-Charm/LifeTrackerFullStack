@@ -84,7 +84,7 @@ class TaskRepositoryImpl(
                 remote
             }
             is DomainResult.Failure -> {
-                val tempId = -(System.currentTimeMillis().toInt())
+                val tempId = -(System.currentTimeMillis() % Int.MAX_VALUE).toInt().coerceAtLeast(1)
                 val localTask = GameTaskDomain(
                     id = tempId,
                     heroId = params.heroId,

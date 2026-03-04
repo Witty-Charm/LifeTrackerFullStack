@@ -98,21 +98,3 @@ data class HealResponse(
     val message: String,
 )
 
-
-@Serializable
-data class HeroUpdateBody(
-    val id: Int,
-    val name: String,
-    val level: Int,
-    val currentXp: Long,
-    val totalXpEarned: Long,
-    val currentHp: Int,
-    val maxHp: Int,
-    val gold: Int,
-    val isDead: Boolean,
-    val deathTime: Instant? = null,
-    val deathCount: Int,
-    val recoveryEndsAt: Instant? = null,
-    val createdDate: Instant,
-    val updatedAt: Instant,
-)

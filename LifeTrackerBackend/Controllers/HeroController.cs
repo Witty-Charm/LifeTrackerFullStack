@@ -82,29 +82,6 @@ public class HeroController : ControllerBase
         return CreatedAtAction(nameof(GetHero), new { id = hero.Id }, MapToDto(hero));
     }
 
-    [HttpPut("{id}")]
-    public async Task<IActionResult> PutHero(int id, Hero hero)
-    {
-        if (id != hero.Id)
-            return BadRequest();
-
-        _context.Entry(hero).State = EntityState.Modified;
-
-        try
-        {
-            await _context.SaveChangesAsync();
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            if (!HeroExists(id))
-                return NotFound();
-            else
-                throw;
-        }
-
-        return NoContent();
-    }
-
     [HttpGet("{id}/stats")]
     public async Task<ActionResult<HeroStatsDto>> GetHeroStats(int id)
     {
@@ -249,11 +226,6 @@ public class HeroController : ControllerBase
             NewGold = hero.Gold,
             Message = $"Healed {healAmount} HP for {goldCost} gold"
         });
-    }
-
-    private bool HeroExists(int id)
-    {
-        return _context.Heroes.Any(e => e.Id == id);
     }
 
     private HeroDto MapToDto(Hero hero)

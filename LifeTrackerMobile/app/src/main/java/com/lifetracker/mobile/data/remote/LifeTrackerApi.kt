@@ -7,7 +7,6 @@ import com.lifetracker.mobile.data.remote.dto.FailTaskResponse
 import com.lifetracker.mobile.data.remote.dto.HealResponse
 import com.lifetracker.mobile.data.remote.dto.HeroDto
 import com.lifetracker.mobile.data.remote.dto.HeroStatsDto
-import com.lifetracker.mobile.data.remote.dto.HeroUpdateBody
 import com.lifetracker.mobile.data.remote.dto.OverdueCheckResponse
 import com.lifetracker.mobile.data.remote.dto.RespawnResponse
 import com.lifetracker.mobile.data.remote.dto.TaskDto
@@ -30,12 +29,6 @@ interface LifeTrackerApi {
 
     @POST("api/Hero")
     suspend fun createHero(@Body request: CreateHeroRequest): Response<HeroDto>
-
-    @PUT("api/Hero/{id}")
-    suspend fun updateHero(
-        @Path("id") id: Int,
-        @Body body: HeroUpdateBody,
-    ): Response<Unit>
 
     @GET("api/Hero/{id}/stats")
     suspend fun getHeroStats(@Path("id") id: Int): Response<HeroStatsDto>
