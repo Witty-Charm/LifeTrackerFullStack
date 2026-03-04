@@ -25,6 +25,7 @@ data class TaskEntity(
     val completionCount: Int,
     val failCount: Int,
     val lastCompletedAt: Long?,
+    val overdueProcessedAt: Long?,
     val baseXp: Int,
     val baseGold: Int,
     val hpPenalty: Int,

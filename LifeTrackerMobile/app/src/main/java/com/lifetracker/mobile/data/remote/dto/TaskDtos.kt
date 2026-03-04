@@ -18,6 +18,7 @@ data class TaskDto(
     val completionCount: Int,
     val failCount: Int,
     val lastCompletedAt: Instant? = null,
+    val overdueProcessedAt: Instant? = null,
     val baseXp: Int,
     val baseGold: Int,
     val hpPenalty: Int,

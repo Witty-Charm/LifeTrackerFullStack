@@ -16,6 +16,7 @@ data class GameTaskDomain(
     val completionCount: Int,
     val failCount: Int,
     val lastCompletedAt: Instant?,
+    val overdueProcessedAt: Instant?,
     val baseXp: Int,
     val baseGold: Int,
     val hpPenalty: Int,

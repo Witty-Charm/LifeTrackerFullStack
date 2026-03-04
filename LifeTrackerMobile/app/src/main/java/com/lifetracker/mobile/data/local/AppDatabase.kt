@@ -9,7 +9,7 @@ import com.lifetracker.mobile.data.local.entity.TaskEntity
 
 @Database(
     entities = [HeroEntity::class, TaskEntity::class],
-    version = 1,
+    version = 2,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {

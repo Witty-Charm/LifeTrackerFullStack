@@ -28,6 +28,7 @@ fun TaskDto.toDomain(): GameTaskDomain = GameTaskDomain(
     completionCount = completionCount,
     failCount = failCount,
     lastCompletedAt = lastCompletedAt,
+    overdueProcessedAt = overdueProcessedAt,
     baseXp = baseXp,
     baseGold = baseGold,
     hpPenalty = hpPenalty,

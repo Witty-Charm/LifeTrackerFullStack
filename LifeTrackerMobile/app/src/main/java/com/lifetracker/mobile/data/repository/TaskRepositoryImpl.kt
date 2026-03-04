@@ -99,6 +99,7 @@ class TaskRepositoryImpl(
                     completionCount = 0,
                     failCount = 0,
                     lastCompletedAt = null,
+                    overdueProcessedAt = null,
                     baseXp = 0,
                     baseGold = 0,
                     hpPenalty = 0,

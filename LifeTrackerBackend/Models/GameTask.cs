@@ -28,6 +28,7 @@ public class GameTask
     public int FailCount { get; set; } = 0;
 
     public DateTimeOffset? LastCompletedAt { get; set; }
+    public DateTimeOffset? OverdueProcessedAt { get; set; }
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
 

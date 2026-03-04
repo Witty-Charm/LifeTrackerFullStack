@@ -32,38 +32,7 @@ public class TaskController : ControllerBase
 
         var tasks = await query.ToListAsync();
 
-        var taskDtos = tasks.Select(t => new TaskDto
-        {
-            Id = t.Id,
-            HeroId = t.HeroId,
-            Title = t.Title,
-            Description = t.Description,
-            Type = t.Type,
-            Difficulty = t.Difficulty,
-            IsCompleted = t.IsCompleted,
-            IsActive = t.IsActive,
-            DueDate = t.DueDate,
-            IsOverdue = t.IsOverdue(),
-            CompletionCount = t.CompletionCount,
-            FailCount = t.FailCount,
-            LastCompletedAt = t.LastCompletedAt,
-            BaseXp = t.GetBaseRewardXP(),
-            BaseGold = t.GetGoldReward(),
-            HpPenalty = t.GetHpPenalty(),
-            GoldPenalty = t.GetGoldPenalty(),
-            StreakInfo = t.Streak != null
-                ? new StreakInfoDto
-                {
-                    CurrentDays = t.Streak.CurrentDays,
-                    BonusXpPercent = t.Streak.GetBonusXpPercent(),
-                    Multiplier = t.Streak.GetStreakMultiplier(),
-                    IsFrozen = t.Streak.IsFrozen(),
-                    IsShieldActive = t.Streak.IsShieldActive
-                }
-                : null
-        }).ToList();
-
-        return Ok(taskDtos);
+        return Ok(tasks.Select(MapToDto).ToList());
     }
 
     [HttpGet("{id}")]
@@ -76,38 +45,7 @@ public class TaskController : ControllerBase
         if (task == null)
             return NotFound();
 
-        var dto = new TaskDto
-        {
-            Id = task.Id,
-            HeroId = task.HeroId,
-            Title = task.Title,
-            Description = task.Description,
-            Type = task.Type,
-            Difficulty = task.Difficulty,
-            IsCompleted = task.IsCompleted,
-            IsActive = task.IsActive,
-            DueDate = task.DueDate,
-            IsOverdue = task.IsOverdue(),
-            CompletionCount = task.CompletionCount,
-            FailCount = task.FailCount,
-            LastCompletedAt = task.LastCompletedAt,
-            BaseXp = task.GetBaseRewardXP(),
-            BaseGold = task.GetGoldReward(),
-            HpPenalty = task.GetHpPenalty(),
-            GoldPenalty = task.GetGoldPenalty(),
-            StreakInfo = task.Streak != null
-                ? new StreakInfoDto
-                {
-                    CurrentDays = task.Streak.CurrentDays,
-                    BonusXpPercent = task.Streak.GetBonusXpPercent(),
-                    Multiplier = task.Streak.GetStreakMultiplier(),
-                    IsFrozen = task.Streak.IsFrozen(),
-                    IsShieldActive = task.Streak.IsShieldActive
-                }
-                : null
-        };
-
-        return Ok(dto);
+        return Ok(MapToDto(task));
     }
 
     [HttpPost]
@@ -159,7 +97,7 @@ public class TaskController : ControllerBase
             await _context.SaveChangesAsync();
         }
 
-        return CreatedAtAction(nameof(GetTask), new { id = task.Id }, await GetTaskDto(task.Id));
+        return CreatedAtAction(nameof(GetTask), new { id = task.Id }, MapToDto(task));
     }
 
     [HttpPut("{id}/complete")]
@@ -349,7 +287,7 @@ public class TaskController : ControllerBase
             .Include(t => t.Streak)
             .Include(t => t.Hero)
             .ThenInclude(h => h!.EconomyBalance)
-            .Where(t => t.IsActive && !t.IsCompleted);
+            .Where(t => t.IsActive && !t.IsCompleted && t.OverdueProcessedAt == null);
 
         if (heroId.HasValue)
             query = query.Where(t => t.HeroId == heroId.Value);
@@ -374,6 +312,8 @@ public class TaskController : ControllerBase
 
             var (hpLost, goldLost, heroDied, streakBroken, streakPenalty) =
                 _gameEngine.ApplyTaskFailure(task, hero, streak, economy);
+
+            task.OverdueProcessedAt = DateTimeOffset.UtcNow;
 
             penalties.Add(new OverdueTaskPenalty
             {
@@ -411,46 +351,37 @@ public class TaskController : ControllerBase
         return NoContent();
     }
 
-    private async Task<TaskDto> GetTaskDto(int taskId)
+    private static TaskDto MapToDto(GameTask task) => new TaskDto
     {
-        var task = await _context.GameTasks
-            .Include(t => t.Streak)
-            .FirstOrDefaultAsync(t => t.Id == taskId);
-
-        if (task == null)
-            throw new Exception("Task not found");
-
-        return new TaskDto
-        {
-            Id = task.Id,
-            HeroId = task.HeroId,
-            Title = task.Title,
-            Description = task.Description,
-            Type = task.Type,
-            Difficulty = task.Difficulty,
-            IsCompleted = task.IsCompleted,
-            IsActive = task.IsActive,
-            DueDate = task.DueDate,
-            IsOverdue = task.IsOverdue(),
-            CompletionCount = task.CompletionCount,
-            FailCount = task.FailCount,
-            LastCompletedAt = task.LastCompletedAt,
-            BaseXp = task.GetBaseRewardXP(),
-            BaseGold = task.GetGoldReward(),
-            HpPenalty = task.GetHpPenalty(),
-            GoldPenalty = task.GetGoldPenalty(),
-            StreakInfo = task.Streak != null
-                ? new StreakInfoDto
-                {
-                    CurrentDays = task.Streak.CurrentDays,
-                    BonusXpPercent = task.Streak.GetBonusXpPercent(),
-                    Multiplier = task.Streak.GetStreakMultiplier(),
-                    IsFrozen = task.Streak.IsFrozen(),
-                    IsShieldActive = task.Streak.IsShieldActive
-                }
-                : null
-        };
-    }
+        Id = task.Id,
+        HeroId = task.HeroId,
+        Title = task.Title,
+        Description = task.Description,
+        Type = task.Type,
+        Difficulty = task.Difficulty,
+        IsCompleted = task.IsCompleted,
+        IsActive = task.IsActive,
+        DueDate = task.DueDate,
+        IsOverdue = task.IsOverdue(),
+        CompletionCount = task.CompletionCount,
+        FailCount = task.FailCount,
+        LastCompletedAt = task.LastCompletedAt,
+        OverdueProcessedAt = task.OverdueProcessedAt,
+        BaseXp = task.GetBaseRewardXP(),
+        BaseGold = task.GetGoldReward(),
+        HpPenalty = task.GetHpPenalty(),
+        GoldPenalty = task.GetGoldPenalty(),
+        StreakInfo = task.Streak != null
+            ? new StreakInfoDto
+            {
+                CurrentDays = task.Streak.CurrentDays,
+                BonusXpPercent = task.Streak.GetBonusXpPercent(),
+                Multiplier = task.Streak.GetStreakMultiplier(),
+                IsFrozen = task.Streak.IsFrozen(),
+                IsShieldActive = task.Streak.IsShieldActive
+            }
+            : null
+    };
 
     private string GetFailureMessage(bool died, int hp, int gold, bool streakBroken, StreakBreakPenalty? penalty)
     {
@@ -497,6 +428,7 @@ public class TaskDto
     public int CompletionCount { get; set; }
     public int FailCount { get; set; }
     public DateTimeOffset? LastCompletedAt { get; set; }
+    public DateTimeOffset? OverdueProcessedAt { get; set; }
     public int BaseXp { get; set; }
     public int BaseGold { get; set; }
     public int HpPenalty { get; set; }
