@@ -31,43 +31,6 @@ app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
 
-using (var scope = app.Services.CreateScope())
-{
-    var services = scope.ServiceProvider;
-    try
-    {
-        var context = services.GetRequiredService<ApplicationDbContext>();
 
-        context.Database.Migrate();
-
-        if (!context.Heroes.Any())
-        {
-            var hero = new LifeTracker.Models.Hero
-            {
-                Name = "Jerry",
-                Level = 1,
-                CurrentXp = 0,
-                CurrentHp = 50,
-                MaxHp = 50,
-                Gold = 100
-            };
-            context.Heroes.Add(hero);
-            context.SaveChanges();
-
-            var economy = new LifeTracker.Models.EconomyBalance
-            {
-                HeroId = hero.Id,
-                TotalGoldEarned = 100
-            };
-            context.EconomyBalances.Add(economy);
-            context.SaveChanges();
-        }
-    }
-    catch (Exception ex)
-    {
-        var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "An error occurred while initializing the database.");
-    }
-}
 app.Urls.Add("http://0.0.0.0:5000");
 app.Run();

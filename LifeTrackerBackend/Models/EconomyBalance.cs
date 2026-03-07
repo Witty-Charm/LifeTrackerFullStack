@@ -10,7 +10,7 @@ public class EconomyBalance
     public long TotalXpEarned { get; set; } = 0;
 
     public int DailyTaskCompletions { get; set; } = 0;
-    public int MaxDailyCompletions { get; set; } = 50;
+    public int MaxDailyCompletions { get; set; } = Constants.GameConstants.DailyTaskCap;
     public DateTimeOffset DailyResetAt { get; set; } = DateTimeOffset.UtcNow.Date;
 
     public decimal XpMultiplier { get; set; } = 1.0m;
