@@ -59,8 +59,13 @@ fun CreateTaskScreen(
     val datePickerState = rememberDatePickerState()
 
     LaunchedEffect(Unit) {
-        vm.events.collect { event ->
-            if (event is UiEvent.TaskCreated) navController.popBackStack()
+        vm.clearError()
+    }
+
+    LaunchedEffect(state.taskCreatedSuccessfully) {
+        if (state.taskCreatedSuccessfully) {
+            vm.consumeTaskCreated()
+            navController.popBackStack()
         }
     }
 

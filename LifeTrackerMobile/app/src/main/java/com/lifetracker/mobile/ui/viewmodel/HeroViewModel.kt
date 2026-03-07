@@ -144,7 +144,10 @@ class HeroViewModel(
         executeAction { taskUseCases.createTask(params) }
             ?.let { task ->
                 _state.update { current ->
-                    current.copy(tasks = current.tasks + task.toUi())
+                    current.copy(
+                        tasks = current.tasks + task.toUi(),
+                        taskCreatedSuccessfully = true
+                    )
                 }
                 _events.send(UiEvent.TaskCreated)
             }
@@ -200,6 +203,10 @@ class HeroViewModel(
 
     fun clearError() {
         _state.update { it.copy(criticalError = null, actionError = null) }
+    }
+
+    fun consumeTaskCreated() {
+        _state.update { it.copy(taskCreatedSuccessfully = false) }
     }
 
     private fun updateHero(transform: HeroDomain.() -> HeroDomain) {

@@ -10,6 +10,7 @@ data class HeroScreenState(
     val needsHeroCreation: Boolean = false,
     val criticalError: UiError? = null,
     val actionError: UiError? = null,
+    val taskCreatedSuccessfully: Boolean = false,
 )
 
 data class HeroUi(

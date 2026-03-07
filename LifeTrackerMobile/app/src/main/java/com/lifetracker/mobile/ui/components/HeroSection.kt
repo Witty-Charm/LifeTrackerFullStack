@@ -120,7 +120,7 @@ fun HeroSection(
             }
         }
 
-        if (hero.isDead || hero.isInRecovery) {
+        if (hero.isDead || (hero.isInRecovery && hero.hpProgress < 1.0f)) {
             Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End
@@ -132,7 +132,7 @@ fun HeroSection(
                     ) {
                         Text(text = "Respawn", color = TextPrimary)
                     }
-                } else if (hero.isInRecovery) {
+                } else if (hero.isInRecovery && hero.hpProgress < 1.0f) {
                     Button(
                         onClick = onHeal,
                         colors = ButtonDefaults.buttonColors(containerColor = PurpleAccent)
