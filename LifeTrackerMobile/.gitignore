@@ -16,3 +16,7 @@ google-services.json
 *.aar
 *.bundle
 *.hprof
+
+# Room schemas (exported for migrations)
+app/schemas/
+
