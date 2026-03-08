@@ -6,12 +6,15 @@ data class HeroScreenState(
     val hero: HeroUi? = null,
     val tasks: List<TaskUi> = emptyList(),
     val isLoading: Boolean = false,
-    val isActionLoading: Boolean = false,
+    val loadingActions: Set<String> = emptySet(),
     val needsHeroCreation: Boolean = false,
     val criticalError: UiError? = null,
     val actionError: UiError? = null,
     val taskCreatedSuccessfully: Boolean = false,
 )
+
+fun HeroScreenState.isActionLoading(key: String) = key in loadingActions
+val HeroScreenState.isAnyActionLoading get() = loadingActions.isNotEmpty()
 
 data class HeroUi(
     val id: Int,

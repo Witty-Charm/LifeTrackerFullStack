@@ -22,6 +22,7 @@ import com.lifetracker.mobile.ui.mapper.toUi
 import com.lifetracker.mobile.ui.mapper.toUiError
 import com.lifetracker.mobile.ui.model.HeroScreenState
 import com.lifetracker.mobile.ui.model.UiEvent
+import com.lifetracker.mobile.ui.model.isActionLoading
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
@@ -106,7 +107,7 @@ class HeroViewModel(
         }
     }
 
-    fun completeTask(taskId: Int) = launchAction {
+    fun completeTask(taskId: Int) = launchAction("task_complete_$taskId") {
         executeAction { taskUseCases.completeTask(taskId) }
             ?.let { result ->
                 applySnapshot(result.heroSnapshot)
@@ -115,7 +116,7 @@ class HeroViewModel(
             }
     }
 
-    fun failTask(taskId: Int) = launchAction {
+    fun failTask(taskId: Int) = launchAction("task_fail_$taskId") {
         executeAction { taskUseCases.failTask(taskId) }
             ?.let { result ->
                 applySnapshot(result.heroSnapshot)
@@ -131,7 +132,7 @@ class HeroViewModel(
         type: UiTaskType,
         difficulty: UiDifficulty,
         dueDate: kotlin.time.Instant?,
-    ) = launchAction {
+    ) = launchAction("task_create") {
         val id = heroId ?: return@launchAction
         val params = CreateTaskParams(
             heroId = id,
@@ -153,7 +154,7 @@ class HeroViewModel(
             }
     }
 
-    fun deleteTask(taskId: Int) = launchAction {
+    fun deleteTask(taskId: Int) = launchAction("task_delete_$taskId") {
         executeAction { taskUseCases.deleteTask(taskId) }
             ?.let {
                 _state.update { current ->
@@ -162,7 +163,7 @@ class HeroViewModel(
             }
     }
 
-    fun respawnHero() = launchAction {
+    fun respawnHero() = launchAction("hero_respawn") {
         val id = heroId ?: return@launchAction
         executeAction { heroUseCases.respawnHero(id) }
             ?.let { result ->
@@ -186,7 +187,7 @@ class HeroViewModel(
 
     }
 
-    fun healHero(amount: Int? = null) = launchAction {
+    fun healHero(amount: Int? = null) = launchAction("hero_heal") {
         val id = heroId ?: return@launchAction
         executeAction { heroUseCases.healHero(id, amount) }
             ?.let { result ->
@@ -215,7 +216,7 @@ class HeroViewModel(
         _state.update { it.copy(hero = updated.toUi()) }
     }
 
-    fun createHero(name: String, startingGold: Int? = null) = launchAction {
+    fun createHero(name: String, startingGold: Int? = null) = launchAction("hero_create") {
         executeAction { heroUseCases.createHero(name, startingGold) }
             ?.let { hero ->
                 heroDomain = hero
@@ -225,14 +226,14 @@ class HeroViewModel(
 
     }
 
-    private fun launchAction(block: suspend () -> Unit) {
-        if(_state.value.isActionLoading) return
+    private fun launchAction(key: String, block: suspend () -> Unit) {
+        if(key in _state.value.loadingActions) return
         viewModelScope.launch {
-            _state.update { it.copy(isActionLoading = true, actionError = null) }
+            _state.update { it.copy(loadingActions = it.loadingActions + key, actionError = null) }
             try {
                 block()
             } finally {
-                _state.update { it.copy(isActionLoading = false) }
+                _state.update { it.copy(loadingActions = it.loadingActions - key) }
             }
         }
     }

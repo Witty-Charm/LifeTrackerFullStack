@@ -7,6 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MonetizationOn
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -35,7 +36,12 @@ import androidx.compose.ui.text.style.TextOverflow
 
 @Composable
 fun HeroSection(
-    hero: HeroUi, onHeal: () -> Unit, onRespawn: () -> Unit, modifier: Modifier = Modifier
+    hero: HeroUi,
+    onHeal: () -> Unit,
+    onRespawn: () -> Unit,
+    isHealLoading: Boolean = false,
+    isRespawnLoading: Boolean = false,
+    modifier: Modifier = Modifier,
 ) {
     Column(
         modifier = modifier
@@ -128,16 +134,34 @@ fun HeroSection(
                 if (hero.isDead) {
                     Button(
                         onClick = onRespawn,
+                        enabled = !isRespawnLoading,
                         colors = ButtonDefaults.buttonColors(containerColor = HealthRed)
                     ) {
-                        Text(text = "Respawn", color = TextPrimary)
+                        if (isRespawnLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                color = TextPrimary,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text(text = "Respawn", color = TextPrimary)
+                        }
                     }
                 } else if (hero.isInRecovery && hero.hpProgress < 1.0f) {
                     Button(
                         onClick = onHeal,
+                        enabled = !isHealLoading,
                         colors = ButtonDefaults.buttonColors(containerColor = PurpleAccent)
                     ) {
-                        Text(text = "Heal", color = TextPrimary)
+                        if (isHealLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                color = TextPrimary,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text(text = "Heal", color = TextPrimary)
+                        }
                     }
                 }
             }
