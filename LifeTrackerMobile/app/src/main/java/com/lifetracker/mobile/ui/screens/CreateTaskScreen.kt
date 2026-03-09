@@ -36,10 +36,10 @@ import androidx.navigation.NavController
 import com.lifetracker.mobile.ui.model.HeroScreenState
 import com.lifetracker.mobile.ui.mapper.toMessage
 import com.lifetracker.mobile.ui.model.UiDifficulty
-import com.lifetracker.mobile.ui.model.UiEvent
 import com.lifetracker.mobile.ui.model.UiTaskType
 import com.lifetracker.mobile.ui.viewmodel.HeroViewModel
 import androidx.compose.ui.platform.LocalContext
+import com.lifetracker.mobile.ui.model.isAnyActionLoading
 import kotlin.time.Instant
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -185,7 +185,7 @@ fun CreateTaskScreen(
                         dueDate = dueDate,
                     )
                 },
-                enabled = title.isNotBlank() && !state.isActionLoading,
+                enabled = title.isNotBlank() && !state.isAnyActionLoading,
                 modifier = Modifier.align(Alignment.End)
             ) {
                 Text("Save")

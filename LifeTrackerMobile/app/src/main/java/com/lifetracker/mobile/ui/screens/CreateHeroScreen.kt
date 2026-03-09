@@ -29,6 +29,7 @@ import androidx.navigation.NavController
 import com.lifetracker.mobile.navigation.Screen
 import com.lifetracker.mobile.ui.mapper.toMessage
 import com.lifetracker.mobile.ui.model.HeroScreenState
+import com.lifetracker.mobile.ui.model.isAnyActionLoading
 import com.lifetracker.mobile.ui.viewmodel.HeroViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -86,10 +87,10 @@ fun CreateHeroScreen(
 
             Button(
                 onClick = { vm.createHero(name) },
-                enabled = name.isNotBlank() && !state.isActionLoading,
+                enabled = name.isNotBlank() && !state.isAnyActionLoading,
                 modifier = Modifier.align(Alignment.End)
             ) {
-                if (state.isActionLoading) {
+                if (state.isAnyActionLoading) {
                     CircularProgressIndicator(
                         modifier = Modifier
                             .height(18.dp)

@@ -22,7 +22,6 @@ import com.lifetracker.mobile.ui.mapper.toUi
 import com.lifetracker.mobile.ui.mapper.toUiError
 import com.lifetracker.mobile.ui.model.HeroScreenState
 import com.lifetracker.mobile.ui.model.UiEvent
-import com.lifetracker.mobile.ui.model.isActionLoading
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
@@ -40,6 +39,16 @@ class HeroViewModel(
     private val taskUseCases: TaskUseCases,
     private val isDebug: Boolean = false,
 ) : ViewModel() {
+    private object ActionKeys {
+        const val HERO_CREATE = "hero_create"
+        const val HERO_RESPAWN = "hero_respawn"
+        const val HERO_HEAL = "hero_heal"
+        const val TASK_CREATE = "task_create"
+
+        fun taskComplete(id: Int) = "task_complete_$id"
+        fun taskFail(id: Int) = "task_fail_$id"
+        fun taskDelete(id: Int) = "task_delete_$id"
+    }
 
     private val _state = MutableStateFlow(HeroScreenState())
     val state: StateFlow<HeroScreenState> = _state.asStateFlow()
@@ -107,7 +116,7 @@ class HeroViewModel(
         }
     }
 
-    fun completeTask(taskId: Int) = launchAction("task_complete_$taskId") {
+    fun completeTask(taskId: Int) = launchAction(ActionKeys.taskComplete(taskId)) {
         executeAction { taskUseCases.completeTask(taskId) }
             ?.let { result ->
                 applySnapshot(result.heroSnapshot)
@@ -116,7 +125,7 @@ class HeroViewModel(
             }
     }
 
-    fun failTask(taskId: Int) = launchAction("task_fail_$taskId") {
+    fun failTask(taskId: Int) = launchAction(ActionKeys.taskFail(taskId)) {
         executeAction { taskUseCases.failTask(taskId) }
             ?.let { result ->
                 applySnapshot(result.heroSnapshot)
@@ -132,7 +141,7 @@ class HeroViewModel(
         type: UiTaskType,
         difficulty: UiDifficulty,
         dueDate: kotlin.time.Instant?,
-    ) = launchAction("task_create") {
+    ) = launchAction(ActionKeys.TASK_CREATE) {
         val id = heroId ?: return@launchAction
         val params = CreateTaskParams(
             heroId = id,
@@ -154,7 +163,7 @@ class HeroViewModel(
             }
     }
 
-    fun deleteTask(taskId: Int) = launchAction("task_delete_$taskId") {
+    fun deleteTask(taskId: Int) = launchAction(ActionKeys.taskDelete(taskId)) {
         executeAction { taskUseCases.deleteTask(taskId) }
             ?.let {
                 _state.update { current ->
@@ -163,7 +172,7 @@ class HeroViewModel(
             }
     }
 
-    fun respawnHero() = launchAction("hero_respawn") {
+    fun respawnHero() = launchAction(ActionKeys.HERO_RESPAWN) {
         val id = heroId ?: return@launchAction
         executeAction { heroUseCases.respawnHero(id) }
             ?.let { result ->
@@ -187,7 +196,7 @@ class HeroViewModel(
 
     }
 
-    fun healHero(amount: Int? = null) = launchAction("hero_heal") {
+    fun healHero(amount: Int? = null) = launchAction(ActionKeys.HERO_HEAL) {
         val id = heroId ?: return@launchAction
         executeAction { heroUseCases.healHero(id, amount) }
             ?.let { result ->
@@ -216,7 +225,7 @@ class HeroViewModel(
         _state.update { it.copy(hero = updated.toUi()) }
     }
 
-    fun createHero(name: String, startingGold: Int? = null) = launchAction("hero_create") {
+    fun createHero(name: String, startingGold: Int? = null) = launchAction(ActionKeys.HERO_CREATE) {
         executeAction { heroUseCases.createHero(name, startingGold) }
             ?.let { hero ->
                 heroDomain = hero
@@ -225,6 +234,16 @@ class HeroViewModel(
             }
 
     }
+
+    fun isTaskLoading(taskId: Int): Boolean {
+        val actions = _state.value.loadingActions
+        return ActionKeys.taskComplete(taskId) in actions
+                || ActionKeys.taskFail(taskId) in actions
+                || ActionKeys.taskDelete(taskId) in actions
+    }
+
+    val isHealLoading: Boolean get() = ActionKeys.HERO_HEAL in _state.value.loadingActions
+    val isRespawnLoading: Boolean get() = ActionKeys.HERO_RESPAWN in _state.value.loadingActions
 
     private fun launchAction(key: String, block: suspend () -> Unit) {
         if(key in _state.value.loadingActions) return

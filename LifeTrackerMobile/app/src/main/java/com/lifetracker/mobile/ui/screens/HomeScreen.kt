@@ -32,7 +32,6 @@ import com.lifetracker.mobile.ui.components.HeroSection
 import com.lifetracker.mobile.ui.components.HomeTab
 import com.lifetracker.mobile.ui.components.TaskItem
 import com.lifetracker.mobile.ui.model.HeroScreenState
-import com.lifetracker.mobile.ui.model.isActionLoading
 import com.lifetracker.mobile.ui.theme.AppBackground
 import com.lifetracker.mobile.ui.theme.PurpleAccent
 import com.lifetracker.mobile.ui.theme.TextPrimary
@@ -98,8 +97,8 @@ fun HomeScreen(
                             hero = hero,
                             onHeal = { vm.healHero() },
                             onRespawn = { vm.respawnHero() },
-                            isHealLoading = state.isActionLoading("hero_heal"),
-                            isRespawnLoading = state.isActionLoading("hero_respawn"),
+                            isHealLoading = vm.isHealLoading,
+                            isRespawnLoading = vm.isRespawnLoading,
                         )
                         DailyObjectiveCard(
                             hero = hero,
@@ -130,10 +129,8 @@ fun HomeScreen(
                                     task = task,
                                     onCompleteClick = { vm.completeTask(task.id) },
                                     onFailClick = { vm.failTask(task.id) },
-                                    isActionLoading = state.isActionLoading("task_complete_${task.id}")
-                                            || state.isActionLoading("task_fail_${task.id}")
-                                            || state.isActionLoading("task_delete_${task.id}"),
-                                    onDeleteClick = { vm.deleteTask(task.id) }
+                                    onDeleteClick = { vm.deleteTask(task.id) },
+                                    isActionLoading = vm.isTaskLoading(task.id) ,
                                 )
                             }
                         }
