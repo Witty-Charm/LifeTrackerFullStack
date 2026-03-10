@@ -3,10 +3,13 @@ package com.lifetracker.mobile
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.LaunchedEffect
@@ -19,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.rememberNavController
 import com.lifetracker.mobile.navigation.NavGraph
 import com.lifetracker.mobile.ui.model.UiEvent
+import com.lifetracker.mobile.ui.theme.AppBackground
 import com.lifetracker.mobile.ui.theme.LifeTrackerMobileTheme
 import com.lifetracker.mobile.ui.viewmodel.HeroViewModel
 import org.koin.androidx.compose.koinViewModel
@@ -46,13 +50,15 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                Box(modifier = Modifier.fillMaxSize()) {
+                Box(modifier = Modifier.fillMaxSize()
+                    .background(AppBackground)
+                    .windowInsetsPadding(WindowInsets.systemBars)
+                ) {
                     NavGraph(navController = navController, vm = vm, state = state)
                     SnackbarHost(
                         hostState = snackbarHostState,
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
-                            .navigationBarsPadding()
                             .padding(bottom = 80.dp)
                     )
                 }
