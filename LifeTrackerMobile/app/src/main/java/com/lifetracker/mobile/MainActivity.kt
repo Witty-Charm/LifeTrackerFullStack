@@ -28,11 +28,19 @@ import com.lifetracker.mobile.ui.viewmodel.HeroViewModel
 import org.koin.androidx.compose.koinViewModel
 
 class MainActivity : ComponentActivity() {
+    private var viewModel: HeroViewModel? = null
+
+    override fun onResume() {
+        super.onResume()
+        viewModel?.loadData()
+    }
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             LifeTrackerMobileTheme {
-                val vm: HeroViewModel = koinViewModel()
+                val vm = koinViewModel<HeroViewModel>().also { viewModel = it }
                 val state by vm.state.collectAsState()
                 val navController = rememberNavController()
                 val snackbarHostState = remember { SnackbarHostState() }

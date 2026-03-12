@@ -19,6 +19,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.material.icons.filled.CloudOff
+
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextOverflow
@@ -42,8 +44,20 @@ fun TaskItem(
     onDeleteClick: () -> Unit,
 ) {
     val isCompleted = task.isCompleted
-    val canAct = !isCompleted && !isActionLoading
+    val canAct = !isCompleted && !isActionLoading && !task.isPendingSync
     val cardAlpha = if (isCompleted) 0.5f else 1f
+
+    if (task.isPendingSync) {
+        TaskCardContent(
+            task = task,
+            canAct = true,
+            cardAlpha = 0.6f,
+            onCompleteClick = onCompleteClick,
+            onFailClick = onFailClick,
+            modifier = modifier,
+        )
+        return
+    }
 
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = { value ->
@@ -94,7 +108,8 @@ private fun TaskCardContent(
     canAct: Boolean,
     cardAlpha: Float,
     onCompleteClick: () -> Unit,
-    onFailClick: () -> Unit
+    onFailClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Row(
         modifier = Modifier
@@ -184,6 +199,24 @@ private fun TaskCardContent(
                     style = MaterialTheme.typography.bodySmall,
                     color = if (task.isOverdue) HealthRed else TextSecondary
                 )
+            }
+
+            if (task.isPendingSync) {
+                Spacer(modifier = Modifier.height(2.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.CloudOff,
+                        contentDescription = null,
+                        tint = TextSecondary,
+                        modifier = Modifier.size(12.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "Pending sync",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary
+                    )
+                }
             }
         }
 

@@ -1,7 +1,9 @@
 package com.lifetracker.mobile.data.repository
 
+import android.content.Context
 import com.lifetracker.mobile.core.network.SafeApiCaller
 import com.lifetracker.mobile.core.network.map
+import com.lifetracker.mobile.core.sync.SyncScheduler
 import com.lifetracker.mobile.data.local.dao.TaskDao
 import com.lifetracker.mobile.data.mapper.toDomain
 import com.lifetracker.mobile.data.mapper.toDomainResult
@@ -22,6 +24,7 @@ class TaskRepositoryImpl(
     private val api: LifeTrackerApi,
     private val caller: SafeApiCaller,
     private val taskDao: TaskDao,
+    private val context: Context,
 ) : TaskRepository {
 
     override suspend fun getTasks(heroId: Int): DomainResult<List<GameTaskDomain>> {
@@ -107,6 +110,7 @@ class TaskRepositoryImpl(
                     streak = null,
                 )
                 taskDao.upsert(localTask.toEntity(pendingSync = true))
+                SyncScheduler.schedule(context)
                 DomainResult.Success(localTask)
             }
         }
@@ -146,6 +150,11 @@ class TaskRepositoryImpl(
             .toDomainResult()
 
     override suspend fun deleteTask(taskId: Int): DomainResult<Unit> {
+        if (taskId < 0) {
+            taskDao.deleteById(taskId)
+            return DomainResult.Success(Unit)
+        }
+
         val remote = caller.safeApiCallUnit { api.deleteTask(taskId) }
             .toDomainResult()
 

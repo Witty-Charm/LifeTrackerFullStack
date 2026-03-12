@@ -22,6 +22,9 @@ import com.lifetracker.mobile.ui.mapper.toUi
 import com.lifetracker.mobile.ui.mapper.toUiError
 import com.lifetracker.mobile.ui.model.HeroScreenState
 import com.lifetracker.mobile.ui.model.UiEvent
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
+import com.lifetracker.mobile.core.sync.SyncScheduler
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
@@ -29,6 +32,8 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -37,6 +42,7 @@ import timber.log.Timber
 class HeroViewModel(
     private val heroUseCases: HeroUseCases,
     private val taskUseCases: TaskUseCases,
+    private val workManager: WorkManager,
     private val isDebug: Boolean = false,
 ) : ViewModel() {
     private object ActionKeys {
@@ -64,6 +70,7 @@ class HeroViewModel(
 
     init {
         loadData()
+        observeSyncWorker()
     }
 
     fun loadData() {
@@ -117,6 +124,10 @@ class HeroViewModel(
     }
 
     fun completeTask(taskId: Int) = launchAction(ActionKeys.taskComplete(taskId)) {
+        if (isPendingSync(taskId)) {
+            _events.send(UiEvent.ShowSnackbar("Task is not synced yet. Try again when online."))
+            return@launchAction
+        }
         executeAction { taskUseCases.completeTask(taskId) }
             ?.let { result ->
                 applySnapshot(result.heroSnapshot)
@@ -126,6 +137,10 @@ class HeroViewModel(
     }
 
     fun failTask(taskId: Int) = launchAction(ActionKeys.taskFail(taskId)) {
+        if (isPendingSync(taskId)) {
+            _events.send(UiEvent.ShowSnackbar("Task is not synced yet. Try again when online."))
+            return@launchAction
+        }
         executeAction { taskUseCases.failTask(taskId) }
             ?.let { result ->
                 applySnapshot(result.heroSnapshot)
@@ -235,6 +250,9 @@ class HeroViewModel(
 
     }
 
+    private fun isPendingSync(taskId: Int): Boolean =
+        _state.value.tasks.find { it.id == taskId }?.isPendingSync == true
+
     fun isTaskLoading(taskId: Int): Boolean {
         val actions = _state.value.loadingActions
         return ActionKeys.taskComplete(taskId) in actions
@@ -313,6 +331,19 @@ class HeroViewModel(
                 null
             },
         )
+    }
+
+    private fun observeSyncWorker() {
+        workManager
+            .getWorkInfosForUniqueWorkFlow(SyncScheduler.WORK_NAME)
+            .onEach { workInfos ->
+                val finished = workInfos.any { it.state == WorkInfo.State.SUCCEEDED }
+                if (finished) {
+                    Timber.d("SyncWorker succeeded — refreshing tasks")
+                    refreshTasks()
+                }
+            }
+            .launchIn(viewModelScope)
     }
 
     private suspend fun <T> safeCall(

@@ -27,8 +27,11 @@ import com.lifetracker.mobile.domain.usecase.task.GetTasksUseCase
 import com.lifetracker.mobile.domain.usecase.task.TaskUseCases
 import com.lifetracker.mobile.ui.viewmodel.HeroViewModel
 import kotlinx.serialization.json.Json
+import androidx.work.WorkManager
+import com.lifetracker.mobile.core.sync.SyncWorker
 import org.koin.core.module.dsl.viewModel
 import org.koin.android.ext.koin.androidContext
+import org.koin.androidx.workmanager.dsl.workerOf
 import org.koin.dsl.module
 
 val appModule = module {
@@ -44,11 +47,14 @@ val appModule = module {
     single { NetworkModule.provideOkHttpClient(isDebug = BuildConfig.DEBUG) }
     single { NetworkModule.provideApi(baseUrl = BuildConfig.BASE_URL, client = get(), json = get()) }
     single<HeroRepository> { HeroRepositoryImpl(api = get(), caller = get(), heroDao = get()) }
-    single<TaskRepository> { TaskRepositoryImpl(api = get(), caller = get(), taskDao = get()) }
+    single<TaskRepository> { TaskRepositoryImpl(api = get(), caller = get(), taskDao = get(), context = androidContext()) }
+    single { WorkManager.getInstance(androidContext()) }
+
     viewModel {
         HeroViewModel(
             heroUseCases = get(),
             taskUseCases = get(),
+            workManager = get(),
             isDebug = BuildConfig.DEBUG,
         )
     }
@@ -89,4 +95,6 @@ val appModule = module {
 
     single { get<AppDatabase>().heroDao() }
     single { get<AppDatabase>().taskDao() }
+
+    workerOf(::SyncWorker)
 }

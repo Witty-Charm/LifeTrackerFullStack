@@ -51,6 +51,7 @@ data class TaskUi(
     val rewardText: String,
     val penaltyText: String,
     val streakText: String?,
+    val isPendingSync: Boolean,
 )
 
 sealed interface UiError {

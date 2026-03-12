@@ -67,6 +67,7 @@ fun GameTaskDomain.toUi(): TaskUi = TaskUi(
     penaltyText = "-$hpPenalty HP -$goldPenalty Gold",
     streakText = streak?.takeIf { it.currentDays > 0 }
         ?.let { "\uD83D\uDD25 ${it.currentDays} days (+${it.bonusXpPercent}%)" },
+    isPendingSync = id < 0,
 )
 
 fun UiTaskType.toDomain(): TaskType = when (this) {
