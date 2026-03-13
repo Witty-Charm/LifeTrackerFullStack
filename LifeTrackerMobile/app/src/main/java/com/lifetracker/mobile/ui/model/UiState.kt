@@ -10,7 +10,6 @@ data class HeroScreenState(
     val needsHeroCreation: Boolean = false,
     val criticalError: UiError? = null,
     val actionError: UiError? = null,
-    val taskCreatedSuccessfully: Boolean = false,
 )
 
 fun HeroScreenState.isActionLoading(key: String) = key in loadingActions

@@ -62,13 +62,6 @@ fun CreateTaskScreen(
         vm.clearError()
     }
 
-    LaunchedEffect(state.taskCreatedSuccessfully) {
-        if (state.taskCreatedSuccessfully) {
-            vm.consumeTaskCreated()
-            navController.popBackStack()
-        }
-    }
-
     Scaffold(
         topBar = {
             TopAppBar(

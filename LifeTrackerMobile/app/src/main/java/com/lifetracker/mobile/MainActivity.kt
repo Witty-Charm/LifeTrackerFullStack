@@ -3,6 +3,7 @@ package com.lifetracker.mobile
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
@@ -28,19 +29,11 @@ import com.lifetracker.mobile.ui.viewmodel.HeroViewModel
 import org.koin.androidx.compose.koinViewModel
 
 class MainActivity : ComponentActivity() {
-    private var viewModel: HeroViewModel? = null
-
-    override fun onResume() {
-        super.onResume()
-        viewModel?.loadData()
-    }
-
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             LifeTrackerMobileTheme {
-                val vm = koinViewModel<HeroViewModel>().also { viewModel = it }
+                val vm = koinViewModel<HeroViewModel>()
                 val state by vm.state.collectAsState()
                 val navController = rememberNavController()
                 val snackbarHostState = remember { SnackbarHostState() }
@@ -53,7 +46,7 @@ class MainActivity : ComponentActivity() {
                             is UiEvent.TaskFailed -> snackbarHostState.showSnackbar(event.message)
                             is UiEvent.HeroRespawned -> snackbarHostState.showSnackbar(event.message)
                             is UiEvent.HeroHealed -> snackbarHostState.showSnackbar(event.message)
-                            else -> {}
+                            is UiEvent.TaskCreated -> navController.popBackStack()
                         }
                     }
                 }
