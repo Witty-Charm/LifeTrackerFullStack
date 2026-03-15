@@ -5,8 +5,6 @@ import com.lifetracker.mobile.data.local.entity.TaskEntity
 import com.lifetracker.mobile.domain.model.GameTaskDomain
 import com.lifetracker.mobile.domain.model.HeroDomain
 import com.lifetracker.mobile.domain.model.StreakDomain
-import com.lifetracker.mobile.domain.model.TaskDifficulty
-import com.lifetracker.mobile.domain.model.TaskType
 import kotlin.time.Instant
 
 fun HeroEntity.toDomain(): HeroDomain = HeroDomain(
@@ -49,18 +47,8 @@ fun TaskEntity.toDomain(): GameTaskDomain = GameTaskDomain(
     heroId = heroId,
     title = title,
     description = description,
-    type = when (type) {
-        "Habit"   -> TaskType.Habit
-        "OneTime" -> TaskType.OneTime
-        else      -> TaskType.Unknown
-    },
-    difficulty = when (difficulty) {
-        "Easy"   -> TaskDifficulty.Easy
-        "Medium" -> TaskDifficulty.Medium
-        "Hard"   -> TaskDifficulty.Hard
-        "Epic"   -> TaskDifficulty.Epic
-        else     -> TaskDifficulty.Unknown
-    },
+    type = type,
+    difficulty = difficulty,
     isCompleted = isCompleted,
     isActive = isActive,
     dueDate = dueDate?.let { Instant.fromEpochMilliseconds(it) },
@@ -89,8 +77,8 @@ fun GameTaskDomain.toEntity(pendingSync: Boolean = false): TaskEntity = TaskEnti
     heroId = heroId,
     title = title,
     description = description,
-    type = type.name,
-    difficulty = difficulty.name,
+    type = type,
+    difficulty = difficulty,
     isCompleted = isCompleted,
     isActive = isActive,
     dueDate = dueDate?.toEpochMilliseconds(),

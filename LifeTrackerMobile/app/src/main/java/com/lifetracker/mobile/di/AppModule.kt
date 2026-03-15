@@ -91,7 +91,6 @@ val appModule = module {
             AppDatabase::class.java,
             "lifetracker.db"
         )
-            .fallbackToDestructiveMigration()
             .build()
     }
 

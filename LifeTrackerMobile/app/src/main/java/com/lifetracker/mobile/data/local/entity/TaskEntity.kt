@@ -3,6 +3,8 @@ package com.lifetracker.mobile.data.local.entity
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import com.lifetracker.mobile.domain.model.TaskDifficulty
+import com.lifetracker.mobile.domain.model.TaskType
 
 @Entity(
     tableName = "tasks",
@@ -16,8 +18,8 @@ data class TaskEntity(
     val heroId: Int,
     val title: String,
     val description: String,
-    val type: String,
-    val difficulty: String,
+    val type: TaskType,
+    val difficulty: TaskDifficulty,
     val isCompleted: Boolean,
     val isActive: Boolean,
     val dueDate: Long?,
