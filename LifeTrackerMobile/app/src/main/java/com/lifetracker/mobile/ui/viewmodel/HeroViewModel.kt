@@ -66,6 +66,10 @@ class HeroViewModel(
 
     // confined to Main thread via viewModelScope - do not read/write from IO/Default context
     private var heroDomain: HeroDomain? = null
+        set(value) {
+            field = value
+            _state.update { it.copy(hero = value?.toUi()) }
+        }
     private val heroId: Int? get() = heroDomain?.id
 
     init {
@@ -230,9 +234,7 @@ class HeroViewModel(
     }
 
     private fun updateHero(transform: HeroDomain.() -> HeroDomain) {
-        val updated = heroDomain?.transform() ?: return
-        heroDomain = updated
-        _state.update { it.copy(hero = updated.toUi()) }
+        heroDomain = heroDomain?.transform()
     }
 
     fun createHero(name: String, startingGold: Int? = null) = launchAction(ActionKeys.HERO_CREATE) {
