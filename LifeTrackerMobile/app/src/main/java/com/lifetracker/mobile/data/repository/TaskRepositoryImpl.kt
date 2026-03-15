@@ -1,6 +1,5 @@
 package com.lifetracker.mobile.data.repository
 
-import android.content.Context
 import com.lifetracker.mobile.core.network.SafeApiCaller
 import com.lifetracker.mobile.core.network.map
 import com.lifetracker.mobile.core.sync.SyncScheduler
@@ -19,13 +18,16 @@ import com.lifetracker.mobile.domain.model.TaskCompletionResult
 import com.lifetracker.mobile.domain.model.TaskFailureResult
 import com.lifetracker.mobile.domain.repository.TaskRepository
 import timber.log.Timber
+import java.util.concurrent.atomic.AtomicInteger
 
 class TaskRepositoryImpl(
     private val api: LifeTrackerApi,
     private val caller: SafeApiCaller,
     private val taskDao: TaskDao,
-    private val context: Context,
+    private val syncScheduler: SyncScheduler,
 ) : TaskRepository {
+
+    private val tempIdCounter = AtomicInteger(0)
 
     override suspend fun getTasks(heroId: Int): DomainResult<List<GameTaskDomain>> {
         val local = taskDao.getByHeroId(heroId).map { it.toDomain() }
@@ -87,7 +89,7 @@ class TaskRepositoryImpl(
                 remote
             }
             is DomainResult.Failure -> {
-                val tempId = -(System.currentTimeMillis() % Int.MAX_VALUE).toInt().coerceAtLeast(1)
+                val tempId = -tempIdCounter.incrementAndGet()
                 val localTask = GameTaskDomain(
                     id = tempId,
                     heroId = params.heroId,
@@ -110,7 +112,7 @@ class TaskRepositoryImpl(
                     streak = null,
                 )
                 taskDao.upsert(localTask.toEntity(pendingSync = true))
-                SyncScheduler.schedule(context)
+                syncScheduler.schedule()
                 DomainResult.Success(localTask)
             }
         }
