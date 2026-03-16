@@ -23,6 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.lifetracker.mobile.ui.model.UiTaskType
 import com.lifetracker.mobile.navigation.Screen
@@ -105,14 +106,17 @@ fun HomeScreen(
                             modifier = Modifier.padding(top = 8.dp, bottom = 12.dp)
                         )
                     }
+                    val isComingSoon = selectedTab == HomeTab.Dailies || selectedTab == HomeTab.Rewards
 
                     val filteredTasks = when (selectedTab) {
                         HomeTab.Habits -> state.tasks.filter { it.type == UiTaskType.Habit }
                         HomeTab.ToDos -> state.tasks.filter { it.type == UiTaskType.OneTime }
                         else -> emptyList()
                     }
-
-                    if (filteredTasks.isEmpty() && !state.isLoading) {
+                    if (isComingSoon) {
+                        ComingSoonPlaceholder(selectedTab.label)
+                    }
+                    else if (filteredTasks.isEmpty() && !state.isLoading) {
                         EmptyTasksPlaceholder()
                     } else {
                         LazyColumn(
@@ -178,5 +182,26 @@ private fun EmptyTasksPlaceholder() {
             style = MaterialTheme.typography.bodyMedium,
             color = TextSecondary
         )
+    }
+}
+
+@Composable
+private fun ComingSoonPlaceholder(tabName: String) {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = "🚧",
+                fontSize = 48.sp
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = "$tabName coming soon",
+                style = MaterialTheme.typography.titleMedium,
+                color = TextSecondary
+            )
+        }
     }
 }
