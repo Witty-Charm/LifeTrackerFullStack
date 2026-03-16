@@ -20,3 +20,6 @@ google-services.json
 # Room schemas (exported for migrations)
 app/schemas/
 
+# Internal dev docs
+app/src/main/java/com/lifetracker/mobile/docs/
+
