@@ -4,6 +4,7 @@ import com.lifetracker.mobile.domain.model.GameTaskDomain
 import com.lifetracker.mobile.domain.model.HeroDomain
 import com.lifetracker.mobile.domain.model.TaskDifficulty
 import com.lifetracker.mobile.domain.model.TaskType
+import com.lifetracker.mobile.ui.model.ChecklistItemUi
 import com.lifetracker.mobile.ui.model.UiDifficulty
 import com.lifetracker.mobile.ui.model.UiTaskType
 import com.lifetracker.mobile.ui.model.HeroStatusBadge
@@ -44,6 +45,7 @@ fun GameTaskDomain.toUi(): TaskUi = TaskUi(
     type = when (type) {
         TaskType.Habit   -> UiTaskType.Habit
         TaskType.OneTime -> UiTaskType.OneTime
+        TaskType.Daily   -> UiTaskType.Daily
         TaskType.Unknown -> UiTaskType.Unknown
     },
     difficultyLabel = when (difficulty) {
@@ -63,6 +65,8 @@ fun GameTaskDomain.toUi(): TaskUi = TaskUi(
     isCompleted = isCompleted,
     isOverdue = isOverdue,
     dueDateText = dueDate?.toDisplayDate(),
+    repeatPatternText = repeatPattern?.toRepeatText(),
+    checklistItems = parseChecklist(checklistJson),
     rewardText = "+$baseXp XP +$baseGold Gold",
     penaltyText = "-$hpPenalty HP -$goldPenalty Gold",
     streakText = streak?.takeIf { it.currentDays > 0 }
@@ -73,6 +77,7 @@ fun GameTaskDomain.toUi(): TaskUi = TaskUi(
 fun UiTaskType.toDomain(): TaskType = when (this) {
     UiTaskType.Habit   -> TaskType.Habit
     UiTaskType.OneTime -> TaskType.OneTime
+    UiTaskType.Daily   -> TaskType.Daily
     UiTaskType.Unknown -> TaskType.Unknown
 }
 
@@ -90,4 +95,43 @@ private fun Instant.toDisplayDate(): String {
         .ofLocalizedDate(FormatStyle.SHORT)
         .withLocale(Locale.getDefault())
         .format(javaDate)
+}
+
+private fun String.toRepeatText(): String {
+    val parts = split(":")
+    val freq = parts.getOrNull(0) ?: return this
+    val n = parts.getOrNull(1)?.toIntOrNull() ?: 1
+    return when (freq) {
+        "DAILY" -> if (n == 1) "Every day" else "Every $n days"
+        "WEEKLY" -> if (n == 1) "Every week" else "Every $n weeks"
+        "MONTHLY" -> if (n == 1) "Every month" else "Every $n months"
+        "YEARLY" -> if (n == 1) "Every year" else "Every $n years"
+        else -> freq
+    }
+}
+
+private fun parseChecklist(checklistJson: String?): List<ChecklistItemUi> {
+    if (checklistJson.isNullOrBlank()) return emptyList()
+    return runCatching {
+        val trimmed = checklistJson.trim()
+        if (trimmed.length <= 2) return@runCatching emptyList()
+        val objects = trimmed.removePrefix("[").removeSuffix("]").split("},{")
+        objects.filter { it.isNotBlank() }.map { item ->
+            val normalized = when {
+                item.startsWith("{") && item.endsWith("}") -> item
+                item.startsWith("{") -> "$item}"
+                item.endsWith("}") -> "{$item"
+                else -> "{$item}"
+            }
+            ChecklistItemUi(
+                id = Regex("\"id\"\\s*:\\s*\"(.*?)\"").find(normalized)?.groupValues?.get(1) ?: "",
+                text = Regex("\"text\"\\s*:\\s*\"(.*?)\"").find(normalized)?.groupValues?.get(1) ?: "",
+                isCompleted = Regex("\"isCompleted\"\\s*:\\s*(true|false)")
+                    .find(normalized)
+                    ?.groupValues
+                    ?.get(1)
+                    ?.toBoolean() ?: false,
+            )
+        }
+    }.getOrDefault(emptyList())
 }

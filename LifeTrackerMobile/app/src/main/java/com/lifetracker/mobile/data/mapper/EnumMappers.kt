@@ -8,6 +8,7 @@ import com.lifetracker.mobile.domain.model.TaskType
 fun TaskTypeDto.toDomain(): TaskType = when (this) {
     TaskTypeDto.Habit   -> TaskType.Habit
     TaskTypeDto.OneTime -> TaskType.OneTime
+    TaskTypeDto.Daily   -> TaskType.Daily
     TaskTypeDto.Unknown -> TaskType.Unknown
 }
 
@@ -22,6 +23,7 @@ fun TaskDifficultyDto.toDomain(): TaskDifficulty = when (this) {
 fun TaskType.toDto(): TaskTypeDto = when (this) {
     TaskType.Habit   -> TaskTypeDto.Habit
     TaskType.OneTime -> TaskTypeDto.OneTime
+    TaskType.Daily   -> TaskTypeDto.Daily
     TaskType.Unknown -> TaskTypeDto.Unknown
 }
 

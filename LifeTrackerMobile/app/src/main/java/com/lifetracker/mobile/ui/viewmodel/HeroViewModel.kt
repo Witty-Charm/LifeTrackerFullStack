@@ -7,6 +7,7 @@ import com.lifetracker.mobile.ui.model.UiDifficulty
 import com.lifetracker.mobile.ui.model.UiTaskType
 import com.lifetracker.mobile.domain.model.DomainResult
 import com.lifetracker.mobile.domain.model.GameError
+import com.lifetracker.mobile.core.reminder.ReminderScheduler
 import com.lifetracker.mobile.domain.model.HeroDomain
 import com.lifetracker.mobile.domain.model.HeroSnapshot
 import com.lifetracker.mobile.domain.model.TaskType
@@ -43,6 +44,7 @@ class HeroViewModel(
     private val heroUseCases: HeroUseCases,
     private val taskUseCases: TaskUseCases,
     private val workManager: WorkManager,
+    private val reminderScheduler: ReminderScheduler,
     private val isDebug: Boolean = false,
 ) : ViewModel() {
     private object ActionKeys {
@@ -50,6 +52,7 @@ class HeroViewModel(
         const val HERO_RESPAWN = "hero_respawn"
         const val HERO_HEAL = "hero_heal"
         const val TASK_CREATE = "task_create"
+        const val DAILY_CREATE = "daily_create"
 
         fun taskComplete(id: Int) = "task_complete_$id"
         fun taskFail(id: Int) = "task_fail_$id"
@@ -107,7 +110,7 @@ class HeroViewModel(
                     current.copy(
                         hero = hero.toUi(),
                         tasks = tasks.dataOrNull()
-                            ?.filter { !it.isCompleted || it.type == TaskType.Habit }
+                            ?.filter { !it.isCompleted || it.type == TaskType.Habit || it.type == TaskType.Daily }
                             ?.map { it.toUi() } ?: current.tasks,
                         actionError = tasks.errorOrNull()?.toUiError(),
                     )
@@ -181,6 +184,43 @@ class HeroViewModel(
             }
     }
 
+    fun createDaily(
+        title: String,
+        description: String?,
+        difficulty: UiDifficulty,
+        startDate: kotlin.time.Instant?,
+        repeatPattern: String,
+        initialStreak: Int,
+        checklistJson: String?,
+        remindersJson: String?,
+    ) = launchAction(ActionKeys.DAILY_CREATE) {
+        val id = heroId ?: return@launchAction
+        val params = CreateTaskParams(
+            heroId = id,
+            title = title,
+            description = description,
+            type = TaskType.Daily,
+            difficulty = difficulty.toDomain(),
+            dueDate = startDate,
+            repeatPattern = repeatPattern,
+            initialStreak = initialStreak,
+            checklistJson = checklistJson,
+            remindersJson = remindersJson,
+        )
+        executeAction { taskUseCases.createTask(params) }
+            ?.let { task ->
+                _state.update { current ->
+                    current.copy(
+                        tasks = current.tasks + task.toUi(),
+                    )
+                }
+                _events.send(UiEvent.DailyCreated)
+                if (!remindersJson.isNullOrBlank()) {
+                    reminderScheduler.schedule(task.id, task.title, remindersJson, repeatPattern)
+                }
+            }
+    }
+
     fun deleteTask(taskId: Int) = launchAction(ActionKeys.taskDelete(taskId)) {
         executeAction { taskUseCases.deleteTask(taskId) }
             ?.let {
@@ -250,16 +290,6 @@ class HeroViewModel(
     private fun isPendingSync(taskId: Int): Boolean =
         _state.value.tasks.find { it.id == taskId }?.isPendingSync == true
 
-    fun isTaskLoading(taskId: Int): Boolean {
-        val actions = _state.value.loadingActions
-        return ActionKeys.taskComplete(taskId) in actions
-                || ActionKeys.taskFail(taskId) in actions
-                || ActionKeys.taskDelete(taskId) in actions
-    }
-
-    val isHealLoading: Boolean get() = ActionKeys.HERO_HEAL in _state.value.loadingActions
-    val isRespawnLoading: Boolean get() = ActionKeys.HERO_RESPAWN in _state.value.loadingActions
-
     private fun launchAction(key: String, block: suspend () -> Unit) {
         if(key in _state.value.loadingActions) return
         viewModelScope.launch {
@@ -294,7 +324,7 @@ class HeroViewModel(
         safeCall { taskUseCases.getTasks(id) }
             .onSuccess { data ->
                 _state.update { it.copy(tasks = data
-                    .filter { !it.isCompleted || it.type == TaskType.Habit }
+                    .filter { !it.isCompleted || it.type == TaskType.Habit || it.type == TaskType.Daily }
                     .map { t -> t.toUi() }
                 )}
             }

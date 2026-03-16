@@ -14,6 +14,9 @@ data class TaskDto(
     val isCompleted: Boolean,
     val isActive: Boolean,
     val dueDate: Instant? = null,
+    val repeatPattern: String? = null,
+    val checklistJson: String? = null,
+    val remindersJson: String? = null,
     val isOverdue: Boolean,
     val completionCount: Int,
     val failCount: Int,
@@ -44,6 +47,9 @@ data class CreateTaskRequest(
     val difficulty: TaskDifficulty = TaskDifficulty.Easy,
     val dueDate: Instant? = null,
     val repeatPattern: String? = null,
+    val initialStreak: Int = 0,
+    val checklistJson: String? = null,
+    val remindersJson: String? = null,
 )
 
 @Serializable

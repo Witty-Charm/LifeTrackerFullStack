@@ -40,6 +40,12 @@ import com.lifetracker.mobile.ui.model.UiTaskType
 import com.lifetracker.mobile.ui.viewmodel.HeroViewModel
 import androidx.compose.ui.platform.LocalContext
 import com.lifetracker.mobile.ui.model.isAnyActionLoading
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toLocalDateTime
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
+import java.util.Locale
 import kotlin.time.Instant
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -146,7 +152,7 @@ fun CreateTaskScreen(
 
                 if (dueDate != null) {
                     Text(
-                        text = dueDate.toString(),
+                        text = dueDate.toDisplayDate(),
                         style = MaterialTheme.typography.bodyMedium
                     )
                     TextButton(onClick = { dueDate = null }) {
@@ -209,5 +215,14 @@ fun CreateTaskScreen(
             }
         }
     }
+}
+
+private fun Instant?.toDisplayDate(): String {
+    if (this == null) return ""
+    val javaDate = this.toLocalDateTime(TimeZone.currentSystemDefault()).date.toJavaLocalDate()
+    return DateTimeFormatter
+        .ofLocalizedDate(FormatStyle.MEDIUM)
+        .withLocale(Locale.getDefault())
+        .format(javaDate)
 }
 

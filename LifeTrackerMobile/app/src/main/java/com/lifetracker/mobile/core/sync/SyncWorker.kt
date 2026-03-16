@@ -18,6 +18,8 @@ import com.lifetracker.mobile.data.remote.dto.CreateTaskRequest
 import com.lifetracker.mobile.data.remote.dto.TaskType as DtoTaskType
 import com.lifetracker.mobile.data.remote.dto.TaskDifficulty as DtoDifficulty
 import com.lifetracker.mobile.data.local.entity.TaskEntity
+import com.lifetracker.mobile.domain.model.TaskDifficulty
+import com.lifetracker.mobile.domain.model.TaskType
 import kotlin.time.Instant
 import timber.log.Timber
 
@@ -124,16 +126,20 @@ private fun TaskEntity.toCreateRequest(): CreateTaskRequest = CreateTaskRequest(
     title = title,
     description = description.ifBlank { null },
     type = when (type) {
-        "Habit"   -> DtoTaskType.Habit
-        "OneTime" -> DtoTaskType.OneTime
-        else      -> DtoTaskType.OneTime
+        TaskType.Habit -> DtoTaskType.Habit
+        TaskType.OneTime -> DtoTaskType.OneTime
+        TaskType.Daily -> DtoTaskType.Daily
+        TaskType.Unknown -> DtoTaskType.OneTime
     },
     difficulty = when (difficulty) {
-        "Easy"   -> DtoDifficulty.Easy
-        "Medium" -> DtoDifficulty.Medium
-        "Hard"   -> DtoDifficulty.Hard
-        "Epic"   -> DtoDifficulty.Epic
-        else     -> DtoDifficulty.Easy
+        TaskDifficulty.Easy -> DtoDifficulty.Easy
+        TaskDifficulty.Medium -> DtoDifficulty.Medium
+        TaskDifficulty.Hard -> DtoDifficulty.Hard
+        TaskDifficulty.Epic -> DtoDifficulty.Epic
+        TaskDifficulty.Unknown -> DtoDifficulty.Easy
     },
     dueDate = dueDate?.let { Instant.fromEpochMilliseconds(it) },
+    repeatPattern = repeatPattern,
+    checklistJson = checklistJson,
+    remindersJson = remindersJson,
 )

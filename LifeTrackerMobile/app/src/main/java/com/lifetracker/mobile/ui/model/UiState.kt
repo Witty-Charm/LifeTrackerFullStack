@@ -12,8 +12,13 @@ data class HeroScreenState(
     val actionError: UiError? = null,
 )
 
-fun HeroScreenState.isActionLoading(key: String) = key in loadingActions
 val HeroScreenState.isAnyActionLoading get() = loadingActions.isNotEmpty()
+val HeroScreenState.isHealLoading get() = "hero_heal" in loadingActions
+val HeroScreenState.isRespawnLoading get() = "hero_respawn" in loadingActions
+fun HeroScreenState.isTaskLoading(taskId: Int) =
+    "task_complete_$taskId" in loadingActions ||
+    "task_fail_$taskId" in loadingActions ||
+    "task_delete_$taskId" in loadingActions
 
 data class HeroUi(
     val id: Int,
@@ -33,7 +38,7 @@ data class HeroUi(
 
 enum class HeroStatusBadge { Alive, Recovery, Dead }
 
-enum class UiTaskType { Habit, OneTime, Unknown }
+enum class UiTaskType { Habit, OneTime, Daily, Unknown }
 
 enum class UiDifficulty { Easy, Medium, Hard, Epic }
 
@@ -47,10 +52,18 @@ data class TaskUi(
     val isCompleted: Boolean,
     val isOverdue: Boolean,
     val dueDateText: String?,
+    val repeatPatternText: String? = null,
+    val checklistItems: List<ChecklistItemUi> = emptyList(),
     val rewardText: String,
     val penaltyText: String,
     val streakText: String?,
     val isPendingSync: Boolean,
+)
+
+data class ChecklistItemUi(
+    val id: String,
+    val text: String,
+    val isCompleted: Boolean,
 )
 
 sealed interface UiError {
@@ -70,6 +83,7 @@ sealed interface UiError {
 sealed interface UiEvent {
     data class ShowSnackbar(val message: String) : UiEvent
     data object TaskCreated : UiEvent
+    data object DailyCreated : UiEvent
     data class TaskCompleted(val message: String) : UiEvent
     data class TaskFailed(val message: String) : UiEvent
     data class HeroRespawned(

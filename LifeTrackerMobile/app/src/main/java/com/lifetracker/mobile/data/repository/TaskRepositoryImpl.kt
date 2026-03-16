@@ -79,6 +79,10 @@ class TaskRepositoryImpl(
                     type = params.type.toDto(),
                     difficulty = params.difficulty.toDto(),
                     dueDate = params.dueDate,
+                    repeatPattern = params.repeatPattern,
+                    initialStreak = params.initialStreak,
+                    checklistJson = params.checklistJson,
+                    remindersJson = params.remindersJson,
                 )
             )
         }.map { it.toDomain() }.toDomainResult()
@@ -100,6 +104,9 @@ class TaskRepositoryImpl(
                     isCompleted = false,
                     isActive = true,
                     dueDate = params.dueDate,
+                    repeatPattern = params.repeatPattern,
+                    checklistJson = params.checklistJson,
+                    remindersJson = params.remindersJson,
                     isOverdue = false,
                     completionCount = 0,
                     failCount = 0,

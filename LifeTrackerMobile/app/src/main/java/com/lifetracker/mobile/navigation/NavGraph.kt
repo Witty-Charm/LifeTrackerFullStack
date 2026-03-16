@@ -5,6 +5,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.lifetracker.mobile.ui.screens.CreateDailyScreen
 import com.lifetracker.mobile.ui.screens.CreateHeroScreen
 import com.lifetracker.mobile.ui.screens.CreateTaskScreen
 import com.lifetracker.mobile.ui.screens.HomeScreen
@@ -16,6 +17,7 @@ sealed interface Screen {
     data object Home : Screen { override val route = "home" }
     data object CreateHero : Screen { override val route = "create_hero" }
     data object CreateTask : Screen { override val route = "create_task" }
+    data object CreateDaily : Screen { override val route = "create_daily" }
 }
 
 @Composable
@@ -50,6 +52,10 @@ fun NavGraph(
 
         composable(Screen.CreateHero.route) {
             CreateHeroScreen(state = state, vm = vm, navController = navController)
+        }
+
+        composable(Screen.CreateDaily.route) {
+            CreateDailyScreen(state = state, vm = vm, navController = navController)
         }
     }
 }

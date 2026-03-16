@@ -3,6 +3,9 @@ package com.lifetracker.mobile.di
 import androidx.room.Room
 import com.lifetracker.mobile.BuildConfig
 import com.lifetracker.mobile.core.network.SafeApiCaller
+import com.lifetracker.mobile.core.reminder.ReminderScheduler
+import com.lifetracker.mobile.core.reminder.ReminderWorker
+import com.lifetracker.mobile.core.serialization.JsonDefaults
 import com.lifetracker.mobile.data.local.AppDatabase
 import com.lifetracker.mobile.data.remote.NetworkModule
 import com.lifetracker.mobile.data.repository.HeroRepositoryImpl
@@ -26,7 +29,6 @@ import com.lifetracker.mobile.domain.usecase.task.GetTaskUseCase
 import com.lifetracker.mobile.domain.usecase.task.GetTasksUseCase
 import com.lifetracker.mobile.domain.usecase.task.TaskUseCases
 import com.lifetracker.mobile.ui.viewmodel.HeroViewModel
-import kotlinx.serialization.json.Json
 import androidx.work.WorkManager
 import com.lifetracker.mobile.core.sync.SyncScheduler
 import com.lifetracker.mobile.core.sync.SyncWorker
@@ -36,18 +38,12 @@ import org.koin.androidx.workmanager.dsl.workerOf
 import org.koin.dsl.module
 
 val appModule = module {
-    single {
-        Json {
-            ignoreUnknownKeys = true
-            explicitNulls = false
-            encodeDefaults = true
-            coerceInputValues = true
-        }
-    }
+    single { JsonDefaults }
     single { SafeApiCaller(json = get()) }
     single { NetworkModule.provideOkHttpClient(isDebug = BuildConfig.DEBUG) }
     single { NetworkModule.provideApi(baseUrl = BuildConfig.BASE_URL, client = get(), json = get()) }
     single { SyncScheduler(workManager = get()) }
+    single { ReminderScheduler(workManager = get(), json = get()) }
     single<HeroRepository> { HeroRepositoryImpl(api = get(), caller = get(), heroDao = get()) }
     single<TaskRepository> { TaskRepositoryImpl(api = get(), caller = get(), taskDao = get(), syncScheduler = get()) }
     single { WorkManager.getInstance(androidContext()) }
@@ -57,6 +53,7 @@ val appModule = module {
             heroUseCases = get(),
             taskUseCases = get(),
             workManager = get(),
+            reminderScheduler = get(),
             isDebug = BuildConfig.DEBUG,
         )
     }
@@ -91,6 +88,7 @@ val appModule = module {
             AppDatabase::class.java,
             "lifetracker.db"
         )
+            .fallbackToDestructiveMigration()
             .build()
     }
 
@@ -98,4 +96,5 @@ val appModule = module {
     single { get<AppDatabase>().taskDao() }
 
     workerOf(::SyncWorker)
+    workerOf(::ReminderWorker)
 }

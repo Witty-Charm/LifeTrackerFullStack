@@ -33,6 +33,8 @@ import com.lifetracker.mobile.ui.components.HeroSection
 import com.lifetracker.mobile.ui.components.HomeTab
 import com.lifetracker.mobile.ui.components.TaskItem
 import com.lifetracker.mobile.ui.model.HeroScreenState
+import com.lifetracker.mobile.ui.model.isHealLoading
+import com.lifetracker.mobile.ui.model.isRespawnLoading
 import com.lifetracker.mobile.ui.theme.AppBackground
 import com.lifetracker.mobile.ui.theme.PurpleAccent
 import com.lifetracker.mobile.ui.theme.TextPrimary
@@ -57,8 +59,13 @@ fun HomeScreen(
             )
         },
         floatingActionButton = {
+            val route = if (selectedTab == HomeTab.Dailies) {
+                Screen.CreateDaily.route
+            } else {
+                Screen.CreateTask.route
+            }
             FloatingActionButton(
-                onClick = { navController.navigate(Screen.CreateTask.route) },
+                onClick = { navController.navigate(route) },
                 shape = androidx.compose.foundation.shape.CircleShape,
                 containerColor = PurpleAccent,
                 contentColor = TextPrimary
@@ -98,19 +105,20 @@ fun HomeScreen(
                             hero = hero,
                             onHeal = { vm.healHero() },
                             onRespawn = { vm.respawnHero() },
-                            isHealLoading = vm.isHealLoading,
-                            isRespawnLoading = vm.isRespawnLoading,
+                            isHealLoading = state.isHealLoading,
+                            isRespawnLoading = state.isRespawnLoading,
                         )
                         DailyObjectiveCard(
                             hero = hero,
                             modifier = Modifier.padding(top = 8.dp, bottom = 12.dp)
                         )
                     }
-                    val isComingSoon = selectedTab == HomeTab.Dailies || selectedTab == HomeTab.Rewards
+                    val isComingSoon = selectedTab == HomeTab.Rewards
 
                     val filteredTasks = when (selectedTab) {
                         HomeTab.Habits -> state.tasks.filter { it.type == UiTaskType.Habit }
                         HomeTab.ToDos -> state.tasks.filter { it.type == UiTaskType.OneTime }
+                        HomeTab.Dailies -> state.tasks.filter { it.type == UiTaskType.Daily }
                         else -> emptyList()
                     }
                     if (isComingSoon) {
@@ -134,7 +142,7 @@ fun HomeScreen(
                                     onCompleteClick = { vm.completeTask(task.id) },
                                     onFailClick = { vm.failTask(task.id) },
                                     onDeleteClick = { vm.deleteTask(task.id) },
-                                    isActionLoading = vm.isTaskLoading(task.id) ,
+                                    isActionLoading = state.isTaskLoading(task.id),
                                 )
                             }
                         }
