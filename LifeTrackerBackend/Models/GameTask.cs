@@ -5,7 +5,8 @@ namespace LifeTracker.Models;
 public enum TaskType
 {
     Habit = 1,
-    OneTime = 2
+    OneTime = 2,
+    Daily = 3
 }
 
 public class GameTask
@@ -22,6 +23,8 @@ public class GameTask
     public bool IsActive { get; set; } = true;
     public DateTimeOffset? DueDate { get; set; }
     public string? RepeatPattern { get; set; }
+    public string? ChecklistJson { get; set; }
+    public string? RemindersJson { get; set; }
 
     public bool IsCompleted { get; set; } = false;
     public int CompletionCount { get; set; } = 0;
@@ -37,7 +40,7 @@ public class GameTask
 
     public int GetBaseRewardXP()
     {
-        var (xp, _) = Type == TaskType.Habit
+        var (xp, _) = Type == TaskType.Habit || Type == TaskType.Daily
             ? GameConstants.GetHabitReward(Difficulty)
             : GameConstants.GetOneTimeReward(Difficulty);
         return xp;
@@ -45,7 +48,7 @@ public class GameTask
 
     public int GetGoldReward()
     {
-        var (_, gold) = Type == TaskType.Habit
+        var (_, gold) = Type == TaskType.Habit || Type == TaskType.Daily
             ? GameConstants.GetHabitReward(Difficulty)
             : GameConstants.GetOneTimeReward(Difficulty);
         return gold;
@@ -53,7 +56,7 @@ public class GameTask
 
     public int GetHpPenalty()
     {
-        var (hpLoss, _) = Type == TaskType.Habit
+        var (hpLoss, _) = Type == TaskType.Habit || Type == TaskType.Daily
             ? GameConstants.GetHabitPenalty(Difficulty)
             : GameConstants.GetOneTimePenalty(Difficulty);
         return hpLoss;
@@ -61,7 +64,7 @@ public class GameTask
 
     public int GetGoldPenalty()
     {
-        var (_, goldLoss) = Type == TaskType.Habit
+        var (_, goldLoss) = Type == TaskType.Habit || Type == TaskType.Daily
             ? GameConstants.GetHabitPenalty(Difficulty)
             : GameConstants.GetOneTimePenalty(Difficulty);
         return goldLoss;

@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LifeTracker.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260224085641_AddShopItem")]
-    partial class AddShopItem
+    [Migration("20260316085133_AddDailyType")]
+    partial class AddDailyType
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -85,6 +85,9 @@ namespace LifeTracker.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("ChecklistJson")
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("CompletionCount")
                         .HasColumnType("INTEGER");
 
@@ -114,6 +117,12 @@ namespace LifeTracker.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<DateTimeOffset?>("LastCompletedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("OverdueProcessedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RemindersJson")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("RepeatPattern")

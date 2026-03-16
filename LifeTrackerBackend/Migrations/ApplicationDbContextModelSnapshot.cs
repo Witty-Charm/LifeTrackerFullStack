@@ -82,6 +82,9 @@ namespace LifeTracker.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("ChecklistJson")
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("CompletionCount")
                         .HasColumnType("INTEGER");
 
@@ -114,6 +117,9 @@ namespace LifeTracker.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<DateTimeOffset?>("OverdueProcessedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RemindersJson")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("RepeatPattern")

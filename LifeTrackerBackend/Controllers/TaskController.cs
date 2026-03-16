@@ -71,6 +71,8 @@ public class TaskController : ControllerBase
             Difficulty = request.Difficulty,
             DueDate = request.DueDate,
             RepeatPattern = request.RepeatPattern,
+            ChecklistJson = request.ChecklistJson,
+            RemindersJson = request.RemindersJson,
             IsCompleted = false,
             IsActive = true,
             CompletionCount = 0,
@@ -82,14 +84,14 @@ public class TaskController : ControllerBase
         _context.GameTasks.Add(task);
         await _context.SaveChangesAsync();
 
-        if (task.Type == TaskType.Habit)
+        if (task.Type == TaskType.Habit || task.Type == TaskType.Daily)
         {
             var streak = new Streak
             {
                 HeroId = task.HeroId,
                 TaskId = task.Id,
-                CurrentDays = 0,
-                LongestDays = 0,
+                CurrentDays = request.InitialStreak,
+                LongestDays = request.InitialStreak,
                 CreatedAt = DateTimeOffset.UtcNow,
                 UpdatedAt = DateTimeOffset.UtcNow
             };
@@ -150,7 +152,7 @@ public class TaskController : ControllerBase
             });
 
         Streak? streak = null;
-        if (task.Type == TaskType.Habit)
+        if (task.Type == TaskType.Habit || task.Type == TaskType.Daily)
         {
             streak = task.Streak ?? await _context.Streaks
                 .FirstOrDefaultAsync(s => s.HeroId == hero.Id && s.TaskId == task.Id);
@@ -362,6 +364,9 @@ public class TaskController : ControllerBase
         IsCompleted = task.IsCompleted,
         IsActive = task.IsActive,
         DueDate = task.DueDate,
+        RepeatPattern = task.RepeatPattern,
+        ChecklistJson = task.ChecklistJson,
+        RemindersJson = task.RemindersJson,
         IsOverdue = task.IsOverdue(),
         CompletionCount = task.CompletionCount,
         FailCount = task.FailCount,
@@ -424,6 +429,9 @@ public class TaskDto
     public bool IsCompleted { get; set; }
     public bool IsActive { get; set; }
     public DateTimeOffset? DueDate { get; set; }
+    public string? RepeatPattern { get; set; }
+    public string? ChecklistJson { get; set; }
+    public string? RemindersJson { get; set; }
     public bool IsOverdue { get; set; }
     public int CompletionCount { get; set; }
     public int FailCount { get; set; }
@@ -454,6 +462,9 @@ public class CreateTaskRequest
     public TaskDifficulty Difficulty { get; set; } = TaskDifficulty.Easy;
     public DateTimeOffset? DueDate { get; set; }
     public string? RepeatPattern { get; set; }
+    public int InitialStreak { get; set; } = 0;
+    public string? ChecklistJson { get; set; }
+    public string? RemindersJson { get; set; }
 }
 
 public class CompleteTaskResponse
