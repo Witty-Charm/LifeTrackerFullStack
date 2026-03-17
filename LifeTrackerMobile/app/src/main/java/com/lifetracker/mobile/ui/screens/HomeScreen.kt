@@ -35,6 +35,7 @@ import com.lifetracker.mobile.ui.components.TaskItem
 import com.lifetracker.mobile.ui.model.HeroScreenState
 import com.lifetracker.mobile.ui.model.isHealLoading
 import com.lifetracker.mobile.ui.model.isRespawnLoading
+import com.lifetracker.mobile.ui.model.isTaskLoading
 import com.lifetracker.mobile.ui.theme.AppBackground
 import com.lifetracker.mobile.ui.theme.PurpleAccent
 import com.lifetracker.mobile.ui.theme.TextPrimary
@@ -55,7 +56,7 @@ fun HomeScreen(
         bottomBar = {
             GameBottomNavigationBar(
                 selectedTab = selectedTab,
-                onTabSelected = { selectedTab = it }
+                onTabSelected = { selectedTab = it },
             )
         },
         floatingActionButton = {
