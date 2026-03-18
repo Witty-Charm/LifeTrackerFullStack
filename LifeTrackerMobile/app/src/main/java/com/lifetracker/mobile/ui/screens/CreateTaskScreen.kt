@@ -61,7 +61,6 @@ fun CreateTaskScreen(
     var selectedDifficulty by remember { mutableStateOf(UiDifficulty.Easy) }
     var dueDate by remember { mutableStateOf<Instant?>(null) }
     var showDatePicker by remember { mutableStateOf(false) }
-
     val datePickerState = rememberDatePickerState()
 
     LaunchedEffect(Unit) {
@@ -201,14 +200,10 @@ fun CreateTaskScreen(
                             dueDate = millis?.let { Instant.fromEpochMilliseconds(it) }
                             showDatePicker = false
                         }
-                    ) {
-                        Text("OK")
-                    }
+                    ) { Text("OK") }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showDatePicker = false }) {
-                        Text("Cancel")
-                    }
+                    TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
                 }
             ) {
                 DatePicker(state = datePickerState)

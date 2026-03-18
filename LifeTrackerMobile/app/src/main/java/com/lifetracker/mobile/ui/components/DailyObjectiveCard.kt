@@ -16,8 +16,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.lifetracker.mobile.ui.model.HeroUi
 import com.lifetracker.mobile.ui.theme.CardBorder
-import com.lifetracker.mobile.ui.theme.GoldYellow
 import com.lifetracker.mobile.ui.theme.ObjectiveCardBg
+import com.lifetracker.mobile.ui.theme.GoldYellow
 import com.lifetracker.mobile.ui.theme.OnGoldText
 import com.lifetracker.mobile.ui.theme.PurpleBorder
 import com.lifetracker.mobile.ui.theme.PurpleAccent

@@ -79,7 +79,7 @@ fun TaskItem(
             canAct = canAct,
             cardAlpha = cardAlpha,
             onCompleteClick = onCompleteClick,
-            onFailClick = onFailClick
+            onFailClick = onFailClick,
         )
     }
 }
@@ -117,6 +117,7 @@ private fun TaskCardContent(
             .heightIn(min = 68.dp)
             .height(IntrinsicSize.Min)
             .clip(RoundedCornerShape(12.dp))
+            .background(CardBackground)
             .graphicsLayer { alpha = cardAlpha }
     ) {
         Box(
@@ -155,7 +156,6 @@ private fun TaskCardContent(
         Column(
             modifier = Modifier
                 .weight(1f)
-                .background(CardBackground)
                 .padding(horizontal = 12.dp, vertical = 10.dp)
         ) {
             Text(

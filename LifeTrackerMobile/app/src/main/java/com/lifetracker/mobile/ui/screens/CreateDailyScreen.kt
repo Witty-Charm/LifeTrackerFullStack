@@ -89,8 +89,6 @@ fun CreateDailyScreen(
     var newReminderHour by remember { mutableStateOf(9) }
     var newReminderMinute by remember { mutableStateOf(0) }
 
-    val datePickerState = rememberDatePickerState()
-
     LaunchedEffect(Unit) {
         vm.clearError()
         vm.events.collect { event ->
@@ -229,6 +227,7 @@ fun CreateDailyScreen(
         }
 
         if (showDatePicker) {
+            val datePickerState = rememberDatePickerState()
             DatePickerDialog(
                 onDismissRequest = { showDatePicker = false },
                 confirmButton = {
@@ -238,14 +237,10 @@ fun CreateDailyScreen(
                             startDate = millis?.let { Instant.fromEpochMilliseconds(it) }
                             showDatePicker = false
                         }
-                    ) {
-                        Text("OK")
-                    }
+                    ) { Text("OK") }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showDatePicker = false }) {
-                        Text("Cancel")
-                    }
+                    TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
                 }
             ) {
                 DatePicker(state = datePickerState)

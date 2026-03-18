@@ -41,6 +41,7 @@ import com.lifetracker.mobile.ui.theme.PurpleAccent
 import com.lifetracker.mobile.ui.theme.TextPrimary
 import com.lifetracker.mobile.ui.theme.TextSecondary
 import com.lifetracker.mobile.ui.viewmodel.HeroViewModel
+import dev.chrisbanes.haze.rememberHazeState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,6 +51,7 @@ fun HomeScreen(
     navController: NavController
 ) {
     var selectedTab by remember { mutableStateOf(HomeTab.ToDos) }
+    val hazeState = rememberHazeState()
 
     Scaffold(
         containerColor = AppBackground,
@@ -57,6 +59,7 @@ fun HomeScreen(
             GameBottomNavigationBar(
                 selectedTab = selectedTab,
                 onTabSelected = { selectedTab = it },
+                hazeState = hazeState,
             )
         },
         floatingActionButton = {
