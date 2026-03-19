@@ -36,12 +36,12 @@ import androidx.compose.ui.text.style.TextOverflow
 
 @Composable
 fun HeroSection(
+    modifier: Modifier = Modifier,
     hero: HeroUi,
     onHeal: () -> Unit,
     onRespawn: () -> Unit,
     isHealLoading: Boolean = false,
     isRespawnLoading: Boolean = false,
-    modifier: Modifier = Modifier,
 ) {
     Column(
         modifier = modifier

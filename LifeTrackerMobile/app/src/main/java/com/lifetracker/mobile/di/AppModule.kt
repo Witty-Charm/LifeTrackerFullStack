@@ -28,6 +28,7 @@ import com.lifetracker.mobile.domain.usecase.task.FailTaskUseCase
 import com.lifetracker.mobile.domain.usecase.task.GetTaskUseCase
 import com.lifetracker.mobile.domain.usecase.task.GetTasksUseCase
 import com.lifetracker.mobile.domain.usecase.task.TaskUseCases
+import com.lifetracker.mobile.ui.viewmodel.CreateDailyViewModel
 import com.lifetracker.mobile.ui.viewmodel.HeroViewModel
 import androidx.work.WorkManager
 import com.lifetracker.mobile.core.sync.SyncScheduler
@@ -48,12 +49,19 @@ val appModule = module {
     single<TaskRepository> { TaskRepositoryImpl(api = get(), caller = get(), taskDao = get(), syncScheduler = get()) }
     single { WorkManager.getInstance(androidContext()) }
 
+    viewModel { params ->
+        CreateDailyViewModel(
+            heroId = params.get(),
+            taskUseCases = get(),
+            reminderScheduler = get(),
+        )
+    }
+
     viewModel {
         HeroViewModel(
             heroUseCases = get(),
             taskUseCases = get(),
             workManager = get(),
-            reminderScheduler = get(),
             isDebug = BuildConfig.DEBUG,
         )
     }

@@ -63,8 +63,9 @@ fun HomeScreen(
             )
         },
         floatingActionButton = {
-            val route = if (selectedTab == HomeTab.Dailies) {
-                Screen.CreateDaily.route
+            val heroId = state.hero?.id
+            val route = if (selectedTab == HomeTab.Dailies && heroId != null) {
+                Screen.CreateDaily.route(heroId)
             } else {
                 Screen.CreateTask.route
             }

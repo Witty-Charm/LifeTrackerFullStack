@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -27,6 +28,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -34,98 +37,84 @@ import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.lifetracker.mobile.domain.model.ChecklistItem
 import com.lifetracker.mobile.domain.model.ReminderItem
-import com.lifetracker.mobile.ui.model.HeroScreenState
+import com.lifetracker.mobile.ui.model.CreateDailyFormState
+import com.lifetracker.mobile.ui.model.RepeatFrequency
 import com.lifetracker.mobile.ui.model.UiDifficulty
-import com.lifetracker.mobile.core.serialization.JsonDefaults
-import com.lifetracker.mobile.ui.model.UiEvent
-import com.lifetracker.mobile.ui.viewmodel.HeroViewModel
+import com.lifetracker.mobile.ui.viewmodel.CreateDailyUiEvent
+import com.lifetracker.mobile.ui.viewmodel.CreateDailyViewModel
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toJavaLocalDate
 import kotlinx.datetime.toLocalDateTime
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Locale
-import kotlin.random.Random
 import kotlin.time.Instant
-
-private enum class RepeatFrequency(val label: String, val unitLabel: String) {
-    DAILY("Daily", "Days"),
-    WEEKLY("Weekly", "Weeks"),
-    MONTHLY("Monthly", "Months"),
-    YEARLY("Yearly", "Years"),
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateDailyScreen(
-    state: HeroScreenState,
-    vm: HeroViewModel,
+    state: CreateDailyFormState,
+    vm: CreateDailyViewModel,
     navController: NavController,
 ) {
-    var title by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-    var selectedDifficulty by remember { mutableStateOf(UiDifficulty.Easy) }
-    var checklistItems by remember { mutableStateOf(listOf<ChecklistItem>()) }
-    var startDate by remember { mutableStateOf<Instant?>(Instant.fromEpochMilliseconds(System.currentTimeMillis())) }
-    var repeatFrequency by remember { mutableStateOf(RepeatFrequency.DAILY) }
-    var repeatInterval by remember { mutableStateOf(1) }
-    var repeatIntervalError by remember { mutableStateOf(false) }
-    var initialStreak by remember { mutableStateOf(0) }
-    var reminders by remember { mutableStateOf(listOf<ReminderItem>()) }
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
     var expandedFrequency by remember { mutableStateOf(false) }
-    var newReminderHour by remember { mutableStateOf(9) }
-    var newReminderMinute by remember { mutableStateOf(0) }
+    var newReminderHour by remember { mutableIntStateOf(9) }
+    var newReminderMinute by remember { mutableIntStateOf(0) }
+    val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(Unit) {
-        vm.clearError()
         vm.events.collect { event ->
-            if (event is UiEvent.DailyCreated) navController.popBackStack()
+            when (event) {
+                is CreateDailyUiEvent.Success -> {
+                    navController.previousBackStackEntry
+                        ?.savedStateHandle
+                        ?.set("daily_created", true)
+                    navController.popBackStack()
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(state.actionError) {
+        state.actionError?.let {
+            val msg = when (it) {
+                is com.lifetracker.mobile.ui.model.UiError.Network -> "Network error. Try again."
+                is com.lifetracker.mobile.ui.model.UiError.Validation ->
+                    it.fieldErrors.values.flatten().joinToString(", ")
+                is com.lifetracker.mobile.ui.model.UiError.Generic -> it.message
+                else -> "Something went wrong."
+            }
+            snackbarHostState.showSnackbar(msg)
         }
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("Create daily") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                        )
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
                     TextButton(
-                        onClick = {
-                            val interval = repeatInterval.coerceAtLeast(1)
-                            repeatInterval = interval
-                            repeatIntervalError = interval < 1
-                            vm.createDaily(
-                                title = title,
-                                description = description.ifBlank { null },
-                                difficulty = selectedDifficulty,
-                                startDate = startDate,
-                                repeatPattern = "${repeatFrequency.name}:$interval",
-                                initialStreak = initialStreak,
-                                checklistJson = checklistItems.toChecklistJson(),
-                                remindersJson = reminders.toRemindersJson(),
-                            )
-                        },
-                        enabled = title.isNotBlank() && !repeatIntervalError,
+                        onClick = { vm.onSubmit() },
+                        enabled = state.canSubmit,
                     ) {
                         Text("Save")
                     }
@@ -142,43 +131,30 @@ fun CreateDailyScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             OutlinedTextField(
-                value = title,
-                onValueChange = { title = it },
+                value = state.title,
+                onValueChange = vm::onTitleChange,
                 label = { Text("Title") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
 
             OutlinedTextField(
-                value = description,
-                onValueChange = { description = it },
+                value = state.description,
+                onValueChange = vm::onDescriptionChange,
                 label = { Text("Description") },
                 modifier = Modifier.fillMaxWidth(),
                 maxLines = 3,
             )
 
             ChecklistSection(
-                items = checklistItems,
-                onAdd = {
-                    checklistItems = checklistItems + ChecklistItem(
-                        id = Random.nextInt(0, 0xFFFF).toString(16),
-                        text = "",
-                    )
-                },
-                onDelete = { id -> checklistItems = checklistItems.filterNot { it.id == id } },
-                onTextChange = { id, text ->
-                    if (id == "__reorder__") {
-                        val order = text.split(",")
-                        checklistItems = order.mapNotNull { orderId -> checklistItems.find { it.id == orderId } }
-                    } else {
-                        checklistItems = checklistItems.map { item ->
-                            if (item.id == id) item.copy(text = text) else item
-                        }
-                    }
-                }
+                items = state.checklistItems,
+                onAdd = vm::onChecklistAdd,
+                onDelete = vm::onChecklistDelete,
+                onTextChange = vm::onChecklistTextChange,
+                onReorder = vm::onReorder,
             )
 
-            Text(text = "Difficulty", style = MaterialTheme.typography.titleSmall)
+            Text("Difficulty", style = MaterialTheme.typography.titleSmall)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(
                     UiDifficulty.Easy to "Easy",
@@ -187,42 +163,37 @@ fun CreateDailyScreen(
                     UiDifficulty.Epic to "Epic",
                 ).forEach { (difficulty, label) ->
                     FilterChip(
-                        selected = selectedDifficulty == difficulty,
-                        onClick = { selectedDifficulty = difficulty },
+                        selected = state.difficulty == difficulty,
+                        onClick = { vm.onDifficultyChange(difficulty) },
                         label = { Text(label) }
                     )
                 }
             }
 
             SchedulingSection(
-                startDate = startDate,
-                frequency = repeatFrequency,
-                interval = repeatInterval,
+                startDate = state.startDate,
+                frequency = state.frequency,
+                interval = state.interval,
                 onDateClick = { showDatePicker = true },
-                onFrequencyChange = { repeatFrequency = it },
-                onIntervalChange = {
-                    repeatInterval = it
-                    repeatIntervalError = it < 1
-                },
+                onFrequencyChange = vm::onFrequencyChange,
+                onIntervalChange = vm::onIntervalChange,
                 expanded = expandedFrequency,
-                onExpandedChange = { expandedFrequency = it }
+                onExpandedChange = { expandedFrequency = it },
             )
 
-            Text(text = "Adjust Streak", style = MaterialTheme.typography.titleSmall)
+            Text("Adjust Streak", style = MaterialTheme.typography.titleSmall)
             OutlinedTextField(
-                value = initialStreak.toString(),
-                onValueChange = { value ->
-                    initialStreak = value.toIntOrNull() ?: 0
-                },
+                value = state.initialStreak.toString(),
+                onValueChange = { vm.onInitialStreakChange(it.toIntOrNull() ?: 0) },
                 label = { Text("Streak") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth(),
             )
 
             RemindersSection(
-                reminders = reminders,
+                reminders = state.reminders,
                 onAdd = { showTimePicker = true },
-                onDelete = { id -> reminders = reminders.filterNot { it.id == id } },
+                onDelete = vm::onReminderDelete,
             )
         }
 
@@ -231,20 +202,16 @@ fun CreateDailyScreen(
             DatePickerDialog(
                 onDismissRequest = { showDatePicker = false },
                 confirmButton = {
-                    TextButton(
-                        onClick = {
-                            val millis = datePickerState.selectedDateMillis
-                            startDate = millis?.let { Instant.fromEpochMilliseconds(it) }
-                            showDatePicker = false
-                        }
-                    ) { Text("OK") }
+                    TextButton(onClick = {
+                        val millis = datePickerState.selectedDateMillis
+                        vm.onStartDateChange(millis?.let { Instant.fromEpochMilliseconds(it) })
+                        showDatePicker = false
+                    }) { Text("OK") }
                 },
                 dismissButton = {
                     TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
                 }
-            ) {
-                DatePicker(state = datePickerState)
-            }
+            ) { DatePicker(state = datePickerState) }
         }
 
         if (showTimePicker) {
@@ -270,16 +237,10 @@ fun CreateDailyScreen(
                     }
                 },
                 confirmButton = {
-                    TextButton(
-                        onClick = {
-                            reminders = reminders + ReminderItem(
-                                id = Random.nextInt(0, 0xFFFF).toString(16),
-                                hour = newReminderHour,
-                                minute = newReminderMinute,
-                            )
-                            showTimePicker = false
-                        }
-                    ) { Text("OK") }
+                    TextButton(onClick = {
+                        vm.onReminderAdd(newReminderHour, newReminderMinute)
+                        showTimePicker = false
+                    }) { Text("OK") }
                 },
                 dismissButton = {
                     TextButton(onClick = { showTimePicker = false }) { Text("Cancel") }
@@ -295,8 +256,9 @@ private fun ChecklistSection(
     onAdd: () -> Unit,
     onDelete: (String) -> Unit,
     onTextChange: (String, String) -> Unit,
+    onReorder: (List<ChecklistItem>) -> Unit,
 ) {
-    Text(text = "Checklist", style = MaterialTheme.typography.titleSmall)
+    Text("Checklist", style = MaterialTheme.typography.titleSmall)
     if (items.isNotEmpty()) {
         Column(
             verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -308,7 +270,7 @@ private fun ChecklistSection(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     IconButton(onClick = { onDelete(item.id) }) {
-                        Icon(imageVector = Icons.Default.Close, contentDescription = "Remove")
+                        Icon(Icons.Default.Close, contentDescription = "Remove")
                     }
                     OutlinedTextField(
                         value = item.text,
@@ -322,26 +284,28 @@ private fun ChecklistSection(
                                 if (index > 0) {
                                     val list = items.toMutableList()
                                     list.add(index - 1, list.removeAt(index))
-                                    onTextChange("__reorder__", list.joinToString(",") { it.id })
+                                    // Экран сам вычисляет новый порядок и передаёт готовый список.
+                                    // ViewModel не знает про индексы — только про результат.
+                                    onReorder(list)
                                 }
                             },
                             modifier = Modifier.size(28.dp),
                             enabled = index > 0,
                         ) {
-                            Icon(imageVector = Icons.Default.ArrowUpward, contentDescription = "Move up", modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.ArrowUpward, contentDescription = "Move up", modifier = Modifier.size(16.dp))
                         }
                         IconButton(
                             onClick = {
                                 if (index < items.lastIndex) {
                                     val list = items.toMutableList()
                                     list.add(index + 1, list.removeAt(index))
-                                    onTextChange("__reorder__", list.joinToString(",") { it.id })
+                                    onReorder(list)
                                 }
                             },
                             modifier = Modifier.size(28.dp),
                             enabled = index < items.lastIndex,
                         ) {
-                            Icon(imageVector = Icons.Default.ArrowDownward, contentDescription = "Move down", modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.ArrowDownward, contentDescription = "Move down", modifier = Modifier.size(16.dp))
                         }
                     }
                 }
@@ -363,8 +327,8 @@ private fun SchedulingSection(
     expanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
 ) {
-    Text(text = "Scheduling", style = MaterialTheme.typography.titleSmall)
-    Text(text = "Start Date")
+    Text("Scheduling", style = MaterialTheme.typography.titleSmall)
+    Text("Start Date")
     TextButton(onClick = onDateClick) {
         Text(startDate?.toDisplayDate() ?: "Select date")
     }
@@ -384,7 +348,7 @@ private fun SchedulingSection(
                 readOnly = true,
                 label = { Text("Repeats") },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                modifier = Modifier.menuAnchor().fillMaxWidth(),
+                modifier = Modifier.menuAnchor(androidx.compose.material3.ExposedDropdownMenuAnchorType.PrimaryNotEditable).fillMaxWidth(),
             )
             ExposedDropdownMenu(
                 expanded = expanded,
@@ -409,8 +373,7 @@ private fun SchedulingSection(
             modifier = Modifier.weight(1f),
         )
     }
-
-    Text("Repeats ${frequency.label.uppercase()} every $interval ${frequency.unitLabel}")
+    Text("Repeats ${frequency.label.uppercase(Locale.getDefault())} every $interval ${frequency.unitLabel}")
 }
 
 @Composable
@@ -419,7 +382,7 @@ private fun RemindersSection(
     onAdd: () -> Unit,
     onDelete: (String) -> Unit,
 ) {
-    Text(text = "Reminders", style = MaterialTheme.typography.titleSmall)
+    Text("Reminders", style = MaterialTheme.typography.titleSmall)
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         reminders.forEach { reminder ->
             Row(
@@ -428,20 +391,12 @@ private fun RemindersSection(
             ) {
                 Text("${reminder.hour.toString().padStart(2, '0')}:${reminder.minute.toString().padStart(2, '0')}")
                 IconButton(onClick = { onDelete(reminder.id) }) {
-                    Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete")
+                    Icon(Icons.Default.Delete, contentDescription = "Delete")
                 }
             }
         }
     }
     TextButton(onClick = onAdd) { Text("+ New reminder") }
-}
-
-private fun List<ChecklistItem>.toChecklistJson(): String {
-    return JsonDefaults.encodeToString(this)
-}
-
-private fun List<ReminderItem>.toRemindersJson(): String {
-    return JsonDefaults.encodeToString(this)
 }
 
 private fun Instant.toDisplayDate(): String {

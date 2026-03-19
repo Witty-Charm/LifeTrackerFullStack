@@ -3,7 +3,6 @@ package com.lifetracker.mobile
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
@@ -47,7 +46,6 @@ class MainActivity : ComponentActivity() {
                             is UiEvent.HeroRespawned -> snackbarHostState.showSnackbar(event.message)
                             is UiEvent.HeroHealed -> snackbarHostState.showSnackbar(event.message)
                             is UiEvent.TaskCreated -> navController.popBackStack()
-                            is UiEvent.DailyCreated -> navController.popBackStack()
                         }
                     }
                 }

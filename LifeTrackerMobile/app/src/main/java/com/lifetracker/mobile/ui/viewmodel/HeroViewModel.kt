@@ -7,7 +7,6 @@ import com.lifetracker.mobile.ui.model.UiDifficulty
 import com.lifetracker.mobile.ui.model.UiTaskType
 import com.lifetracker.mobile.domain.model.DomainResult
 import com.lifetracker.mobile.domain.model.GameError
-import com.lifetracker.mobile.core.reminder.ReminderScheduler
 import com.lifetracker.mobile.domain.model.HeroDomain
 import com.lifetracker.mobile.domain.model.HeroSnapshot
 import com.lifetracker.mobile.domain.model.TaskType
@@ -44,7 +43,6 @@ class HeroViewModel(
     private val heroUseCases: HeroUseCases,
     private val taskUseCases: TaskUseCases,
     private val workManager: WorkManager,
-    private val reminderScheduler: ReminderScheduler,
     private val isDebug: Boolean = false,
 ) : ViewModel() {
     private object ActionKeys {
@@ -52,8 +50,6 @@ class HeroViewModel(
         const val HERO_RESPAWN = "hero_respawn"
         const val HERO_HEAL = "hero_heal"
         const val TASK_CREATE = "task_create"
-        const val DAILY_CREATE = "daily_create"
-
         fun taskComplete(id: Int) = "task_complete_$id"
         fun taskFail(id: Int) = "task_fail_$id"
         fun taskDelete(id: Int) = "task_delete_$id"
@@ -138,7 +134,7 @@ class HeroViewModel(
         executeAction { taskUseCases.completeTask(taskId) }
             ?.let { result ->
                 applySnapshot(result.heroSnapshot)
-                refreshTasks()
+                doRefreshTasks()
                 _events.send(UiEvent.TaskCompleted(result.message))
             }
     }
@@ -151,11 +147,12 @@ class HeroViewModel(
         executeAction { taskUseCases.failTask(taskId) }
             ?.let { result ->
                 applySnapshot(result.heroSnapshot)
-                refreshTasks()
+                doRefreshTasks()
                 _events.send(UiEvent.TaskFailed(result.message))
 
             }
     }
+    
 
     fun createTask(
         title: String,
@@ -181,43 +178,6 @@ class HeroViewModel(
                     )
                 }
                 _events.send(UiEvent.TaskCreated)
-            }
-    }
-
-    fun createDaily(
-        title: String,
-        description: String?,
-        difficulty: UiDifficulty,
-        startDate: kotlin.time.Instant?,
-        repeatPattern: String,
-        initialStreak: Int,
-        checklistJson: String?,
-        remindersJson: String?,
-    ) = launchAction(ActionKeys.DAILY_CREATE) {
-        val id = heroId ?: return@launchAction
-        val params = CreateTaskParams(
-            heroId = id,
-            title = title,
-            description = description,
-            type = TaskType.Daily,
-            difficulty = difficulty.toDomain(),
-            dueDate = startDate,
-            repeatPattern = repeatPattern,
-            initialStreak = initialStreak,
-            checklistJson = checklistJson,
-            remindersJson = remindersJson,
-        )
-        executeAction { taskUseCases.createTask(params) }
-            ?.let { task ->
-                _state.update { current ->
-                    current.copy(
-                        tasks = current.tasks + task.toUi(),
-                    )
-                }
-                _events.send(UiEvent.DailyCreated)
-                if (!remindersJson.isNullOrBlank()) {
-                    reminderScheduler.schedule(task.id, task.title, remindersJson, repeatPattern)
-                }
             }
     }
 
@@ -282,7 +242,7 @@ class HeroViewModel(
             ?.let { hero ->
                 heroDomain = hero
                 _state.update { it.copy(hero = hero.toUi(), needsHeroCreation = false) }
-                refreshTasks()
+                doRefreshTasks()
             }
 
     }
@@ -319,7 +279,11 @@ class HeroViewModel(
         }
     }
 
-    private suspend fun refreshTasks() {
+    fun refreshTasks() {
+        viewModelScope.launch { doRefreshTasks() }
+    }
+
+    private suspend fun doRefreshTasks() {
         val id = heroId ?: return
         safeCall { taskUseCases.getTasks(id) }
             .onSuccess { data ->
@@ -367,7 +331,7 @@ class HeroViewModel(
                 val finished = workInfos.any { it.state == WorkInfo.State.SUCCEEDED }
                 if (finished) {
                     Timber.d("SyncWorker succeeded — refreshing tasks")
-                    refreshTasks()
+                    doRefreshTasks()
                 }
             }
             .launchIn(viewModelScope)
