@@ -1,6 +1,6 @@
 # Add project specific ProGuard rules here.
 # You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
+# proguardFiles setting in build.gradle.kts.
 
 # Retrofit
 -keepattributes Signature, InnerClasses, EnclosingMethod
@@ -19,9 +19,4 @@
 -keep @androidx.room.Entity class *
 -dontwarn androidx.room.paging.**
 
-# Gson
--keepattributes Signature
--keepattributes *Annotation*
--keep class sun.misc.Unsafe { *; }
--keep class com.google.gson.** { *; }
 
