@@ -4,6 +4,8 @@ import com.lifetracker.mobile.domain.model.GameTaskDomain
 import com.lifetracker.mobile.domain.model.HeroDomain
 import com.lifetracker.mobile.domain.model.TaskDifficulty
 import com.lifetracker.mobile.domain.model.TaskType
+import com.lifetracker.mobile.core.serialization.JsonDefaults
+import com.lifetracker.mobile.domain.model.ChecklistItem
 import com.lifetracker.mobile.ui.model.ChecklistItemUi
 import com.lifetracker.mobile.ui.model.UiDifficulty
 import com.lifetracker.mobile.ui.model.UiTaskType
@@ -113,25 +115,9 @@ private fun String.toRepeatText(): String {
 private fun parseChecklist(checklistJson: String?): List<ChecklistItemUi> {
     if (checklistJson.isNullOrBlank()) return emptyList()
     return runCatching {
-        val trimmed = checklistJson.trim()
-        if (trimmed.length <= 2) return@runCatching emptyList()
-        val objects = trimmed.removePrefix("[").removeSuffix("]").split("},{")
-        objects.filter { it.isNotBlank() }.map { item ->
-            val normalized = when {
-                item.startsWith("{") && item.endsWith("}") -> item
-                item.startsWith("{") -> "$item}"
-                item.endsWith("}") -> "{$item"
-                else -> "{$item}"
-            }
-            ChecklistItemUi(
-                id = Regex("\"id\"\\s*:\\s*\"(.*?)\"").find(normalized)?.groupValues?.get(1) ?: "",
-                text = Regex("\"text\"\\s*:\\s*\"(.*?)\"").find(normalized)?.groupValues?.get(1) ?: "",
-                isCompleted = Regex("\"isCompleted\"\\s*:\\s*(true|false)")
-                    .find(normalized)
-                    ?.groupValues
-                    ?.get(1)
-                    ?.toBoolean() ?: false,
-            )
-        }
-    }.getOrDefault(emptyList())
+        JsonDefaults.decodeFromString<List<ChecklistItem>>(checklistJson)
+    }
+        .onFailure { timber.log.Timber.w(it, "parseChecklist: failed to parse JSON") }
+        .getOrDefault(emptyList())
+        .map { ChecklistItemUi(id = it.id, text = it.text, isCompleted = it.isCompleted) }
 }
