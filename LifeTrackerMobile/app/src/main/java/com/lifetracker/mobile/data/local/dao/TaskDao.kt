@@ -2,6 +2,7 @@ package com.lifetracker.mobile.data.local.dao
 
 import androidx.room.Dao
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Upsert
 import com.lifetracker.mobile.data.local.entity.TaskEntity
 
@@ -27,6 +28,12 @@ interface TaskDao {
 
     @Upsert
     suspend fun upsertAll(tasks: List<TaskEntity>)
+
+    @Transaction
+    suspend fun replaceTempWithReal(tempId: Int, realTask: TaskEntity) {
+        upsert(realTask)
+        deleteById(tempId)
+    }
 }
 
 

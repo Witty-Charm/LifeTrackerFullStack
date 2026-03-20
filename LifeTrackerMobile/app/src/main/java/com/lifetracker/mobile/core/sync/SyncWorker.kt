@@ -52,8 +52,10 @@ class SyncWorker(
 
             when (result) {
                 is NetworkResult.Success -> {
-                    taskDao.deleteById(entity.id)
-                    taskDao.upsert(result.data.toDomain().toEntity(pendingSync = false))
+                    taskDao.replaceTempWithReal(
+                        tempId = entity.id,
+                        realTask = result.data.toDomain().toEntity(pendingSync = false),
+                    )
                     Timber.d("SyncWorker: synced task '${entity.title}' → real id ${result.data.id}")
                 }
 
