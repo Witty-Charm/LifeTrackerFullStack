@@ -1,6 +1,7 @@
 package com.lifetracker.mobile.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,8 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -21,8 +20,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import com.lifetracker.mobile.ui.components.GameDatePickerDialog
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -40,13 +39,19 @@ import com.lifetracker.mobile.ui.model.UiTaskType
 import com.lifetracker.mobile.ui.viewmodel.HeroViewModel
 import androidx.compose.ui.platform.LocalContext
 import com.lifetracker.mobile.ui.model.isAnyActionLoading
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.haze
+import dev.chrisbanes.haze.hazeSource
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.format
 import kotlinx.datetime.toLocalDateTime
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
-import java.util.Locale
+import kotlinx.datetime.format.MonthNames
+import kotlinx.datetime.format.char
+import kotlinx.datetime.todayIn
 import kotlin.time.Instant
+import kotlin.time.Clock
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,13 +66,16 @@ fun CreateTaskScreen(
     var selectedDifficulty by remember { mutableStateOf(UiDifficulty.Easy) }
     var dueDate by remember { mutableStateOf<Instant?>(null) }
     var showDatePicker by remember { mutableStateOf(false) }
-    val datePickerState = rememberDatePickerState()
+    val context = LocalContext.current
+    val hazeState = remember { HazeState() }
 
     LaunchedEffect(Unit) {
         vm.clearError()
     }
 
-    Scaffold(
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            modifier = Modifier.hazeSource(hazeState),
         topBar = {
             TopAppBar(
                 title = { Text("Create task") },
@@ -160,7 +168,6 @@ fun CreateTaskScreen(
                 }
             }
 
-            val context = LocalContext.current
             val errorText = state.actionError?.toMessage(context)
 
             if (errorText != null) {
@@ -190,34 +197,34 @@ fun CreateTaskScreen(
             }
         }
 
-        if (showDatePicker) {
-            DatePickerDialog(
-                onDismissRequest = { showDatePicker = false },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            val millis = datePickerState.selectedDateMillis
-                            dueDate = millis?.let { Instant.fromEpochMilliseconds(it) }
-                            showDatePicker = false
-                        }
-                    ) { Text("OK") }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
-                }
-            ) {
-                DatePicker(state = datePickerState)
-            }
         }
+
+        GameDatePickerDialog(
+            visible = showDatePicker,
+            hazeState = hazeState,
+            initialDate = dueDate
+                ?.toLocalDateTime(TimeZone.currentSystemDefault())
+                ?.date
+                ?: Clock.System.todayIn(TimeZone.currentSystemDefault()),
+            onDateSelected = { date ->
+                dueDate = date.atStartOfDayIn(TimeZone.currentSystemDefault())
+            },
+            onDismiss = { showDatePicker = false },
+        )
     }
 }
 
-private fun Instant?.toDisplayDate(): String {
-    if (this == null) return ""
-    val javaDate = this.toLocalDateTime(TimeZone.currentSystemDefault()).date.toJavaLocalDate()
-    return DateTimeFormatter
-        .ofLocalizedDate(FormatStyle.MEDIUM)
-        .withLocale(Locale.getDefault())
-        .format(javaDate)
+private val DisplayDateFormat = LocalDate.Format {
+    day()
+    char(' ')
+    monthName(MonthNames.ENGLISH_ABBREVIATED)
+    char(' ')
+    year()
 }
+
+private fun Instant?.toDisplayDate(): String =
+    this?.toLocalDateTime(TimeZone.currentSystemDefault())
+        ?.date
+        ?.format(DisplayDateFormat)
+        ?: ""
 

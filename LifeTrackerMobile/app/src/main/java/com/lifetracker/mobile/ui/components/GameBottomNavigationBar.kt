@@ -40,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -49,6 +50,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lifetracker.mobile.ui.theme.PurpleAccent
@@ -148,11 +150,11 @@ fun GameBottomNavigationBar(
                 }
             }
 
-            val glassTop    = PurpleAccent.copy(alpha = 0.28f)
+            val glassTop = PurpleAccent.copy(alpha = 0.28f)
             val glassBottom = PurpleAccent.copy(alpha = 0.08f)
-            val specular    = Color.White.copy(alpha = 0.32f)
+            val specular = Color.White.copy(alpha = 0.32f)
             val borderGlass = Color.White.copy(alpha = 0.14f)
-            val innerGlow   = PurpleAccent.copy(alpha = 0.12f)
+            val innerGlow = PurpleAccent.copy(alpha = 0.12f)
 
             Box(
                 modifier = Modifier
@@ -234,7 +236,6 @@ private fun GlassTabItem(
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val icons = remember(tab) { tabIcons(tab) }
-    val density = LocalDensity.current
 
     val pressScale by animateFloatAsState(
         targetValue = if (isPressed) 0.84f else 1f,
@@ -290,10 +291,7 @@ private fun GlassTabItem(
                 interactionSource = interactionSource,
                 indication = null,
             ) { onSelect() }
-            .graphicsLayer {
-                scaleX = pressScale
-                scaleY = pressScale
-            }
+            .scale(pressScale)
             .padding(vertical = 6.dp),
     ) {
         Icon(
@@ -302,11 +300,8 @@ private fun GlassTabItem(
             tint = iconColor,
             modifier = Modifier
                 .size(22.dp)
-                .graphicsLayer {
-                    scaleX = iconScale
-                    scaleY = iconScale
-                    translationY = with(density) { iconOffsetY.toPx() }
-                },
+                .scale(iconScale)
+                .offset(y = iconOffsetY),
         )
 
         Box(
