@@ -32,7 +32,11 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
@@ -327,12 +331,13 @@ class HeroViewModel(
     private fun observeSyncWorker() {
         workManager
             .getWorkInfosForUniqueWorkFlow(SyncScheduler.WORK_NAME)
-            .onEach { workInfos ->
-                val finished = workInfos.any { it.state == WorkInfo.State.SUCCEEDED }
-                if (finished) {
-                    Timber.d("SyncWorker succeeded — refreshing tasks")
-                    doRefreshTasks()
-                }
+            .map { workInfos -> workInfos.any { it.state == WorkInfo.State.SUCCEEDED } }
+            .distinctUntilChanged()
+            .drop(1)
+            .filter { succeeded -> succeeded }
+            .onEach {
+                Timber.d("SyncWorker succeeded — refreshing tasks")
+                doRefreshTasks()
             }
             .launchIn(viewModelScope)
     }

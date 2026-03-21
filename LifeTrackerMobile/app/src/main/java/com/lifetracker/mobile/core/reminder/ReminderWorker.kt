@@ -3,6 +3,7 @@ package com.lifetracker.mobile.core.reminder
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
@@ -23,14 +24,12 @@ class ReminderWorker(
     private fun showNotification(context: Context, taskId: Int, title: String) {
         val manager = context.getSystemService(NotificationManager::class.java)
         val channelId = "daily_reminders"
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                channelId,
-                "Daily Reminders",
-                NotificationManager.IMPORTANCE_DEFAULT,
-            )
-            manager.createNotificationChannel(channel)
-        }
+        val channel = NotificationChannel(
+            channelId,
+            "Daily Reminders",
+            NotificationManager.IMPORTANCE_DEFAULT,
+        )
+        manager.createNotificationChannel(channel)
         val notification = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle("LifeTracker")
