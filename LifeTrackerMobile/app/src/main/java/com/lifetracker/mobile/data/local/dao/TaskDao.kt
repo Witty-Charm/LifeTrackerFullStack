@@ -7,33 +7,42 @@ import androidx.room.Upsert
 import com.lifetracker.mobile.data.local.entity.TaskEntity
 
 @Dao
-interface TaskDao {
+abstract class TaskDao {
     @Query("SELECT * FROM tasks")
-    suspend fun getAll(): List<TaskEntity>
+    abstract suspend fun getAll(): List<TaskEntity>
 
     @Query("SELECT * FROM tasks WHERE id = :id")
-    suspend fun getById(id: Int): TaskEntity?
+    abstract suspend fun getById(id: Int): TaskEntity?
 
     @Query("SELECT * FROM tasks WHERE heroId = :heroId")
-    suspend fun getByHeroId(heroId: Int): List<TaskEntity>
+    abstract suspend fun getByHeroId(heroId: Int): List<TaskEntity>
 
     @Query("DELETE FROM tasks WHERE id = :id")
-    suspend fun deleteById(id: Int)
+    abstract suspend fun deleteById(id: Int)
 
     @Query("SELECT * FROM tasks WHERE pendingSync = 1")
-    suspend fun getPendingSync(): List<TaskEntity>
+    abstract suspend fun getPendingSync(): List<TaskEntity>
 
     @Upsert
-    suspend fun upsert(task: TaskEntity)
+    abstract suspend fun upsert(task: TaskEntity)
 
     @Upsert
-    suspend fun upsertAll(tasks: List<TaskEntity>)
+    abstract suspend fun upsertAll(tasks: List<TaskEntity>)
+
+    @Query("SELECT COALESCE(MIN(id), 0) - 1 FROM tasks")
+    abstract suspend fun getNextTempId(): Int
 
     @Transaction
-    suspend fun replaceTempWithReal(tempId: Int, realTask: TaskEntity) {
+    open suspend fun insertOfflineTask(task: TaskEntity): TaskEntity {
+        val tempId = getNextTempId()
+        val withId = task.copy(id = tempId)
+        upsert(withId)
+        return withId
+    }
+
+    @Transaction
+    open suspend fun replaceTempWithReal(tempId: Int, realTask: TaskEntity) {
         upsert(realTask)
         deleteById(tempId)
     }
 }
-
-
