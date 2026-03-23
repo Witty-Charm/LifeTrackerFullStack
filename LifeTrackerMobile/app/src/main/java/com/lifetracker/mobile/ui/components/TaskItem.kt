@@ -26,12 +26,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.lifetracker.mobile.ui.model.TaskUi
-import com.lifetracker.mobile.ui.theme.CardBackground
-import com.lifetracker.mobile.ui.theme.CardBorder
-import com.lifetracker.mobile.ui.theme.GoldYellow
-import com.lifetracker.mobile.ui.theme.HealthRed
-import com.lifetracker.mobile.ui.theme.TextPrimary
-import com.lifetracker.mobile.ui.theme.TextSecondary
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -90,13 +84,13 @@ private fun DismissBackground() {
         modifier = Modifier
             .fillMaxSize()
             .clip(RoundedCornerShape(12.dp))
-            .background(HealthRed)
+            .background(MaterialTheme.colorScheme.error)
             .padding(end = 16.dp)
     ) {
         Icon(
             imageVector = Icons.Default.Delete,
             contentDescription = null,
-            tint = TextPrimary,
+            tint = MaterialTheme.colorScheme.onError,
             modifier = Modifier.align(Alignment.CenterEnd)
         )
     }
@@ -117,7 +111,7 @@ private fun TaskCardContent(
             .heightIn(min = 68.dp)
             .height(IntrinsicSize.Min)
             .clip(RoundedCornerShape(12.dp))
-            .background(CardBackground)
+            .background(MaterialTheme.colorScheme.surface)
             .graphicsLayer { alpha = cardAlpha }
     ) {
         Box(
@@ -125,7 +119,7 @@ private fun TaskCardContent(
                 .width(48.dp)
                 .fillMaxHeight()
                 .background(
-                    color = GoldYellow,
+                    color = MaterialTheme.colorScheme.secondary,
                     shape = RoundedCornerShape(
                         topStart = 12.dp,
                         bottomStart = 12.dp,
@@ -140,7 +134,7 @@ private fun TaskCardContent(
                 modifier = Modifier
                     .size(28.dp)
                     .background(
-                        color = Color.White.copy(alpha = 0.2f),
+                        color = MaterialTheme.colorScheme.onSecondary.copy(alpha = 0.2f),
                         shape = CircleShape
                     ),
                 contentAlignment = Alignment.Center
@@ -148,7 +142,7 @@ private fun TaskCardContent(
                 Text(
                     text = "+",
                     style = MaterialTheme.typography.titleMedium,
-                    color = TextPrimary
+                    color = MaterialTheme.colorScheme.onBackground
                 )
             }
         }
@@ -161,7 +155,7 @@ private fun TaskCardContent(
             Text(
                 text = task.title,
                 style = MaterialTheme.typography.titleMedium,
-                color = TextPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
@@ -171,7 +165,7 @@ private fun TaskCardContent(
                 Text(
                     text = task.description,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -182,14 +176,14 @@ private fun TaskCardContent(
             Text(
                 text = task.difficultyLabel,
                 style = MaterialTheme.typography.bodySmall,
-                color = Color(task.difficultyColor)
+                color = MaterialTheme.colorScheme.tertiary
             )
 
             if (task.streakText != null) {
                 Text(
                     text = "🔥 ${task.streakText}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
@@ -197,7 +191,7 @@ private fun TaskCardContent(
                 Text(
                     text = task.dueDateText,
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (task.isOverdue) HealthRed else TextSecondary
+                    color = if (task.isOverdue) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
@@ -207,14 +201,14 @@ private fun TaskCardContent(
                     Icon(
                         imageVector = Icons.Default.CloudOff,
                         contentDescription = null,
-                        tint = TextSecondary,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(12.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = "Pending sync",
                         style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -225,7 +219,7 @@ private fun TaskCardContent(
                 .width(60.dp)
                 .fillMaxHeight()
                 .background(
-                    color = CardBorder,
+                    color = MaterialTheme.colorScheme.surfaceVariant,
                     shape = RoundedCornerShape(
                         topStart = 0.dp,
                         bottomStart = 0.dp,
@@ -241,7 +235,7 @@ private fun TaskCardContent(
                     .size(28.dp)
                     .border(
                         width = 1.5.dp,
-                        color = TextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         shape = CircleShape
                     ),
                 contentAlignment = Alignment.Center
@@ -249,7 +243,7 @@ private fun TaskCardContent(
                 Text(
                     text = "−",
                     style = MaterialTheme.typography.titleMedium,
-                    color = TextSecondary
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }

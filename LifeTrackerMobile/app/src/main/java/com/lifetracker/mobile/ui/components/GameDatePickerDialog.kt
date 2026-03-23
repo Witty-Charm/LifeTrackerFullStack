@@ -27,6 +27,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -43,10 +44,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.lifetracker.mobile.ui.theme.PurpleAccent
-import com.lifetracker.mobile.ui.theme.SurfaceDark
-import com.lifetracker.mobile.ui.theme.TextPrimary
-import com.lifetracker.mobile.ui.theme.TextSecondary
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
 import kotlinx.datetime.DateTimeUnit
@@ -75,6 +72,7 @@ fun GameDatePickerDialog(
     var selectedDate by remember { mutableStateOf(initialDate) }
     val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
     val shape = RoundedCornerShape(24.dp)
+    val surfaceColor = MaterialTheme.colorScheme.surface
 
     AnimatedVisibility(
         visible = visible,
@@ -100,7 +98,7 @@ fun GameDatePickerDialog(
                     )
                     .clip(shape)
                     .hazeEffect(state = hazeState) {
-                        backgroundColor = SurfaceDark
+                        backgroundColor = surfaceColor
                         blurRadius = 28.dp
                         noiseFactor = 0f
                     }
@@ -131,14 +129,14 @@ fun GameDatePickerDialog(
                             Icon(
                                 Icons.AutoMirrored.Filled.KeyboardArrowLeft,
                                 "Previous month",
-                                tint = TextPrimary
+                                tint = MaterialTheme.colorScheme.onSurface
                             )
                         }
                         Text(
                             text = displayMonth.monthLabel(),
                             fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = TextPrimary,
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
                         IconButton(onClick = {
                             displayMonth = displayMonth.plus(1, DateTimeUnit.MONTH)
@@ -146,7 +144,7 @@ fun GameDatePickerDialog(
                             Icon(
                                 Icons.AutoMirrored.Filled.KeyboardArrowRight,
                                 "Next month",
-                                tint = TextPrimary
+                                tint = MaterialTheme.colorScheme.onSurface
                             )
                         }
                     }
@@ -160,7 +158,7 @@ fun GameDatePickerDialog(
                                 modifier = Modifier.weight(1f),
                                 textAlign = TextAlign.Center,
                                 fontSize = 12.sp,
-                                color = TextSecondary,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontWeight = FontWeight.Medium,
                             )
                         }
@@ -180,10 +178,10 @@ fun GameDatePickerDialog(
                                 val isToday = date == today
 
                                 val textColor = when {
-                                    isSelected -> Color.White
-                                    !isCurrentMonth -> TextSecondary.copy(alpha = 0.30f)
-                                    isToday -> PurpleAccent
-                                    else -> TextPrimary
+                                    isSelected -> MaterialTheme.colorScheme.onPrimary
+                                    !isCurrentMonth -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.30f)
+                                    isToday -> MaterialTheme.colorScheme.primary
+                                    else -> MaterialTheme.colorScheme.onSurface
                                 }
 
                                 Box(
@@ -194,10 +192,10 @@ fun GameDatePickerDialog(
                                         .clip(CircleShape)
                                         .then(
                                             when {
-                                                isSelected -> Modifier.background(PurpleAccent)
+                                                isSelected -> Modifier.background(MaterialTheme.colorScheme.primary)
                                                 isToday -> Modifier.border(
                                                     1.dp,
-                                                    PurpleAccent,
+                                                    MaterialTheme.colorScheme.primary,
                                                     CircleShape
                                                 )
 
@@ -229,11 +227,11 @@ fun GameDatePickerDialog(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         TextButton(onClick = onDismiss) {
-                            Text("Cancel", color = TextSecondary)
+                            Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Box(modifier = Modifier.size(8.dp))
                         TextButton(onClick = { onDateSelected(selectedDate); onDismiss() }) {
-                            Text("OK", color = PurpleAccent, fontWeight = FontWeight.SemiBold)
+                            Text("OK", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
                         }
                     }
                 }

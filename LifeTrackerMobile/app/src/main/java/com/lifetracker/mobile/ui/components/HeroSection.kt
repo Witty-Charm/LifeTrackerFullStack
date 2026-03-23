@@ -19,14 +19,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lifetracker.mobile.ui.model.HeroUi
-import com.lifetracker.mobile.ui.theme.CardBorder
 import com.lifetracker.mobile.ui.theme.GoldYellow
 import com.lifetracker.mobile.ui.theme.HealthRed
 import com.lifetracker.mobile.ui.theme.HeroTileGradientEnd
 import com.lifetracker.mobile.ui.theme.HeroTileGradientStart
-import com.lifetracker.mobile.ui.theme.PurpleAccent
-import com.lifetracker.mobile.ui.theme.TextPrimary
-import com.lifetracker.mobile.ui.theme.TextSecondary
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -72,7 +68,7 @@ fun HeroSection(
                     Text(
                         text = initial, style = MaterialTheme.typography.displaySmall.copy(
                             fontSize = 48.sp, fontWeight = FontWeight.ExtraBold
-                        ), color = TextPrimary, maxLines = 1, overflow = TextOverflow.Clip
+                        ), color = MaterialTheme.colorScheme.onPrimary, maxLines = 1, overflow = TextOverflow.Clip
                     )
                 }
 
@@ -85,7 +81,7 @@ fun HeroSection(
                     Text(
                         text = "Lvl ${hero.level}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Icon(
@@ -140,27 +136,27 @@ fun HeroSection(
                         if (isRespawnLoading) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(16.dp),
-                                color = TextPrimary,
+                                color = MaterialTheme.colorScheme.onError,
                                 strokeWidth = 2.dp
                             )
                         } else {
-                            Text(text = "Respawn", color = TextPrimary)
+                            Text(text = "Respawn", color = MaterialTheme.colorScheme.onError)
                         }
                     }
                 } else if (hero.isInRecovery && hero.hpProgress < 1.0f) {
                     Button(
                         onClick = onHeal,
                         enabled = !isHealLoading,
-                        colors = ButtonDefaults.buttonColors(containerColor = PurpleAccent)
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                     ) {
                         if (isHealLoading) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(16.dp),
-                                color = TextPrimary,
+                                color = MaterialTheme.colorScheme.onPrimary,
                                 strokeWidth = 2.dp
                             )
                         } else {
-                            Text(text = "Heal", color = TextPrimary)
+                            Text(text = "Heal", color = MaterialTheme.colorScheme.onPrimary)
                         }
                     }
                 }
@@ -186,7 +182,7 @@ private fun StatBar(
                     .height(10.dp)
                     .clip(CircleShape),
                 color = barColor,
-                trackColor = CardBorder,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant,
                 strokeCap = StrokeCap.Butt,
                 gapSize = 0.dp,
                 drawStopIndicator = {})
@@ -198,10 +194,10 @@ private fun StatBar(
             Text(
                 text = fractionText,
                 style = MaterialTheme.typography.bodySmall,
-                color = TextSecondary
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
-                text = label, style = MaterialTheme.typography.bodySmall, color = TextSecondary
+                text = label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

@@ -15,13 +15,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.lifetracker.mobile.ui.model.HeroUi
-import com.lifetracker.mobile.ui.theme.CardBorder
-import com.lifetracker.mobile.ui.theme.ObjectiveCardBg
-import com.lifetracker.mobile.ui.theme.GoldYellow
-import com.lifetracker.mobile.ui.theme.OnGoldText
-import com.lifetracker.mobile.ui.theme.PurpleBorder
-import com.lifetracker.mobile.ui.theme.PurpleAccent
-import com.lifetracker.mobile.ui.theme.TextPrimary
 
 @Composable
 fun DailyObjectiveCard(
@@ -35,10 +28,10 @@ fun DailyObjectiveCard(
             .clip(RoundedCornerShape(12.dp))
             .border(
                 width = 1.5.dp,
-                color = PurpleBorder,
+                color = MaterialTheme.colorScheme.outline,
                 shape = RoundedCornerShape(12.dp)
             )
-            .background(ObjectiveCardBg)
+            .background(MaterialTheme.colorScheme.surface)
             .padding(16.dp)
     ) {
         Column {
@@ -50,19 +43,19 @@ fun DailyObjectiveCard(
                 Text(
                     text = "Daily Progress",
                     style = MaterialTheme.typography.headlineSmall,
-                    color = TextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.weight(1f)
                 )
 
                 Surface(
-                    color = GoldYellow,
-                    contentColor = OnGoldText,
+                    color = MaterialTheme.colorScheme.secondary,
+                    contentColor = MaterialTheme.colorScheme.onSecondary,
                     shape = RoundedCornerShape(999.dp)
                 ) {
                     Text(
                         text = hero.dailyText,
                         style = MaterialTheme.typography.labelMedium,
-                        color = OnGoldText,
+                        color = MaterialTheme.colorScheme.onSecondary,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                     )
                 }
@@ -76,8 +69,8 @@ fun DailyObjectiveCard(
                     .fillMaxWidth()
                     .height(8.dp)
                     .clip(CircleShape),
-                color = PurpleAccent,
-                trackColor = CardBorder
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant
             )
         }
     }

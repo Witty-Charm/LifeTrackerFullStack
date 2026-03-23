@@ -284,8 +284,6 @@ private fun ChecklistSection(
                                 if (index > 0) {
                                     val list = items.toMutableList()
                                     list.add(index - 1, list.removeAt(index))
-                                    // Экран сам вычисляет новый порядок и передаёт готовый список.
-                                    // ViewModel не знает про индексы — только про результат.
                                     onReorder(list)
                                 }
                             },

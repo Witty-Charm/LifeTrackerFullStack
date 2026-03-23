@@ -106,6 +106,7 @@ dependencies {
     implementation(libs.koin.compose)
     implementation(libs.koin.workmanager)
     implementation(libs.androidx.work.runtime.ktx)
+    implementation(libs.androidx.datastore.preferences)
 
     debugImplementation(libs.compose.ui.tooling)
     debugImplementation(libs.compose.ui.test.manifest)

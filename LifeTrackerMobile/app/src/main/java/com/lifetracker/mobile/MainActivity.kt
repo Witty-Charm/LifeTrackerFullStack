@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.LaunchedEffect
@@ -20,18 +21,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.rememberNavController
+import com.lifetracker.mobile.core.theme.ThemeController
 import com.lifetracker.mobile.navigation.NavGraph
 import com.lifetracker.mobile.ui.model.UiEvent
-import com.lifetracker.mobile.ui.theme.AppBackground
 import com.lifetracker.mobile.ui.theme.LifeTrackerMobileTheme
 import com.lifetracker.mobile.ui.viewmodel.HeroViewModel
+import org.koin.android.ext.android.get
 import org.koin.androidx.compose.koinViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            LifeTrackerMobileTheme {
+            val themeController: ThemeController = get()
+            val themeMode by themeController.themeMode.collectAsState()
+            LifeTrackerMobileTheme(themeMode = themeMode) {
                 val vm = koinViewModel<HeroViewModel>()
                 val state by vm.state.collectAsState()
                 val navController = rememberNavController()
@@ -51,7 +55,7 @@ class MainActivity : ComponentActivity() {
                 }
 
                 Box(modifier = Modifier.fillMaxSize()
-                    .background(AppBackground)
+                    .background(MaterialTheme.colorScheme.background)
                     .windowInsetsPadding(WindowInsets.systemBars)
                 ) {
                     NavGraph(navController = navController, vm = vm, state = state)

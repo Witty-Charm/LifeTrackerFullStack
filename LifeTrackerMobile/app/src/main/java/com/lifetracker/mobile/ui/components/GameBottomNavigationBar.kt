@@ -30,6 +30,7 @@ import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.EmojiEvents
 import androidx.compose.material.icons.outlined.FitnessCenter
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -53,9 +54,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.lifetracker.mobile.ui.theme.PurpleAccent
-import com.lifetracker.mobile.ui.theme.SurfaceDark
-import com.lifetracker.mobile.ui.theme.TextSecondary
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
 import kotlinx.coroutines.launch
@@ -87,6 +85,9 @@ fun GameBottomNavigationBar(
     val selectedIndex = tabs.indexOf(selectedTab)
     val shape = RoundedCornerShape(percent = 50)
     val density = LocalDensity.current
+    val surfaceColor = MaterialTheme.colorScheme.surface
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val outlineColor = MaterialTheme.colorScheme.outline
 
     val indicatorX = remember { Animatable(0f) }
     val indicatorWidth = remember { Animatable(0f) }
@@ -102,7 +103,7 @@ fun GameBottomNavigationBar(
                 .fillMaxWidth(0.85f)
                 .clip(shape)
                 .hazeEffect(state = hazeState) {
-                    backgroundColor = SurfaceDark
+                    backgroundColor = surfaceColor
                     blurRadius = 28.dp
                     noiseFactor = 0f
                 }
@@ -110,8 +111,8 @@ fun GameBottomNavigationBar(
                     width = 0.5.dp,
                     brush = Brush.verticalGradient(
                         colors = listOf(
-                            Color.White.copy(alpha = 0.20f),
-                            Color.White.copy(alpha = 0.04f),
+                            outlineColor.copy(alpha = 0.30f),
+                            outlineColor.copy(alpha = 0.08f),
                         ),
                     ),
                     shape = shape,
@@ -150,11 +151,11 @@ fun GameBottomNavigationBar(
                 }
             }
 
-            val glassTop = PurpleAccent.copy(alpha = 0.28f)
-            val glassBottom = PurpleAccent.copy(alpha = 0.08f)
+            val glassTop = primaryColor.copy(alpha = 0.28f)
+            val glassBottom = primaryColor.copy(alpha = 0.08f)
             val specular = Color.White.copy(alpha = 0.32f)
             val borderGlass = Color.White.copy(alpha = 0.14f)
-            val innerGlow = PurpleAccent.copy(alpha = 0.12f)
+            val innerGlow = primaryColor.copy(alpha = 0.12f)
 
             Box(
                 modifier = Modifier
@@ -279,7 +280,7 @@ private fun GlassTabItem(
         label = "labelScale_${tab.name}",
     )
 
-    val iconColor = if (isSelected) PurpleAccent else TextSecondary
+    val iconColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,

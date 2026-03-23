@@ -36,10 +36,6 @@ import com.lifetracker.mobile.ui.model.HeroScreenState
 import com.lifetracker.mobile.ui.model.isHealLoading
 import com.lifetracker.mobile.ui.model.isRespawnLoading
 import com.lifetracker.mobile.ui.model.isTaskLoading
-import com.lifetracker.mobile.ui.theme.AppBackground
-import com.lifetracker.mobile.ui.theme.PurpleAccent
-import com.lifetracker.mobile.ui.theme.TextPrimary
-import com.lifetracker.mobile.ui.theme.TextSecondary
 import com.lifetracker.mobile.ui.viewmodel.HeroViewModel
 import dev.chrisbanes.haze.rememberHazeState
 
@@ -54,7 +50,7 @@ fun HomeScreen(
     val hazeState = rememberHazeState()
 
     Scaffold(
-        containerColor = AppBackground,
+        containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
             GameBottomNavigationBar(
                 selectedTab = selectedTab,
@@ -72,8 +68,8 @@ fun HomeScreen(
             FloatingActionButton(
                 onClick = { navController.navigate(route) },
                 shape = androidx.compose.foundation.shape.CircleShape,
-                containerColor = PurpleAccent,
-                contentColor = TextPrimary
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
@@ -96,7 +92,7 @@ fun HomeScreen(
                             .fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        CircularProgressIndicator(color = PurpleAccent)
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                     }
                 }
 
@@ -171,14 +167,14 @@ private fun ErrorView(
         Text(
             text = "Something went wrong",
             style = MaterialTheme.typography.titleMedium,
-            color = TextSecondary
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.height(12.dp))
         Button(
             onClick = onRetry,
-            colors = ButtonDefaults.buttonColors(containerColor = PurpleAccent)
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
         ) {
-            Text(text = "Retry", color = TextPrimary)
+            Text(text = "Retry", color = MaterialTheme.colorScheme.onPrimary)
         }
     }
 }
@@ -193,7 +189,7 @@ private fun EmptyTasksPlaceholder() {
         Text(
             text = "No tasks here yet",
             style = MaterialTheme.typography.bodyMedium,
-            color = TextSecondary
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
@@ -213,7 +209,7 @@ private fun ComingSoonPlaceholder(tabName: String) {
             Text(
                 text = "$tabName coming soon",
                 style = MaterialTheme.typography.titleMedium,
-                color = TextSecondary
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
