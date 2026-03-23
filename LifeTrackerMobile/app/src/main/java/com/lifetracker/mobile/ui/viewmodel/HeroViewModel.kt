@@ -47,8 +47,13 @@ class HeroViewModel(
     private val heroUseCases: HeroUseCases,
     private val taskUseCases: TaskUseCases,
     private val workManager: WorkManager,
-    private val isDebug: Boolean = false,
 ) : ViewModel() {
+
+    // BuildConfig.DEBUG — константа времени сборки, не зависимость.
+    // Инициализируем здесь, а не через DI: ViewModel в UI-слое,
+    // BuildConfig там уместен. В debug — крашимся на неожиданных
+    // исключениях, чтобы их не пропустить. В release — глотаем.
+    private val isDebug: Boolean = BuildConfig.DEBUG
     private object ActionKeys {
         const val HERO_CREATE = "hero_create"
         const val HERO_RESPAWN = "hero_respawn"

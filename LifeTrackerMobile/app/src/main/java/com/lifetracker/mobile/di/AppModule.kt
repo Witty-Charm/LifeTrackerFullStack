@@ -41,7 +41,8 @@ import com.lifetracker.mobile.domain.usecase.task.TaskUseCases
 import com.lifetracker.mobile.ui.viewmodel.CreateDailyViewModel
 import com.lifetracker.mobile.ui.viewmodel.HeroViewModel
 import org.koin.android.ext.koin.androidContext
-import org.koin.androidx.viewmodel.dsl.viewModel
+import org.koin.core.module.dsl.viewModel
+import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
 
 val appModule = module {
@@ -76,14 +77,7 @@ val appModule = module {
         )
     }
 
-    viewModel {
-        HeroViewModel(
-            heroUseCases = get(),
-            taskUseCases = get(),
-            workManager = get(),
-            isDebug = BuildConfig.DEBUG,
-        )
-    }
+    viewModelOf(::HeroViewModel)
     single {
         val heroRepo: HeroRepository = get()
         HeroUseCases(
@@ -115,7 +109,7 @@ val appModule = module {
             AppDatabase::class.java,
             "lifetracker.db"
         )
-            .fallbackToDestructiveMigration()
+            .fallbackToDestructiveMigration(dropAllTables = true)
             .build()
     }
 
