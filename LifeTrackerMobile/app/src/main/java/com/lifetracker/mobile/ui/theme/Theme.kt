@@ -17,21 +17,38 @@ import androidx.core.view.WindowCompat
 import com.lifetracker.mobile.domain.model.ThemeMode
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+    background = AppBackground,
+    surface = CardBackground,
+    onBackground = TextPrimary,
+    onSurface = TextPrimary,
+    onSurfaceVariant = TextSecondary,
+    primary = PurpleAccent,
+    onPrimary = TextPrimary,
+    secondary = GoldYellow,
+    onSecondary = OnGoldText,
+    error = HealthRed,
+    outline = PurpleBorder,
+    surfaceVariant = CardBorder
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
+    background = AppBackgroundLight,
+    surface = CardBackgroundLight,
+    onBackground = TextPrimaryLight,
+    onSurface = TextPrimaryLight,
+    onSurfaceVariant = TextSecondaryLight,
+    primary = PurpleAccent,
+    onPrimary = TextPrimary,
+    secondary = GoldYellow,
+    onSecondary = OnGoldTextLight,
+    error = HealthRed,
+    outline = PurpleBorder,
+    surfaceVariant = CardBorderLight
 )
 
 @Composable
 fun LifeTrackerMobileTheme(
     themeMode: ThemeMode = ThemeMode.SYSTEM,
-    dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
     val darkTheme = when (themeMode) {
@@ -39,14 +56,7 @@ fun LifeTrackerMobileTheme(
         ThemeMode.LIGHT -> false
         ThemeMode.SYSTEM -> isSystemInDarkTheme()
     }
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
+    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
