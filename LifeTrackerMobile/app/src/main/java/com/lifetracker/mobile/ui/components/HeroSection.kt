@@ -19,16 +19,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lifetracker.mobile.ui.model.HeroUi
-import com.lifetracker.mobile.ui.theme.GoldYellow
-import com.lifetracker.mobile.ui.theme.HealthRed
-import com.lifetracker.mobile.ui.theme.HeroTileGradientEnd
-import com.lifetracker.mobile.ui.theme.HeroTileGradientStart
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.style.TextOverflow
+import com.lifetracker.mobile.ui.theme.GoldYellow
+import com.lifetracker.mobile.ui.theme.HealthRed
+import com.lifetracker.mobile.ui.theme.HeroTileGradientEnd
+import com.lifetracker.mobile.ui.theme.HeroTileGradientStart
 
 @Composable
 fun HeroSection(
@@ -131,7 +131,7 @@ fun HeroSection(
                     Button(
                         onClick = onRespawn,
                         enabled = !isRespawnLoading,
-                        colors = ButtonDefaults.buttonColors(containerColor = HealthRed)
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                     ) {
                         if (isRespawnLoading) {
                             CircularProgressIndicator(
