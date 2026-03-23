@@ -24,6 +24,7 @@ import com.lifetracker.mobile.ui.model.HeroScreenState
 import com.lifetracker.mobile.ui.model.UiEvent
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
+import com.lifetracker.mobile.BuildConfig
 import com.lifetracker.mobile.core.sync.SyncScheduler
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -48,11 +49,6 @@ class HeroViewModel(
     private val taskUseCases: TaskUseCases,
     private val workManager: WorkManager,
 ) : ViewModel() {
-
-    // BuildConfig.DEBUG — константа времени сборки, не зависимость.
-    // Инициализируем здесь, а не через DI: ViewModel в UI-слое,
-    // BuildConfig там уместен. В debug — крашимся на неожиданных
-    // исключениях, чтобы их не пропустить. В release — глотаем.
     private val isDebug: Boolean = BuildConfig.DEBUG
     private object ActionKeys {
         const val HERO_CREATE = "hero_create"
