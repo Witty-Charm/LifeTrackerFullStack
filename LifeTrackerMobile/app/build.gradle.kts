@@ -93,6 +93,7 @@ dependencies {
 
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
+    implementation(libs.androidx.datastore.core)
     ksp(libs.androidx.room.compiler)
 
     implementation(libs.retrofit)

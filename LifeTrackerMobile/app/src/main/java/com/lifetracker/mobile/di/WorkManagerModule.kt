@@ -8,10 +8,6 @@ import org.koin.androidx.workmanager.dsl.workerOf
 import org.koin.androidx.workmanager.factory.KoinWorkerFactory
 import org.koin.dsl.module
 
-/**
- * Centralizes WorkManager-related bindings so future workers register in one place
- * and the KoinWorkerFactory is always available.
- */
 val workManagerModule = module {
     single { WorkManager.getInstance(androidContext()) }
     single { KoinWorkerFactory() }
