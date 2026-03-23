@@ -176,7 +176,7 @@ private fun TaskCardContent(
             Text(
                 text = task.difficultyLabel,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.tertiary
+                color = Color(task.difficultyColor)
             )
 
             if (task.streakText != null) {
