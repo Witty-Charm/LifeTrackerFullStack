@@ -8,6 +8,9 @@ import com.lifetracker.mobile.core.serialization.JsonDefaults
 import com.lifetracker.mobile.domain.model.ChecklistItem
 import com.lifetracker.mobile.ui.model.ChecklistItemUi
 import com.lifetracker.mobile.ui.model.UiDifficulty
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import com.lifetracker.mobile.ui.model.UiTaskType
 import com.lifetracker.mobile.ui.model.HeroStatusBadge
 import com.lifetracker.mobile.ui.model.HeroUi
@@ -90,13 +93,13 @@ fun UiDifficulty.toDomain(): TaskDifficulty = when (this) {
     UiDifficulty.Epic   -> TaskDifficulty.Epic
 }
 
+private val shortDateFormatter: DateTimeFormatter by lazy {
+    DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT).withLocale(Locale.getDefault())
+}
+
 private fun Instant.toDisplayDate(): String {
     val javaDate = this.toLocalDateTime(TimeZone.currentSystemDefault()).date.toJavaLocalDate()
-
-    return DateTimeFormatter
-        .ofLocalizedDate(FormatStyle.SHORT)
-        .withLocale(Locale.getDefault())
-        .format(javaDate)
+    return shortDateFormatter.format(javaDate)
 }
 
 private fun String.toRepeatText(): String {
@@ -112,12 +115,13 @@ private fun String.toRepeatText(): String {
     }
 }
 
-private fun parseChecklist(checklistJson: String?): List<ChecklistItemUi> {
-    if (checklistJson.isNullOrBlank()) return emptyList()
+private fun parseChecklist(checklistJson: String?): ImmutableList<ChecklistItemUi> {
+    if (checklistJson.isNullOrBlank()) return persistentListOf()
     return runCatching {
         JsonDefaults.decodeFromString<List<ChecklistItem>>(checklistJson)
     }
         .onFailure { timber.log.Timber.w(it, "parseChecklist: failed to parse JSON") }
         .getOrDefault(emptyList())
         .map { ChecklistItemUi(id = it.id, text = it.text, isCompleted = it.isCompleted) }
+        .toImmutableList()
 }

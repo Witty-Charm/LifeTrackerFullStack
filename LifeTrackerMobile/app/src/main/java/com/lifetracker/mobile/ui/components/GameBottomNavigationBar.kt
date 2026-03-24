@@ -2,7 +2,6 @@ package com.lifetracker.mobile.ui.components
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -41,7 +40,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -51,7 +49,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.chrisbanes.haze.HazeState
@@ -215,10 +212,11 @@ fun GameBottomNavigationBar(
 
             Row(modifier = Modifier.fillMaxWidth()) {
                 tabs.forEach { tab ->
+                    val onSelect = remember(tab) { { onTabSelected(tab) } }
                     GlassTabItem(
                         tab = tab,
                         isSelected = tab == selectedTab,
-                        onSelect = { onTabSelected(tab) },
+                        onSelect = onSelect,
                         modifier = Modifier.weight(1f),
                     )
                 }
@@ -238,7 +236,7 @@ private fun GlassTabItem(
     val isPressed by interactionSource.collectIsPressedAsState()
     val icons = remember(tab) { tabIcons(tab) }
 
-    val pressScale by animateFloatAsState(
+    val pressScaleState = animateFloatAsState(
         targetValue = if (isPressed) 0.84f else 1f,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
@@ -247,7 +245,7 @@ private fun GlassTabItem(
         label = "pressScale_${tab.name}",
     )
 
-    val iconScale by animateFloatAsState(
+    val iconScaleState = animateFloatAsState(
         targetValue = if (isSelected) 1.15f else 1f,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
@@ -256,8 +254,8 @@ private fun GlassTabItem(
         label = "iconScale_${tab.name}",
     )
 
-    val iconOffsetY by animateDpAsState(
-        targetValue = if (isSelected) (-1).dp else 1.dp,
+    val iconOffsetYState = animateFloatAsState(
+        targetValue = if (isSelected) -1f else 1f,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessLow,
@@ -265,13 +263,13 @@ private fun GlassTabItem(
         label = "iconOffsetY_${tab.name}",
     )
 
-    val labelAlpha by animateFloatAsState(
+    val labelAlphaState = animateFloatAsState(
         targetValue = if (isSelected) 1f else 0f,
         animationSpec = tween(durationMillis = if (isSelected) 220 else 120),
         label = "labelAlpha_${tab.name}",
     )
 
-    val labelScale by animateFloatAsState(
+    val labelScaleState = animateFloatAsState(
         targetValue = if (isSelected) 1f else 0.6f,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
@@ -292,7 +290,11 @@ private fun GlassTabItem(
                 interactionSource = interactionSource,
                 indication = null,
             ) { onSelect() }
-            .scale(pressScale)
+            .graphicsLayer {
+                val s = pressScaleState.value
+                scaleX = s
+                scaleY = s
+            }
             .padding(vertical = 6.dp),
     ) {
         Icon(
@@ -301,17 +303,21 @@ private fun GlassTabItem(
             tint = iconColor,
             modifier = Modifier
                 .size(22.dp)
-                .scale(iconScale)
-                .offset(y = iconOffsetY),
+                .graphicsLayer {
+                    val s = iconScaleState.value
+                    scaleX = s
+                    scaleY = s
+                    translationY = iconOffsetYState.value * density
+                },
         )
 
         Box(
             modifier = Modifier
                 .height(if (isSelected) 16.dp else 0.dp)
                 .graphicsLayer {
-                    alpha = labelAlpha
-                    scaleX = labelScale
-                    scaleY = labelScale
+                    alpha = labelAlphaState.value
+                    scaleX = labelScaleState.value
+                    scaleY = labelScaleState.value
                 },
             contentAlignment = Alignment.Center,
         ) {

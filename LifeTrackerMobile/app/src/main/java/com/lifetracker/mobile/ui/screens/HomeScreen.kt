@@ -19,7 +19,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -46,7 +45,9 @@ fun HomeScreen(
     vm: HeroViewModel,
     navController: NavController
 ) {
-    var selectedTab by remember { mutableStateOf(HomeTab.ToDos) }
+    val selectedTabState = remember { mutableStateOf(HomeTab.ToDos) }
+    val selectedTab by selectedTabState
+    val onTabSelected: (HomeTab) -> Unit = remember { { selectedTabState.value = it } }
     val hazeState = rememberHazeState()
 
     Scaffold(
@@ -54,7 +55,7 @@ fun HomeScreen(
         bottomBar = {
             GameBottomNavigationBar(
                 selectedTab = selectedTab,
-                onTabSelected = { selectedTab = it },
+                onTabSelected = onTabSelected,
                 hazeState = hazeState,
             )
         },

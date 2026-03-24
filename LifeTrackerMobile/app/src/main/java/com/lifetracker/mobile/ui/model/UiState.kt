@@ -1,12 +1,18 @@
 package com.lifetracker.mobile.ui.model
 
+import androidx.compose.runtime.Immutable
 import kotlin.time.Instant
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.ImmutableSet
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentSetOf
 
+@Immutable
 data class HeroScreenState(
     val hero: HeroUi? = null,
-    val tasks: List<TaskUi> = emptyList(),
+    val tasks: ImmutableList<TaskUi> = persistentListOf(),
     val isLoading: Boolean = false,
-    val loadingActions: Set<String> = emptySet(),
+    val loadingActions: ImmutableSet<String> = persistentSetOf(),
     val needsHeroCreation: Boolean = false,
     val criticalError: UiError? = null,
     val actionError: UiError? = null,
@@ -20,6 +26,7 @@ fun HeroScreenState.isTaskLoading(taskId: Int) =
     "task_fail_$taskId" in loadingActions ||
     "task_delete_$taskId" in loadingActions
 
+@Immutable
 data class HeroUi(
     val id: Int,
     val name: String,
@@ -42,6 +49,7 @@ enum class UiTaskType { Habit, OneTime, Daily, Unknown }
 
 enum class UiDifficulty { Easy, Medium, Hard, Epic }
 
+@Immutable
 data class TaskUi(
     val id: Int,
     val title: String,
@@ -53,13 +61,14 @@ data class TaskUi(
     val isOverdue: Boolean,
     val dueDateText: String?,
     val repeatPatternText: String? = null,
-    val checklistItems: List<ChecklistItemUi> = emptyList(),
+    val checklistItems: ImmutableList<ChecklistItemUi> = persistentListOf(),
     val rewardText: String,
     val penaltyText: String,
     val streakText: String?,
     val isPendingSync: Boolean,
 )
 
+@Immutable
 data class ChecklistItemUi(
     val id: String,
     val text: String,

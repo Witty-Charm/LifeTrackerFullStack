@@ -40,6 +40,8 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.collections.immutable.toPersistentList
+import kotlinx.collections.immutable.toPersistentSet
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -112,7 +114,8 @@ class HeroViewModel(
                         hero = hero.toUi(),
                         tasks = tasks.dataOrNull()
                             ?.filter { !it.isCompleted || it.type == TaskType.Habit || it.type == TaskType.Daily }
-                            ?.map { it.toUi() } ?: current.tasks,
+                            ?.map { it.toUi() }
+                            ?.toPersistentList() ?: current.tasks,
                         actionError = tasks.errorOrNull()?.toUiError(),
                     )
                 }
@@ -179,7 +182,7 @@ class HeroViewModel(
             ?.let { task ->
                 _state.update { current ->
                     current.copy(
-                        tasks = current.tasks + task.toUi(),
+                        tasks = (current.tasks + task.toUi()).toPersistentList(),
                     )
                 }
                 _events.send(UiEvent.TaskCreated)
@@ -190,7 +193,7 @@ class HeroViewModel(
         executeAction { taskUseCases.deleteTask(taskId) }
             ?.let {
                 _state.update { current ->
-                    current.copy(tasks = current.tasks.filter { it.id != taskId })
+                    current.copy(tasks = current.tasks.filter { it.id != taskId }.toPersistentList())
                 }
             }
     }
@@ -258,11 +261,11 @@ class HeroViewModel(
     private fun launchAction(key: String, block: suspend () -> Unit) {
         if(key in _state.value.loadingActions) return
         viewModelScope.launch {
-            _state.update { it.copy(loadingActions = it.loadingActions + key, actionError = null) }
+            _state.update { it.copy(loadingActions = (it.loadingActions + key).toPersistentSet(), actionError = null) }
             try {
                 block()
             } finally {
-                _state.update { it.copy(loadingActions = it.loadingActions - key) }
+                _state.update { it.copy(loadingActions = (it.loadingActions - key).toPersistentSet()) }
             }
         }
     }
@@ -295,6 +298,7 @@ class HeroViewModel(
                 _state.update { it.copy(tasks = data
                     .filter { !it.isCompleted || it.type == TaskType.Habit || it.type == TaskType.Daily }
                     .map { t -> t.toUi() }
+                    .toPersistentList()
                 )}
             }
             .onFailure { Timber.w("Background task refresh failed: $it") }

@@ -15,12 +15,13 @@ retrofit = "3.0.0"
 okhttp = "5.3.2"
 retrofitKotlinxConverter = "1.0.0"
 kotlinxSerialization = "1.10.0"
+kotlinxCollectionsImmutable = "0.4.0"
 kotlinxDatetime = "0.7.1"
 coroutines = "1.10.2"
 
 koin = "4.2.0"
 workManager = "2.11.1"
-androidxDatastore = "1.1.1"
+androidxDatastore = "1.2.1"
 timber = "5.0.1"
 haze = "1.7.2"
 
@@ -63,6 +64,7 @@ retrofit-kotlinx-converter = { group = "com.jakewharton.retrofit", name = "retro
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 okhttp-logging = { group = "com.squareup.okhttp3", name = "logging-interceptor", version.ref = "okhttp" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
+kotlinx-collections-immutable = { group = "org.jetbrains.kotlinx", name = "kotlinx-collections-immutable", version.ref = "kotlinxCollectionsImmutable" }
 kotlinx-datetime = { group = "org.jetbrains.kotlinx", name = "kotlinx-datetime", version.ref = "kotlinxDatetime" }
 kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines" }

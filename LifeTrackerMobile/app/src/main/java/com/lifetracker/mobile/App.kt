@@ -13,7 +13,6 @@ import org.koin.core.context.GlobalContext
 import org.koin.core.context.GlobalContext.startKoin
 
 class App : Application(), Configuration.Provider {
-
     private lateinit var workerFactory: KoinWorkerFactory
 
     override fun onCreate() {
