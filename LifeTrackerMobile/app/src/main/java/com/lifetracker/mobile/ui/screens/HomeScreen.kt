@@ -102,11 +102,14 @@ fun HomeScreen(
                 }
 
                 else -> {
+                    val onHeal = remember { { vm.healHero() } }
+                    val onRespawn = remember { { vm.respawnHero() } }
+
                     state.hero?.let { hero ->
                         HeroSection(
                             hero = hero,
-                            onHeal = { vm.healHero() },
-                            onRespawn = { vm.respawnHero() },
+                            onHeal = onHeal,
+                            onRespawn = onRespawn,
                             isHealLoading = state.isHealLoading,
                             isRespawnLoading = state.isRespawnLoading,
                         )
@@ -116,12 +119,13 @@ fun HomeScreen(
                         )
                     }
                     val isComingSoon = selectedTab == HomeTab.Rewards
-
-                    val filteredTasks = when (selectedTab) {
-                        HomeTab.Habits -> state.tasks.filter { it.type == UiTaskType.Habit }
-                        HomeTab.ToDos -> state.tasks.filter { it.type == UiTaskType.OneTime }
-                        HomeTab.Dailies -> state.tasks.filter { it.type == UiTaskType.Daily }
-                        else -> emptyList()
+                    val filteredTasks = remember(selectedTab, state.tasks) {
+                        when (selectedTab) {
+                            HomeTab.Habits  -> state.tasks.filter { it.type == UiTaskType.Habit }
+                            HomeTab.ToDos   -> state.tasks.filter { it.type == UiTaskType.OneTime }
+                            HomeTab.Dailies -> state.tasks.filter { it.type == UiTaskType.Daily }
+                            else -> emptyList()
+                        }
                     }
                     if (isComingSoon) {
                         ComingSoonPlaceholder(selectedTab.label)
@@ -139,12 +143,17 @@ fun HomeScreen(
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             items(filteredTasks, key = { it.id }) { task ->
+                                val taskId = task.id
+                                val onComplete = remember(taskId) { { vm.completeTask(taskId) } }
+                                val onFail = remember(taskId) { { vm.failTask(taskId) } }
+                                val onDelete = remember(taskId) { { vm.deleteTask(taskId) } }
+
                                 TaskItem(
                                     task = task,
-                                    onCompleteClick = { vm.completeTask(task.id) },
-                                    onFailClick = { vm.failTask(task.id) },
-                                    onDeleteClick = { vm.deleteTask(task.id) },
-                                    isActionLoading = state.isTaskLoading(task.id),
+                                    onCompleteClick = onComplete,
+                                    onFailClick = onFail,
+                                    onDeleteClick = onDelete,
+                                    isActionLoading = state.isTaskLoading(taskId),
                                 )
                             }
                         }

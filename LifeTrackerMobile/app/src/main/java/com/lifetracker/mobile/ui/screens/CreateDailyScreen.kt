@@ -17,8 +17,6 @@ import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
@@ -33,7 +31,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -48,17 +45,23 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.lifetracker.mobile.domain.model.ChecklistItem
 import com.lifetracker.mobile.domain.model.ReminderItem
+import com.lifetracker.mobile.ui.components.GameDatePickerDialog
 import com.lifetracker.mobile.ui.model.CreateDailyFormState
 import com.lifetracker.mobile.ui.model.RepeatFrequency
 import com.lifetracker.mobile.ui.model.UiDifficulty
 import com.lifetracker.mobile.ui.viewmodel.CreateDailyUiEvent
 import com.lifetracker.mobile.ui.viewmodel.CreateDailyViewModel
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.toJavaLocalDate
 import kotlinx.datetime.toLocalDateTime
+import kotlinx.datetime.todayIn
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Locale
+import kotlin.time.Clock
 import kotlin.time.Instant
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -74,6 +77,7 @@ fun CreateDailyScreen(
     var newReminderHour by remember { mutableIntStateOf(9) }
     var newReminderMinute by remember { mutableIntStateOf(0) }
     val snackbarHostState = remember { SnackbarHostState() }
+    val hazeState = rememberHazeState()
 
     LaunchedEffect(Unit) {
         vm.events.collect { event ->
@@ -125,6 +129,7 @@ fun CreateDailyScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .hazeSource(hazeState)
                 .padding(paddingValues)
                 .padding(16.dp)
                 .verticalScroll(rememberScrollState()),
@@ -197,22 +202,18 @@ fun CreateDailyScreen(
             )
         }
 
-        if (showDatePicker) {
-            val datePickerState = rememberDatePickerState()
-            DatePickerDialog(
-                onDismissRequest = { showDatePicker = false },
-                confirmButton = {
-                    TextButton(onClick = {
-                        val millis = datePickerState.selectedDateMillis
-                        vm.onStartDateChange(millis?.let { Instant.fromEpochMilliseconds(it) })
-                        showDatePicker = false
-                    }) { Text("OK") }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
-                }
-            ) { DatePicker(state = datePickerState) }
-        }
+        GameDatePickerDialog(
+            visible = showDatePicker,
+            hazeState = hazeState,
+            initialDate = state.startDate
+                ?.toLocalDateTime(TimeZone.currentSystemDefault())
+                ?.date
+                ?: Clock.System.todayIn(TimeZone.currentSystemDefault()),
+            onDateSelected = { date ->
+                vm.onStartDateChange(date.atStartOfDayIn(TimeZone.currentSystemDefault()))
+            },
+            onDismiss = { showDatePicker = false },
+        )
 
         if (showTimePicker) {
             AlertDialog(
@@ -397,10 +398,13 @@ private fun RemindersSection(
     TextButton(onClick = onAdd) { Text("+ New reminder") }
 }
 
+private val mediumDateFormatter: DateTimeFormatter by lazy {
+    DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(Locale.getDefault())
+}
+
 private fun Instant.toDisplayDate(): String {
     val javaDate = this.toLocalDateTime(TimeZone.currentSystemDefault()).date.toJavaLocalDate()
-    return DateTimeFormatter
-        .ofLocalizedDate(FormatStyle.MEDIUM)
-        .withLocale(Locale.getDefault())
-        .format(javaDate)
+    return mediumDateFormatter.format(javaDate)
 }
+
+

@@ -40,7 +40,6 @@ import com.lifetracker.mobile.ui.viewmodel.HeroViewModel
 import androidx.compose.ui.platform.LocalContext
 import com.lifetracker.mobile.ui.model.isAnyActionLoading
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.haze
 import dev.chrisbanes.haze.hazeSource
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
@@ -75,7 +74,6 @@ fun CreateTaskScreen(
 
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
-            modifier = Modifier.hazeSource(hazeState),
         topBar = {
             TopAppBar(
                 title = { Text("Create task") },
@@ -93,6 +91,7 @@ fun CreateTaskScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .hazeSource(hazeState)
                 .padding(paddingValues)
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
