@@ -49,7 +49,12 @@ class MainActivity : ComponentActivity() {
                             is UiEvent.TaskFailed -> snackbarHostState.showSnackbar(event.message)
                             is UiEvent.HeroRespawned -> snackbarHostState.showSnackbar(event.message)
                             is UiEvent.HeroHealed -> snackbarHostState.showSnackbar(event.message)
-                            is UiEvent.TaskCreated -> navController.popBackStack()
+                            is UiEvent.TaskCreated -> {
+                                navController.previousBackStackEntry
+                                    ?.savedStateHandle
+                                    ?.set("task_created", event.type)
+                                navController.popBackStack()
+                            }
                         }
                     }
                 }

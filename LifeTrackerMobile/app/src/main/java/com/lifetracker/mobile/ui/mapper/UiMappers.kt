@@ -79,6 +79,13 @@ fun GameTaskDomain.toUi(): TaskUi = TaskUi(
     isPendingSync = id < 0,
 )
 
+fun TaskType.toUi(): UiTaskType = when (this) {
+    TaskType.Habit -> UiTaskType.Habit
+    TaskType.OneTime -> UiTaskType.OneTime
+    TaskType.Daily -> UiTaskType.Daily
+    TaskType.Unknown -> UiTaskType.Unknown
+}
+
 fun UiTaskType.toDomain(): TaskType = when (this) {
     UiTaskType.Habit   -> TaskType.Habit
     UiTaskType.OneTime -> TaskType.OneTime

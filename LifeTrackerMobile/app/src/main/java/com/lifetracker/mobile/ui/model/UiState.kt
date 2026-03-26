@@ -91,7 +91,7 @@ sealed interface UiError {
 
 sealed interface UiEvent {
     data class ShowSnackbar(val message: String) : UiEvent
-    data object TaskCreated : UiEvent
+    data class TaskCreated(val type: UiTaskType) : UiEvent
     data class TaskCompleted(val message: String) : UiEvent
     data class TaskFailed(val message: String) : UiEvent
     data class HeroRespawned(

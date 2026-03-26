@@ -185,7 +185,7 @@ class HeroViewModel(
                         tasks = (current.tasks + task.toUi()).toPersistentList(),
                     )
                 }
-                _events.send(UiEvent.TaskCreated)
+                _events.send(UiEvent.TaskCreated(type))
             }
     }
 

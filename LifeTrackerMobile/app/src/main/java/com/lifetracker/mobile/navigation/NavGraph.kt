@@ -12,6 +12,7 @@ import com.lifetracker.mobile.ui.screens.CreateHeroScreen
 import com.lifetracker.mobile.ui.screens.CreateTaskScreen
 import com.lifetracker.mobile.ui.screens.HomeScreen
 import com.lifetracker.mobile.ui.model.HeroScreenState
+import com.lifetracker.mobile.ui.model.UiTaskType
 import com.lifetracker.mobile.ui.viewmodel.CreateDailyViewModel
 import com.lifetracker.mobile.ui.viewmodel.HeroViewModel
 import androidx.compose.runtime.getValue
@@ -49,17 +50,21 @@ fun NavGraph(
         startDestination = Screen.Home.route
     ) {
         composable(Screen.Home.route) {
-            val currentEntry = navController.currentBackStackEntry
-            LaunchedEffect(currentEntry) {
-                val created = currentEntry?.savedStateHandle?.remove<Boolean>("daily_created")
-                if (created == true) {
+            val createdTaskType = navController.currentBackStackEntry
+                ?.savedStateHandle
+                ?.remove<UiTaskType>("task_created")
+
+            LaunchedEffect(createdTaskType) {
+                if (createdTaskType != null) {
                     vm.refreshTasks()
                 }
             }
+
             HomeScreen(
                 state = state,
                 vm = vm,
-                navController = navController
+                navController = navController,
+                createdTaskType = createdTaskType
             )
         }
 

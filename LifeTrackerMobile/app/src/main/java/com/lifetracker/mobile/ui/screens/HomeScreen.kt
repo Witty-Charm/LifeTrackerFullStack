@@ -16,6 +16,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,12 +44,24 @@ import dev.chrisbanes.haze.rememberHazeState
 fun HomeScreen(
     state: HeroScreenState,
     vm: HeroViewModel,
-    navController: NavController
+    navController: NavController,
+    createdTaskType: UiTaskType?
 ) {
     val selectedTabState = remember { mutableStateOf(HomeTab.ToDos) }
     val selectedTab by selectedTabState
     val onTabSelected: (HomeTab) -> Unit = remember { { selectedTabState.value = it } }
     val hazeState = rememberHazeState()
+
+    LaunchedEffect(createdTaskType) {
+        createdTaskType?.let {
+            selectedTabState.value = when (it) {
+                UiTaskType.Habit -> HomeTab.Habits
+                UiTaskType.OneTime -> HomeTab.ToDos
+                UiTaskType.Daily -> HomeTab.Dailies
+                UiTaskType.Unknown -> HomeTab.ToDos
+            }
+        }
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,

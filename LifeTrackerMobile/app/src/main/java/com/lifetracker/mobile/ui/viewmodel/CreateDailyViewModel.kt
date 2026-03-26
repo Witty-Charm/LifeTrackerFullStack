@@ -30,7 +30,7 @@ import kotlin.time.Instant
 import timber.log.Timber
 
 sealed interface CreateDailyUiEvent {
-    data object Success : CreateDailyUiEvent
+    data class Success(val type: TaskType) : CreateDailyUiEvent
 }
 
 class CreateDailyViewModel(
@@ -104,11 +104,11 @@ class CreateDailyViewModel(
         if (!s.canSubmit) return
 
         viewModelScope.launch {
-            _state.update { it.copy(isSubmitting = true, actionError = null) }
+            _state.update { it.copy(isSaving = true, actionError = null) }
             try {
                 submit(s)
             } finally {
-                _state.update { it.copy(isSubmitting = false) }
+                _state.update { it.copy(isSaving = false) }
             }
         }
     }
@@ -143,7 +143,7 @@ class CreateDailyViewModel(
                     if (!remindersJson.isNullOrBlank()) {
                         reminderScheduler.schedule(task.id, task.title, remindersJson, repeatPattern)
                     }
-                    _events.send(CreateDailyUiEvent.Success)
+                    _events.send(CreateDailyUiEvent.Success(TaskType.Daily))
                 },
                 onFailure = { error ->
                     _state.update { it.copy(actionError = error.toUiError()) }

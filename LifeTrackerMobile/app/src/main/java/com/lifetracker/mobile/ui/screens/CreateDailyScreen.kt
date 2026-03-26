@@ -45,6 +45,8 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.lifetracker.mobile.domain.model.ChecklistItem
 import com.lifetracker.mobile.domain.model.ReminderItem
+import com.lifetracker.mobile.ui.mapper.toUi
+import com.lifetracker.mobile.ui.model.UiTaskType
 import com.lifetracker.mobile.ui.components.GameDatePickerDialog
 import com.lifetracker.mobile.ui.model.CreateDailyFormState
 import com.lifetracker.mobile.ui.model.RepeatFrequency
@@ -85,7 +87,7 @@ fun CreateDailyScreen(
                 is CreateDailyUiEvent.Success -> {
                     navController.previousBackStackEntry
                         ?.savedStateHandle
-                        ?.set("daily_created", true)
+                        ?.set("task_created", event.type.toUi())
                     navController.popBackStack()
                 }
             }

@@ -15,8 +15,8 @@ data class CreateDailyFormState(
     val initialStreak: Int = 0,
     val checklistItems: List<ChecklistItem> = emptyList(),
     val reminders: List<ReminderItem> = emptyList(),
-    val isSubmitting: Boolean = false,
+    val isSaving: Boolean = false,
     val actionError: UiError? = null,
 ) {
-    val canSubmit: Boolean get() = title.isNotBlank() && !intervalError && !isSubmitting
+    val canSubmit: Boolean get() = title.isNotBlank() && !intervalError && !isSaving
 }
