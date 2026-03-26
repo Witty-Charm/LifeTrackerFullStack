@@ -198,6 +198,19 @@ class HeroViewModel(
             }
     }
 
+    fun retrySync(taskId: Int) = launchAction("retry_sync_$taskId") {
+        executeAction { taskUseCases.retryTaskSync(taskId) }
+    }
+
+    fun deleteFailedTask(taskId: Int) = launchAction("delete_failed_$taskId") {
+        executeAction { taskUseCases.deleteLocalTask(taskId) }
+            ?.let {
+                _state.update { current ->
+                    current.copy(tasks = current.tasks.filter { it.id != taskId }.toPersistentList())
+                }
+            }
+    }
+
     fun respawnHero() = launchAction(ActionKeys.HERO_RESPAWN) {
         val id = heroId ?: return@launchAction
         executeAction { heroUseCases.respawnHero(id) }

@@ -12,6 +12,7 @@ import com.lifetracker.mobile.core.serialization.JsonDefaults
 import com.lifetracker.mobile.core.sync.SyncScheduler
 import com.lifetracker.mobile.core.theme.ThemeController
 import com.lifetracker.mobile.data.local.AppDatabase
+import com.lifetracker.mobile.data.local.MIGRATION_2_3
 import com.lifetracker.mobile.data.remote.NetworkModule
 import com.lifetracker.mobile.data.repository.DataStoreSettingsRepository
 import com.lifetracker.mobile.data.repository.HeroRepositoryImpl
@@ -33,10 +34,12 @@ import com.lifetracker.mobile.domain.usecase.settings.ThemeSettingsUseCases
 import com.lifetracker.mobile.domain.usecase.task.CheckOverdueTasksUseCase
 import com.lifetracker.mobile.domain.usecase.task.CompleteTaskUseCase
 import com.lifetracker.mobile.domain.usecase.task.CreateTaskUseCase
+import com.lifetracker.mobile.domain.usecase.task.DeleteLocalTaskUseCase
 import com.lifetracker.mobile.domain.usecase.task.DeleteTaskUseCase
 import com.lifetracker.mobile.domain.usecase.task.FailTaskUseCase
 import com.lifetracker.mobile.domain.usecase.task.GetTaskUseCase
 import com.lifetracker.mobile.domain.usecase.task.GetTasksUseCase
+import com.lifetracker.mobile.domain.usecase.task.RetryTaskSyncUseCase
 import com.lifetracker.mobile.domain.usecase.task.TaskUseCases
 import com.lifetracker.mobile.ui.viewmodel.CreateDailyViewModel
 import com.lifetracker.mobile.ui.viewmodel.HeroViewModel
@@ -100,6 +103,8 @@ val appModule = module {
             failTask = FailTaskUseCase(taskRepo),
             deleteTask = DeleteTaskUseCase(taskRepo),
             checkOverdue = CheckOverdueTasksUseCase(taskRepo),
+            retryTaskSync = RetryTaskSyncUseCase(taskRepo),
+            deleteLocalTask = DeleteLocalTaskUseCase(taskRepo),
         )
     }
 
@@ -109,6 +114,7 @@ val appModule = module {
             AppDatabase::class.java,
             "lifetracker.db"
         )
+            .addMigrations(MIGRATION_2_3)
             .fallbackToDestructiveMigration(dropAllTables = true)
             .build()
     }

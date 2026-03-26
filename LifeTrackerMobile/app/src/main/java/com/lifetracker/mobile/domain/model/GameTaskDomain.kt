@@ -25,6 +25,8 @@ data class GameTaskDomain(
     val hpPenalty: Int,
     val goldPenalty: Int,
     val streak: StreakDomain?,
+    val pendingSync: Boolean = false,
+    val syncError: String? = null,
 )
 
 data class StreakDomain(

@@ -160,6 +160,8 @@ fun HomeScreen(
                                 val onComplete = remember(taskId) { { vm.completeTask(taskId) } }
                                 val onFail = remember(taskId) { { vm.failTask(taskId) } }
                                 val onDelete = remember(taskId) { { vm.deleteTask(taskId) } }
+                                val onRetry = remember(taskId) { { vm.retrySync(taskId) } }
+                                val onDeleteFailed = remember(taskId) { { vm.deleteFailedTask(taskId) } }
 
                                 TaskItem(
                                     task = task,
@@ -167,6 +169,8 @@ fun HomeScreen(
                                     onFailClick = onFail,
                                     onDeleteClick = onDelete,
                                     isActionLoading = state.isTaskLoading(taskId),
+                                    onRetrySyncClick = onRetry,
+                                    onDeleteFailedTaskClick = onDeleteFailed,
                                 )
                             }
                         }

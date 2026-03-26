@@ -20,6 +20,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -36,6 +40,8 @@ fun TaskItem(
     isActionLoading: Boolean,
     modifier: Modifier = Modifier,
     onDeleteClick: () -> Unit,
+    onRetrySyncClick: () -> Unit,
+    onDeleteFailedTaskClick: () -> Unit,
 ) {
     val isCompleted = task.isCompleted
     val canAct = !isCompleted && !isActionLoading && !task.isPendingSync
@@ -48,6 +54,8 @@ fun TaskItem(
             cardAlpha = 0.6f,
             onCompleteClick = onCompleteClick,
             onFailClick = onFailClick,
+            onRetrySyncClick = onRetrySyncClick,
+            onDeleteFailedTaskClick = onDeleteFailedTaskClick,
             modifier = modifier,
         )
         return
@@ -74,6 +82,8 @@ fun TaskItem(
             cardAlpha = cardAlpha,
             onCompleteClick = onCompleteClick,
             onFailClick = onFailClick,
+            onRetrySyncClick = onRetrySyncClick,
+            onDeleteFailedTaskClick = onDeleteFailedTaskClick,
         )
     }
 }
@@ -103,6 +113,8 @@ private fun TaskCardContent(
     cardAlpha: Float,
     onCompleteClick: () -> Unit,
     onFailClick: () -> Unit,
+    onRetrySyncClick: () -> Unit,
+    onDeleteFailedTaskClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -193,6 +205,50 @@ private fun TaskCardContent(
                     style = MaterialTheme.typography.bodySmall,
                     color = if (task.isOverdue) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+
+            if (task.syncError != null) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Error,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(12.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = task.syncError,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Row {
+                    Button(
+                        onClick =  onRetrySyncClick,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                        ),
+                    ) {
+                        Icon(imageVector = Icons.Default.Refresh, contentDescription = "Retry")
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Retry")
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(
+                        onClick = onDeleteFailedTaskClick,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error,
+                            contentColor = MaterialTheme.colorScheme.onError,
+                        ),
+                    ) {
+                        Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete")
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Delete")
+                    }
+                }
             }
 
             if (task.isPendingSync) {

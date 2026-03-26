@@ -8,4 +8,6 @@ data class TaskUseCases(
     val failTask: FailTaskUseCase,
     val checkOverdue: CheckOverdueTasksUseCase,
     val deleteTask: DeleteTaskUseCase,
+    val retryTaskSync: RetryTaskSyncUseCase,
+    val deleteLocalTask: DeleteLocalTaskUseCase,
 )

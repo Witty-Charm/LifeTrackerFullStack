@@ -239,7 +239,7 @@ private fun DateCell(
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = date.dayOfMonth.toString(),
+            text = date.day.toString(),
             fontSize = 13.sp,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
             color = textColor,

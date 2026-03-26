@@ -167,4 +167,17 @@ class TaskRepositoryImpl(
         }
         return remote
     }
+
+    override suspend fun retryTaskSync(taskId: Int): DomainResult<Unit> {
+        taskDao.getById(taskId)?.let {
+            taskDao.upsert(it.copy(pendingSync = true, syncError = null))
+            syncScheduler.schedule()
+        }
+        return DomainResult.Success(Unit)
+    }
+
+    override suspend fun deleteLocalTask(taskId: Int): DomainResult<Unit> {
+        taskDao.deleteById(taskId)
+        return DomainResult.Success(Unit)
+    }
 }

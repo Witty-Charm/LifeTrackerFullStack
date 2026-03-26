@@ -60,8 +60,8 @@ class SyncWorker(
                 }
 
                 is NetworkResult.Error -> {
-                    Timber.w("SyncWorker: task '${entity.title}' rejected by server (${result.code}), removing")
-                    taskDao.deleteById(entity.id)
+                    Timber.w("SyncWorker: task '${entity.title}' rejected by server (${result.code}), saving error")
+                    taskDao.upsert(entity.copy(pendingSync = false, syncError = "Server rejected (HTTP ${result.code})"))
                     failedTitles.add(entity.title)
                 }
 

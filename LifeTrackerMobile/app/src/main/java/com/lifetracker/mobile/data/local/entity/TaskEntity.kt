@@ -41,4 +41,5 @@ data class TaskEntity(
     val streakIsFrozen: Boolean?,
     val streakIsShieldActive: Boolean?,
     val pendingSync: Boolean = false,
+    val syncError: String? = null,
 )

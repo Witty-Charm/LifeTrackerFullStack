@@ -10,4 +10,6 @@ interface TaskRepository {
     suspend fun failTask(taskId: Int): DomainResult<TaskFailureResult>
     suspend fun checkOverdueTasks(heroId: Int): DomainResult<OverdueResult>
     suspend fun deleteTask(taskId: Int): DomainResult<Unit>
+    suspend fun retryTaskSync(taskId: Int): DomainResult<Unit>
+    suspend fun deleteLocalTask(taskId: Int): DomainResult<Unit>
 }

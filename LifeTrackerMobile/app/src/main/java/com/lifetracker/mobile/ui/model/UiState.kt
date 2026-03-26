@@ -66,6 +66,7 @@ data class TaskUi(
     val penaltyText: String,
     val streakText: String?,
     val isPendingSync: Boolean,
+    val syncError: String? = null,
 )
 
 @Immutable

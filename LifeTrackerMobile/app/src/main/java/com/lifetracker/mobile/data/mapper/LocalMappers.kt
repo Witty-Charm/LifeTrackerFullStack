@@ -73,9 +73,11 @@ fun TaskEntity.toDomain(): GameTaskDomain = GameTaskDomain(
             isShieldActive = streakIsShieldActive ?: false,
         )
     } else null,
+    pendingSync = pendingSync,
+    syncError = syncError,
 )
 
-fun GameTaskDomain.toEntity(pendingSync: Boolean = false): TaskEntity = TaskEntity(
+fun GameTaskDomain.toEntity(pendingSync: Boolean = this.pendingSync): TaskEntity = TaskEntity(
     id = id,
     heroId = heroId,
     title = title,
@@ -103,4 +105,5 @@ fun GameTaskDomain.toEntity(pendingSync: Boolean = false): TaskEntity = TaskEnti
     streakIsFrozen = streak?.isFrozen,
     streakIsShieldActive = streak?.isShieldActive,
     pendingSync = pendingSync,
+    syncError = syncError,
 )
