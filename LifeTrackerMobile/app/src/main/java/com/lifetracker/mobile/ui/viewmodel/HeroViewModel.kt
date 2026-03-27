@@ -7,6 +7,7 @@ import com.lifetracker.mobile.ui.model.UiDifficulty
 import com.lifetracker.mobile.ui.model.UiTaskType
 import com.lifetracker.mobile.domain.model.DomainResult
 import com.lifetracker.mobile.domain.model.GameError
+import com.lifetracker.mobile.domain.model.GameTaskDomain
 import com.lifetracker.mobile.domain.model.HeroDomain
 import com.lifetracker.mobile.domain.model.HeroSnapshot
 import com.lifetracker.mobile.domain.model.TaskType
@@ -112,10 +113,7 @@ class HeroViewModel(
                 _state.update { current ->
                     current.copy(
                         hero = hero.toUi(),
-                        tasks = tasks.dataOrNull()
-                            ?.filter { !it.isCompleted || it.type == TaskType.Habit || it.type == TaskType.Daily }
-                            ?.map { it.toUi() }
-                            ?.toPersistentList() ?: current.tasks,
+                        tasks = tasks.dataOrNull()?.toVisibleUiTasks() ?: current.tasks,
                         actionError = tasks.errorOrNull()?.toUiError(),
                     )
                 }
@@ -308,11 +306,7 @@ class HeroViewModel(
         val id = heroId ?: return
         safeCall { taskUseCases.getTasks(id) }
             .onSuccess { data ->
-                _state.update { it.copy(tasks = data
-                    .filter { !it.isCompleted || it.type == TaskType.Habit || it.type == TaskType.Daily }
-                    .map { t -> t.toUi() }
-                    .toPersistentList()
-                )}
+                _state.update { state -> state.copy(tasks = data.toVisibleUiTasks()) }
             }
             .onFailure { Timber.w("Background task refresh failed: $it") }
     }
@@ -359,6 +353,11 @@ class HeroViewModel(
             }
             .launchIn(viewModelScope)
     }
+
+    private fun List<GameTaskDomain>.toVisibleUiTasks() =
+        filter { task -> !task.isCompleted || task.type == TaskType.Habit || task.type == TaskType.Daily }
+            .map { task -> task.toUi() }
+            .toPersistentList()
 
     private suspend fun <T> safeCall(
         block: suspend () -> DomainResult<T>,
