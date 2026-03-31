@@ -3,13 +3,8 @@ package com.lifetracker.mobile.ui.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FabPosition
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -66,33 +61,19 @@ fun HomeScreen(
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
-            GameBottomNavigationBar(
-                selectedTab = selectedTab,
-                onTabSelected = onTabSelected,
-                hazeState = hazeState,
-            )
-        },
-        floatingActionButton = {
             val heroId = state.hero?.id
             val route = if (selectedTab == HomeTab.Dailies && heroId != null) {
                 Screen.CreateDaily.route(heroId)
             } else {
                 Screen.CreateTask.route
             }
-            FloatingActionButton(
-                onClick = { navController.navigate(route) },
-                shape = androidx.compose.foundation.shape.CircleShape,
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Add task",
-                    modifier = Modifier.size(28.dp)
-                )
-            }
+            GameBottomNavigationBar(
+                selectedTab = selectedTab,
+                onTabSelected = onTabSelected,
+                hazeState = hazeState,
+                onAddClick = { navController.navigate(route) },
+            )
         },
-        floatingActionButtonPosition = FabPosition.Center
     ) { innerPadding ->
         Column(
             modifier = Modifier
