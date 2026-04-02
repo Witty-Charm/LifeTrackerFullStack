@@ -129,15 +129,16 @@ private fun DialogSurface(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = { onMonthChange(-1) }) {
-                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, null)
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, null, tint = colorScheme.onSurface)
                 }
                 Text(
                     text = displayMonth.monthLabel(),
                     fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
+                    color = colorScheme.onSurface
                 )
                 IconButton(onClick = { onMonthChange(1) }) {
-                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null)
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = colorScheme.onSurface)
                 }
             }
 
