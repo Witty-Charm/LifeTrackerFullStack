@@ -45,7 +45,9 @@ fun HeroSection(
             .padding(start = 16.dp, end = 16.dp, top = 16.dp)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.Top
         ) {
@@ -54,7 +56,7 @@ fun HeroSection(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(130.dp)
+                        .size(122.dp)
                         .clip(RoundedCornerShape(16.dp))
                         .background(
                             brush = Brush.verticalGradient(
@@ -96,6 +98,31 @@ fun HeroSection(
                         style = MaterialTheme.typography.labelMedium,
                         color = GoldYellow
                     )
+                }
+
+                if (hero.xpBoostPercent > 0 && hero.xpBoostTasksRemaining > 0) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Start,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                    ) {
+                        Text(
+                            text = "+${hero.xpBoostPercent}% XP",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = "${hero.xpBoostTasksRemaining} tasks left",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
 

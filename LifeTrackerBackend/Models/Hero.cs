@@ -14,6 +14,9 @@ public class Hero
     public int MaxHp { get; set; } = GameConstants.BaseHp;
     public int Gold { get; set; } = 0;
 
+    public int XpBoostPercent { get; set; } = 0;
+    public int XpBoostTasksRemaining { get; set; } = 0;
+
     public bool IsDead { get; set; } = false;
     public DateTimeOffset? DeathTime { get; set; }
     public int DeathCount { get; set; } = 0;

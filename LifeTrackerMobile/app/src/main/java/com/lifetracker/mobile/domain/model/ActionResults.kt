@@ -39,6 +39,8 @@ data class HeroSnapshot(
     val dailyCompletions: Int,
     val dailyCompletionsMax: Int,
     val isDead: Boolean,
+    val xpBoostPercent: Int = 0,
+    val xpBoostTasksRemaining: Int = 0,
 )
 
 data class StreakPenaltyInfo(

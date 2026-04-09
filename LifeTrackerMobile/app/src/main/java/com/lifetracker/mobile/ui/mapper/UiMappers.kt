@@ -2,11 +2,15 @@ package com.lifetracker.mobile.ui.mapper
 
 import com.lifetracker.mobile.domain.model.GameTaskDomain
 import com.lifetracker.mobile.domain.model.HeroDomain
+import com.lifetracker.mobile.domain.model.InventoryItemDomain
+import com.lifetracker.mobile.domain.model.ShopItemDomain
 import com.lifetracker.mobile.domain.model.TaskDifficulty
 import com.lifetracker.mobile.domain.model.TaskType
 import com.lifetracker.mobile.core.serialization.JsonDefaults
 import com.lifetracker.mobile.domain.model.ChecklistItem
 import com.lifetracker.mobile.ui.model.ChecklistItemUi
+import com.lifetracker.mobile.ui.model.InventoryItemUi
+import com.lifetracker.mobile.ui.model.ShopItemUi
 import com.lifetracker.mobile.ui.model.UiDifficulty
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -32,8 +36,11 @@ fun HeroDomain.toUi(): HeroUi = HeroUi(
     hpText = "$currentHp / $maxHp HP",
     hpProgress = hpProgress,
     goldText = "%,d Gold".format(gold),
+    gold = gold,
     isDead = isDead,
     isInRecovery = isInRecovery,
+    xpBoostPercent = xpBoostPercent,
+    xpBoostTasksRemaining = xpBoostTasksRemaining,
     dailyText = "$dailyCompletions / $dailyCompletionsMax tasks today",
     dailyProgress = dailyProgress,
     statusBadge = when {
@@ -133,3 +140,21 @@ private fun parseChecklist(checklistJson: String?): ImmutableList<ChecklistItemU
         .map { ChecklistItemUi(id = it.id, text = it.text, isCompleted = it.isCompleted) }
         .toImmutableList()
 }
+
+fun ShopItemDomain.toUi(heroGold: Int): ShopItemUi = ShopItemUi(
+    id = id,
+    name = name,
+    description = description,
+    cost = price,
+    itemType = itemType,
+    effectValue = effectValue,
+    canAfford = heroGold >= price,
+)
+
+fun InventoryItemDomain.toUi(heroGold: Int): InventoryItemUi = InventoryItemUi(
+    purchaseId = purchaseId,
+    item = item.toUi(heroGold),
+    purchasedAt = purchasedAt.toLocalDateTime(TimeZone.currentSystemDefault())
+        .date.toJavaLocalDate()
+        .format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(Locale.getDefault())),
+)

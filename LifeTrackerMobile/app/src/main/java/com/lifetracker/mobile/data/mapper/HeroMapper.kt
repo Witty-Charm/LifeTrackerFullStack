@@ -22,6 +22,8 @@ fun HeroDto.toDomain(): HeroDomain = HeroDomain(
     deathCount = deathCount,
     isInRecovery = isInRecovery,
     recoveryMultiplier = recoveryMultiplier,
+    xpBoostPercent = xpBoostPercent,
+    xpBoostTasksRemaining = xpBoostTasksRemaining,
     dailyCompletions = dailyCompletions,
     dailyCompletionsMax = dailyCompletionsMax,
 )

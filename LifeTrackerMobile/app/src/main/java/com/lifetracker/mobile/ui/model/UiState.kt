@@ -36,8 +36,11 @@ data class HeroUi(
     val hpText: String,
     val hpProgress: Float,
     val goldText: String,
+    val gold: Int,
     val isDead: Boolean,
     val isInRecovery: Boolean,
+    val xpBoostPercent: Int = 0,
+    val xpBoostTasksRemaining: Int = 0,
     val dailyText: String,
     val dailyProgress: Float,
     val statusBadge: HeroStatusBadge,
@@ -100,4 +103,19 @@ sealed interface UiEvent {
         val recoveryEndsAt: Instant?,
     ) : UiEvent
     data class HeroHealed(val message: String) : UiEvent
+    data class HeroGoldUpdated(val newGold: Int) : UiEvent
+    data class HeroHpUpdated(val newHp: Int, val maxHp: Int) : UiEvent
+    data class HeroXpBoostUpdated(val percent: Int, val tasksRemaining: Int) : UiEvent
 }
+@Immutable
+data class ShopScreenState(
+    val items: ImmutableList<ShopItemUi> = persistentListOf(),
+    val inventory: ImmutableList<InventoryItemUi> = persistentListOf(),
+    val isLoadingItems: Boolean = false,
+    val isLoadingInventory: Boolean = false,
+    val loadingActions: ImmutableSet<String> = persistentSetOf(),
+    val actionError: UiError? = null,
+    val showInventory: Boolean = false,
+)
+
+fun ShopScreenState.isBuyLoading(itemId: Int) = "buy_$itemId" in loadingActions

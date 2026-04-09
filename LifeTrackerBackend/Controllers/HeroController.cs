@@ -253,6 +253,8 @@ public class HeroController : ControllerBase
             DeathCount = hero.DeathCount,
             IsInRecovery = hero.IsInRecovery(),
             RecoveryMultiplier = hero.GetRecoveryMultiplier(),
+            XpBoostPercent = hero.XpBoostPercent,
+            XpBoostTasksRemaining = hero.XpBoostTasksRemaining,
             DailyCompletions = economy.DailyTaskCompletions,
             DailyCompletionsMax = economy.MaxDailyCompletions
         };
@@ -273,6 +275,8 @@ public class HeroDto
     public int DeathCount { get; set; }
     public bool IsInRecovery { get; set; }
     public double RecoveryMultiplier { get; set; }
+    public int XpBoostPercent { get; set; }
+    public int XpBoostTasksRemaining { get; set; }
     public int DailyCompletions { get; set; }
     public int DailyCompletionsMax { get; set; }
 }

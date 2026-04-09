@@ -33,6 +33,21 @@ public class ShopService : IShopService
             return (null, $"Not enough gold. Need {item.Price}, have {hero.Gold}.");
 
         hero.Gold -= item.Price;
+
+        string effectMessage = item.ItemType switch
+        {
+            1 or 2 => ApplyHeal(hero, item.EffectValue),
+            3 => ApplyXpBoost(hero, item.EffectValue),
+            4 => await ApplyStreakShield(heroId),
+            5 => ApplyRecoveryReset(hero),
+            _ => string.Empty
+        };
+
+        if (item.ItemType is 1 or 2)
+        {
+
+        }
+
         hero.UpdatedAt = DateTimeOffset.UtcNow;
 
         var economy = await _db.EconomyBalances.FirstOrDefaultAsync(e => e.HeroId == heroId);
@@ -55,8 +70,13 @@ public class ShopService : IShopService
 
         var result = new BuyResultDto(
             NewGold: hero.Gold,
+            NewHp: hero.CurrentHp,
+            MaxHp: hero.MaxHp,
             PurchasedItem: MapItemToDto(item),
-            Message: $"Purchased {item.Name} for {item.Price} gold!"
+            Message: $"Purchased {item.Name} for {item.Price} gold!",
+            Effect: effectMessage,
+            XpBoostPercent: hero.XpBoostPercent,
+            XpBoostTasksRemaining: hero.XpBoostTasksRemaining
         );
         return (result, null);
     }
@@ -81,4 +101,36 @@ public class ShopService : IShopService
 
     private static ShopItemDto MapItemToDto(ShopItem item) =>
         new(item.Id, item.Name, item.Description, item.Price, item.ItemType, item.EffectValue);
+
+    private static string ApplyHeal(Hero hero, int healAmount)
+    {
+        hero.CurrentHp = Math.Min(hero.MaxHp, hero.CurrentHp + healAmount);
+        return $"Restored {healAmount} HP";
+    }
+
+    private static string ApplyXpBoost(Hero hero, int percent)
+    {
+        hero.XpBoostPercent = percent;
+        hero.XpBoostTasksRemaining = 5;
+        return $"+{percent}% XP boost for next 5 tasks";
+    }
+
+    private async Task<string> ApplyStreakShield(int heroId)
+    {
+        var streaks = await _db.Streaks.Where(s => s.HeroId == heroId).ToListAsync();
+        var now = DateTimeOffset.UtcNow;
+        foreach (var streak in streaks)
+        {
+            streak.IsShieldActive = true;
+            streak.ShieldExpiresAt = now.AddDays(1);
+            streak.UpdatedAt = now;
+        }
+        return streaks.Count == 0 ? "" : "Streak shield active for 1 day";
+    }
+
+    private static string ApplyRecoveryReset(Hero hero)
+    {
+        hero.RecoveryEndsAt = null;
+        return "Recovery debuff removed";
+    }
 }

@@ -20,6 +20,8 @@ fun HeroEntity.toDomain(): HeroDomain = HeroDomain(
     deathCount = deathCount,
     isInRecovery = isInRecovery,
     recoveryMultiplier = recoveryMultiplier,
+    xpBoostPercent = xpBoostPercent,
+    xpBoostTasksRemaining = xpBoostTasksRemaining,
     dailyCompletions = dailyCompletions,
     dailyCompletionsMax = dailyCompletionsMax,
 )
@@ -37,6 +39,8 @@ fun HeroDomain.toEntity(pendingSync: Boolean = false): HeroEntity = HeroEntity(
     deathCount = deathCount,
     isInRecovery = isInRecovery,
     recoveryMultiplier = recoveryMultiplier,
+    xpBoostPercent = xpBoostPercent,
+    xpBoostTasksRemaining = xpBoostTasksRemaining,
     dailyCompletions = dailyCompletions,
     dailyCompletionsMax = dailyCompletionsMax,
     pendingSync = pendingSync,

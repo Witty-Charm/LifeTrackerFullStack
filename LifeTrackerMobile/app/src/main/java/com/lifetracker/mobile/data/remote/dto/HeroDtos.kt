@@ -17,6 +17,8 @@ data class HeroDto(
     val deathCount: Int,
     val isInRecovery: Boolean,
     val recoveryMultiplier: Double,
+    val xpBoostPercent: Int = 0,
+    val xpBoostTasksRemaining: Int = 0,
     val dailyCompletions: Int,
     val dailyCompletionsMax: Int,
 )

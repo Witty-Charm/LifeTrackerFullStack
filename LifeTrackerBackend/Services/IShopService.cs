@@ -6,7 +6,7 @@ public record ShopItemDto(int Id, string Name, string Description, int Price, in
 
 public record BuyItemRequest(int HeroId, int ItemId);
 
-public record BuyResultDto(int NewGold, ShopItemDto PurchasedItem, string Message);
+public record BuyResultDto(int NewGold, int NewHp, int MaxHp, ShopItemDto PurchasedItem, string Message, string Effect, int XpBoostPercent, int XpBoostTasksRemaining);
 
 public record PurchasedItemDto(int PurchaseId, ShopItemDto Item, DateTimeOffset PurchasedAt);
 

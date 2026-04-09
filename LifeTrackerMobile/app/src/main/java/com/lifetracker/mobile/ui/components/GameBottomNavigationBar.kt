@@ -23,12 +23,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.outlined.CalendarToday
 import androidx.compose.material.icons.outlined.CheckCircle
-import androidx.compose.material.icons.outlined.EmojiEvents
 import androidx.compose.material.icons.outlined.FitnessCenter
+import androidx.compose.material.icons.outlined.ShoppingCart
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -66,7 +66,7 @@ enum class HomeTab(val label: String) {
     Habits("Habits"),
     Dailies("Dailies"),
     ToDos("To Do's"),
-    Rewards("Rewards")
+    Shop("Shop")
 }
 
 private data class TabIcons(val outlined: ImageVector, val filled: ImageVector)
@@ -75,7 +75,7 @@ private fun tabIcons(tab: HomeTab): TabIcons = when (tab) {
     HomeTab.Habits  -> TabIcons(Icons.Outlined.FitnessCenter,  Icons.Filled.FitnessCenter)
     HomeTab.Dailies -> TabIcons(Icons.Outlined.CalendarToday,  Icons.Filled.CalendarToday)
     HomeTab.ToDos   -> TabIcons(Icons.Outlined.CheckCircle,    Icons.Filled.CheckCircle)
-    HomeTab.Rewards -> TabIcons(Icons.Outlined.EmojiEvents,    Icons.Filled.EmojiEvents)
+    HomeTab.Shop    -> TabIcons(Icons.Outlined.ShoppingCart,   Icons.Filled.ShoppingCart)
 }
 
 @Composable

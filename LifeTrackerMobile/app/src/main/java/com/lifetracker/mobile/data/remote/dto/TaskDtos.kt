@@ -74,6 +74,8 @@ data class CompleteTaskResponse(
     val dailyCompletions: Int,
     val maxDailyCompletions: Int,
     val deathCount: Int,
+    val xpBoostPercent: Int = 0,
+    val xpBoostTasksRemaining: Int = 0,
     val message: String,
 )
 
@@ -97,6 +99,8 @@ data class FailTaskResponse(
     val maxDailyCompletions: Int,
     val streakBroken: Boolean,
     val streakPenalty: StreakPenaltyDto? = null,
+    val xpBoostPercent: Int = 0,
+    val xpBoostTasksRemaining: Int = 0,
     val message: String,
 )
 

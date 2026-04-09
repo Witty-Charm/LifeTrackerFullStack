@@ -18,5 +18,7 @@
     <string name="habit">Habit</string>
     <string name="one_time">One-Time</string>
     <string name="unknown">Unknown</string>
+    <string name="shop">Shop</string>
+    <string name="rewards">Rewards</string>
 </resources>
 

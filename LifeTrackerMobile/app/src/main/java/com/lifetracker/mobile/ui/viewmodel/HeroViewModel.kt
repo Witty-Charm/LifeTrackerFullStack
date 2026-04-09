@@ -248,6 +248,18 @@ class HeroViewModel(
             }
     }
 
+    fun updateHeroGold(newGold: Int) {
+        updateHero { copy(gold = newGold) }
+    }
+
+    fun updateHeroHp(newHp: Int, maxHp: Int) {
+        updateHero { copy(currentHp = newHp, maxHp = maxHp) }
+    }
+
+    fun updateHeroXpBoost(percent: Int, tasksRemaining: Int) {
+        updateHero { copy(xpBoostPercent = percent, xpBoostTasksRemaining = tasksRemaining) }
+    }
+
     fun clearError() {
         _state.update { it.copy(criticalError = null, actionError = null) }
     }
@@ -294,6 +306,8 @@ class HeroViewModel(
                 deathCount = snapshot.deathCount,
                 dailyCompletions = snapshot.dailyCompletions,
                 dailyCompletionsMax = snapshot.dailyCompletionsMax,
+                xpBoostPercent = snapshot.xpBoostPercent,
+                xpBoostTasksRemaining = snapshot.xpBoostTasksRemaining,
             )
         }
     }

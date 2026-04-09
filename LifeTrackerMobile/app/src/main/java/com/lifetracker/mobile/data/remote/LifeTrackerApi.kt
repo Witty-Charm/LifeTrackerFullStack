@@ -1,5 +1,7 @@
 package com.lifetracker.mobile.data.remote
 
+import com.lifetracker.mobile.data.remote.dto.BuyItemRequestDto
+import com.lifetracker.mobile.data.remote.dto.BuyResultDto
 import com.lifetracker.mobile.data.remote.dto.CompleteTaskResponse
 import com.lifetracker.mobile.data.remote.dto.CreateHeroRequest
 import com.lifetracker.mobile.data.remote.dto.CreateTaskRequest
@@ -8,7 +10,9 @@ import com.lifetracker.mobile.data.remote.dto.HealResponse
 import com.lifetracker.mobile.data.remote.dto.HeroDto
 import com.lifetracker.mobile.data.remote.dto.HeroStatsDto
 import com.lifetracker.mobile.data.remote.dto.OverdueCheckResponse
+import com.lifetracker.mobile.data.remote.dto.PurchasedItemDto
 import com.lifetracker.mobile.data.remote.dto.RespawnResponse
+import com.lifetracker.mobile.data.remote.dto.ShopItemDto
 import com.lifetracker.mobile.data.remote.dto.TaskDto
 import retrofit2.Response
 import retrofit2.http.Body
@@ -43,9 +47,7 @@ interface LifeTrackerApi {
     ): Response<HealResponse>
 
     @GET("api/Task")
-    suspend fun getTasks(
-        @Query("heroId") heroId: Int? = null,
-    ): Response<List<TaskDto>>
+    suspend fun getTasks(@Query("heroId") heroId: Int? = null): Response<List<TaskDto>>
 
     @GET("api/Task/{id}")
     suspend fun getTask(@Path("id") id: Int): Response<TaskDto>
@@ -60,10 +62,17 @@ interface LifeTrackerApi {
     suspend fun failTask(@Path("id") id: Int): Response<FailTaskResponse>
 
     @POST("api/Task/check-overdue")
-    suspend fun checkOverdueTasks(
-        @Query("heroId") heroId: Int? = null,
-    ): Response<OverdueCheckResponse>
+    suspend fun checkOverdueTasks(@Query("heroId") heroId: Int? = null): Response<OverdueCheckResponse>
 
     @DELETE("api/Task/{id}")
     suspend fun deleteTask(@Path("id") id: Int): Response<Unit>
+
+    @GET("api/Shop/items")
+    suspend fun getShopItems(): Response<List<ShopItemDto>>
+
+    @POST("api/Shop/buy")
+    suspend fun buyItem(@Body request: BuyItemRequestDto): Response<BuyResultDto>
+
+    @GET("api/Shop/inventory/{heroId}")
+    suspend fun getInventory(@Path("heroId") heroId: Int): Response<List<PurchasedItemDto>>
 }

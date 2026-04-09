@@ -196,6 +196,8 @@ public class TaskController : ControllerBase
             NewHp = hero.CurrentHp,
             MaxHp = hero.MaxHp,
             DeathCount = hero.DeathCount,
+            XpBoostPercent = hero.XpBoostPercent,
+            XpBoostTasksRemaining = hero.XpBoostTasksRemaining,
 
             StreakBonus = streakBonus,
             CurrentStreak = streak?.CurrentDays ?? 0,
@@ -264,6 +266,8 @@ public class TaskController : ControllerBase
             XpForNextLevel = hero.GetXpRequiredForNextLevel(),
             DailyCompletions = economy.DailyTaskCompletions,
             MaxDailyCompletions = economy.MaxDailyCompletions,
+            XpBoostPercent = hero.XpBoostPercent,
+            XpBoostTasksRemaining = hero.XpBoostTasksRemaining,
 
             StreakBroken = streakBroken,
             StreakPenalty = streakPenalty != null
@@ -489,6 +493,8 @@ public class CompleteTaskResponse
     public double StreakMultiplier { get; set; }
     public int DailyCompletions { get; set; }
     public int MaxDailyCompletions { get; set; }
+    public int XpBoostPercent { get; set; }
+    public int XpBoostTasksRemaining { get; set; }
     public string Message { get; set; } = string.Empty;
 }
 
@@ -512,6 +518,8 @@ public class FailTaskResponse
     public int DeathCount { get; set; }
     public bool StreakBroken { get; set; }
     public StreakPenaltyDto? StreakPenalty { get; set; }
+    public int XpBoostPercent { get; set; }
+    public int XpBoostTasksRemaining { get; set; }
     public string Message { get; set; } = string.Empty;
 }
 

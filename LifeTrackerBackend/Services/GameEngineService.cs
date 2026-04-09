@@ -14,7 +14,11 @@ public class GameEngineService
         double recoveryMult = hero.GetRecoveryMultiplier();
         double economyMult = (double)economy.GetFinalXpMultiplier();
 
-        double finalXp = baseXp * difficultyMult * streakMult * levelScaling * recoveryMult * economyMult;
+        double heroBoostMult = 1.0;
+        if (hero.XpBoostTasksRemaining > 0 && hero.XpBoostPercent > 0)
+            heroBoostMult += hero.XpBoostPercent / 100.0;
+
+        double finalXp = baseXp * difficultyMult * streakMult * levelScaling * recoveryMult * economyMult * heroBoostMult;
 
         return (long)Math.Floor(finalXp);
     }
@@ -45,6 +49,17 @@ public class GameEngineService
 
         hero.GainXP(xpReward);
         hero.Gold += goldReward;
+
+        if (hero.XpBoostTasksRemaining > 0)
+        {
+            hero.XpBoostTasksRemaining--;
+            if (hero.XpBoostTasksRemaining <= 0)
+            {
+                hero.XpBoostTasksRemaining = 0;
+                hero.XpBoostPercent = 0;
+            }
+        }
+
         hero.UpdatedAt = DateTime.UtcNow;
 
         economy.TotalXpEarned += xpReward;
@@ -80,6 +95,16 @@ public class GameEngineService
 
         bool streakBroken = false;
         StreakBreakPenalty? streakPenalty = null;
+
+        if (streak != null)
+        {
+            if (streak.ShieldExpiresAt.HasValue && streak.ShieldExpiresAt <= DateTimeOffset.UtcNow)
+            {
+                streak.IsShieldActive = false;
+                streak.ShieldExpiresAt = null;
+                streak.UpdatedAt = DateTimeOffset.UtcNow;
+            }
+        }
 
         if (streak != null && streak.CurrentDays > 0 && !streak.IsFrozen() && !streak.IsShieldActive)
         {

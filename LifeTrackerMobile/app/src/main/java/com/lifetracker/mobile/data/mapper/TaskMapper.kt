@@ -69,6 +69,8 @@ fun CompleteTaskResponse.toDomain(): TaskCompletionResult = TaskCompletionResult
         dailyCompletions = dailyCompletions,
         dailyCompletionsMax = maxDailyCompletions,
         isDead = false,
+        xpBoostPercent = xpBoostPercent,
+        xpBoostTasksRemaining = xpBoostTasksRemaining,
     ),
 )
 
@@ -100,6 +102,8 @@ fun FailTaskResponse.toDomain(): TaskFailureResult = TaskFailureResult(
         dailyCompletions = dailyCompletions,
         dailyCompletionsMax = maxDailyCompletions,
         isDead = heroDied,
+        xpBoostPercent = xpBoostPercent,
+        xpBoostTasksRemaining = xpBoostTasksRemaining,
     ),
 )
 

@@ -55,6 +55,9 @@ class MainActivity : ComponentActivity() {
                                     ?.set("task_created", event.type)
                                 navController.popBackStack()
                             }
+                            is UiEvent.HeroGoldUpdated -> Unit
+                            is UiEvent.HeroHpUpdated -> Unit
+                            is UiEvent.HeroXpBoostUpdated -> Unit
                         }
                     }
                 }
