@@ -2,7 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using LifeTracker.Data;
-
+using LifeTracker.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,7 +20,8 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-builder.Services.AddSingleton<LifeTracker.Services.GameEngineService>();
+builder.Services.AddSingleton<GameEngineService>();
+builder.Services.AddScoped<IShopService, ShopService>();
 builder.Services.AddProblemDetails();
 
 var app = builder.Build();
@@ -30,7 +31,6 @@ app.UseSwaggerUI();
 app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
-
 
 app.Urls.Add("http://0.0.0.0:5000");
 app.Run();

@@ -15,6 +15,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<Streak> Streaks { get; set; }
     public DbSet<EconomyBalance> EconomyBalances { get; set; }
     public DbSet<ShopItem> ShopItems { get; set; }
+    public DbSet<Purchase> Purchases { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -47,5 +48,20 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<GameTask>()
             .Property(t => t.Difficulty)
             .HasConversion<int>();
+
+        modelBuilder.Entity<Purchase>()
+            .HasOne(p => p.Hero)
+            .WithMany()
+            .HasForeignKey(p => p.HeroId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<Purchase>()
+            .HasOne(p => p.ShopItem)
+            .WithMany()
+            .HasForeignKey(p => p.ShopItemId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Purchase>()
+            .HasIndex(p => p.HeroId);
     }
 }
