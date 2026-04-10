@@ -36,6 +36,7 @@ data class StreakInfoDto(
     val multiplier: Double,
     val isFrozen: Boolean,
     val isShieldActive: Boolean,
+    val shieldExpiresAtUtc: String? = null,
 )
 
 @Serializable
@@ -101,6 +102,7 @@ data class FailTaskResponse(
     val streakPenalty: StreakPenaltyDto? = null,
     val xpBoostPercent: Int = 0,
     val xpBoostTasksRemaining: Int = 0,
+    val shieldAbsorbed: Boolean = false,
     val message: String,
 )
 

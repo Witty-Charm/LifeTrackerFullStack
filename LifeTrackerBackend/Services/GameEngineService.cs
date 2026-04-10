@@ -77,6 +77,11 @@ public class GameEngineService
         return (xpReward, goldReward, leveledUp, streakBonusPercent);
     }
 
+    private static bool ShieldActiveNow(Streak streak) =>
+        streak.IsShieldActive &&
+        streak.ShieldExpiresAtUtc.HasValue &&
+        DateTimeOffset.UtcNow <= streak.ShieldExpiresAtUtc.Value;
+
     public (int hpLost, int goldLost, bool heroDied, bool streakBroken, StreakBreakPenalty? penalty)
         ApplyTaskFailure(
             GameTask task,
@@ -87,24 +92,30 @@ public class GameEngineService
         int hpPenalty = task.GetHpPenalty();
         int goldPenalty = task.GetGoldPenalty();
 
+        if (streak != null && streak.IsShieldActive &&
+            (!streak.ShieldExpiresAtUtc.HasValue || DateTimeOffset.UtcNow > streak.ShieldExpiresAtUtc))
+        {
+            streak.IsShieldActive = false;
+            streak.ShieldFailConsumed = false;
+            streak.ShieldExpiresAtUtc = null;
+            streak.ShieldBackupCurrentDays = null;
+            streak.ShieldBackupBreakAtUtc = null;
+        }
+
         hero.Gold = Math.Max(0, hero.Gold - goldPenalty);
         hero.TakeDamage(hpPenalty);
 
         task.FailCount++;
         task.UpdatedAt = DateTime.UtcNow;
 
+        if (streak != null && ShieldActiveNow(streak) && !streak.ShieldFailConsumed)
+        {
+            streak.ShieldFailConsumed = true;
+            return (hpPenalty, goldPenalty, hero.IsDead, false, null);
+        }
+
         bool streakBroken = false;
         StreakBreakPenalty? streakPenalty = null;
-
-        if (streak != null)
-        {
-            if (streak.ShieldExpiresAt.HasValue && streak.ShieldExpiresAt <= DateTimeOffset.UtcNow)
-            {
-                streak.IsShieldActive = false;
-                streak.ShieldExpiresAt = null;
-                streak.UpdatedAt = DateTimeOffset.UtcNow;
-            }
-        }
 
         if (streak != null && streak.CurrentDays > 0 && !streak.IsFrozen() && !streak.IsShieldActive)
         {
@@ -124,6 +135,9 @@ public class GameEngineService
                 GoldLost = goldPenaltyFromStreak,
                 CooldownHours = cooldownHours
             };
+
+            streak.ShieldBackupCurrentDays = streak.CurrentDays;
+            streak.ShieldBackupBreakAtUtc = DateTimeOffset.UtcNow;
 
             streak.Break();
             streakBroken = true;
@@ -155,7 +169,6 @@ public class GameEngineService
     }
 }
 
-//dto
 public class StreakBreakPenalty
 {
     public int StreakDays { get; set; }

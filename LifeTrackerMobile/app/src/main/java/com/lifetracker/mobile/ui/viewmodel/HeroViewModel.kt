@@ -154,8 +154,12 @@ class HeroViewModel(
             ?.let { result ->
                 applySnapshot(result.heroSnapshot)
                 doRefreshTasks()
-                _events.send(UiEvent.TaskFailed(result.message))
 
+                if (result.shieldAbsorbed && !result.streakBroken) {
+                    _events.send(UiEvent.ShowSnackbar("Shield absorbed today's failure"))
+                } else {
+                    _events.send(UiEvent.TaskFailed(result.message))
+                }
             }
     }
     

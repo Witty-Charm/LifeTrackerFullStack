@@ -21,7 +21,12 @@ public class ShopController : ControllerBase
     [HttpPost("buy")]
     public async Task<ActionResult<BuyResultDto>> BuyItem([FromBody] BuyItemRequest request)
     {
-        var (result, error) = await _shopService.BuyItemAsync(request.HeroId, request.ItemId);
+        var (result, error) = await _shopService.BuyItemAsync(
+            request.HeroId,
+            request.ItemId,
+            request.ClientTimeZone,
+            request.ClientLocalDateTime
+        );
         if (error is not null)
             return BadRequest(new { message = error });
         return Ok(result);

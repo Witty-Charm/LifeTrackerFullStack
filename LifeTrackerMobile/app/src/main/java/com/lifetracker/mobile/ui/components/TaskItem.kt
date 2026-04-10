@@ -199,6 +199,14 @@ private fun TaskCardContent(
                 )
             }
 
+            if (task.isShieldActive && task.shieldCountdownText != null) {
+                Text(
+                    text = "🛡️ Shielded today · ${task.shieldCountdownText}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
             if (task.dueDateText != null) {
                 Text(
                     text = task.dueDateText,

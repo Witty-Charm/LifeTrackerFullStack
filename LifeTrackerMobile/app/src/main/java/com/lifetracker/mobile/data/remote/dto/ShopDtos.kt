@@ -17,6 +17,8 @@ data class ShopItemDto(
 data class BuyItemRequestDto(
     @SerialName("heroId") val heroId: Int,
     @SerialName("itemId") val itemId: Int,
+    @SerialName("clientTimeZone") val clientTimeZone: String? = null,
+    @SerialName("clientLocalDateTime") val clientLocalDateTime: String? = null,
 )
 
 @Serializable

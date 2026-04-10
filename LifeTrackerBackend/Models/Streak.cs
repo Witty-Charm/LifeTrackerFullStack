@@ -16,7 +16,10 @@ public class Streak
     public int FreezeCharges { get; set; } = 0;
     public DateTimeOffset? FreezeActiveUntil { get; set; }
     public bool IsShieldActive { get; set; } = false;
-    public DateTimeOffset? ShieldExpiresAt { get; set; }
+    public DateTimeOffset? ShieldExpiresAtUtc { get; set; }
+    public bool ShieldFailConsumed { get; set; } = false;
+    public int? ShieldBackupCurrentDays { get; set; }
+    public DateTimeOffset? ShieldBackupBreakAtUtc { get; set; }
 
     public int TotalBreaks { get; set; } = 0;
     public DateTimeOffset? LastBreakDate { get; set; }

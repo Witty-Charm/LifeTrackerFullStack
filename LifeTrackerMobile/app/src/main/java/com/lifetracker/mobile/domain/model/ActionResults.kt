@@ -23,6 +23,7 @@ data class TaskFailureResult(
     val heroDied: Boolean,
     val streakBroken: Boolean,
     val streakPenalty: StreakPenaltyInfo?,
+    val shieldAbsorbed: Boolean = false,
     val message: String,
     val heroSnapshot: HeroSnapshot,
 )

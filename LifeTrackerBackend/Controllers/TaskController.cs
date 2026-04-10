@@ -387,7 +387,8 @@ public class TaskController : ControllerBase
                 BonusXpPercent = task.Streak.GetBonusXpPercent(),
                 Multiplier = task.Streak.GetStreakMultiplier(),
                 IsFrozen = task.Streak.IsFrozen(),
-                IsShieldActive = task.Streak.IsShieldActive
+                IsShieldActive = task.Streak.IsShieldActive,
+                ShieldExpiresAtUtc = task.Streak.ShieldExpiresAtUtc
             }
             : null
     };
@@ -455,6 +456,7 @@ public class StreakInfoDto
     public double Multiplier { get; set; }
     public bool IsFrozen { get; set; }
     public bool IsShieldActive { get; set; }
+    public DateTimeOffset? ShieldExpiresAtUtc { get; set; }
 }
 
 public class CreateTaskRequest

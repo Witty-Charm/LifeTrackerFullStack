@@ -36,8 +36,17 @@ class ShopViewModel(
     }
 
     fun loadForHero(heroId: Int) {
-        if (heroId == currentHeroId || heroId <= 0) return
+        timber.log.Timber.d("loadForHero called: heroId=$heroId, currentHeroId=$currentHeroId")
+        if (heroId == currentHeroId) {
+            timber.log.Timber.d("loadForHero skipped: heroId=$heroId already loaded")
+            return
+        }
+        if (heroId <= 0) {
+            timber.log.Timber.w("loadForHero: invalid heroId=$heroId, skipping")
+            return
+        }
         currentHeroId = heroId
+        timber.log.Timber.d("loadForHero: loading items and inventory for heroId=$heroId")
         loadItems()
         loadInventory()
     }
@@ -100,9 +109,11 @@ class ShopViewModel(
 
     private fun loadItems() {
         viewModelScope.launch {
+            timber.log.Timber.d("loadItems: starting to load shop items")
             _state.update { it.copy(isLoadingItems = true) }
             shopUseCases.getShopItems()
                 .onSuccess { items ->
+                    timber.log.Timber.d("loadItems: received ${items.size} items from API")
                     _state.update { s ->
                         s.copy(
                             items = items.map { it.toUi(currentHeroGold) }.toPersistentList(),
@@ -111,6 +122,7 @@ class ShopViewModel(
                     }
                 }
                 .onFailure { error ->
+                    timber.log.Timber.e("loadItems: failed to load items: $error")
                     _state.update { it.copy(isLoadingItems = false, actionError = error.toUiError()) }
                 }
         }

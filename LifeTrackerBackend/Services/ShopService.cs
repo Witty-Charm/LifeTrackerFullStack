@@ -16,7 +16,7 @@ public class ShopService : IShopService
         return items.Select(MapItemToDto);
     }
 
-    public async Task<(BuyResultDto? Result, string? Error)> BuyItemAsync(int heroId, int itemId)
+    public async Task<(BuyResultDto? Result, string? Error)> BuyItemAsync(int heroId, int itemId, string? clientTimeZone, DateTimeOffset? clientLocalDateTime)
     {
         var hero = await _db.Heroes.FindAsync(heroId);
         if (hero is null)
@@ -29,19 +29,36 @@ public class ShopService : IShopService
         if (item is null)
             return (null, "Item not found");
 
+
+        if (item.ItemType == 4)
+        {
+            if (string.IsNullOrWhiteSpace(clientTimeZone))
+                return (null, "Client timezone is required for shield purchase");
+            if (clientLocalDateTime is null)
+                return (null, "Client local datetime is required for shield purchase");
+        }
+
         if (hero.Gold < item.Price)
             return (null, $"Not enough gold. Need {item.Price}, have {hero.Gold}.");
 
         hero.Gold -= item.Price;
 
-        string effectMessage = item.ItemType switch
+        string effectMessage;
+        try
         {
-            1 or 2 => ApplyHeal(hero, item.EffectValue),
-            3 => ApplyXpBoost(hero, item.EffectValue),
-            4 => await ApplyStreakShield(heroId),
-            5 => ApplyRecoveryReset(hero),
-            _ => string.Empty
-        };
+            effectMessage = item.ItemType switch
+            {
+                1 or 2 => ApplyHeal(hero, item.EffectValue),
+                3 => ApplyXpBoost(hero, item.EffectValue),
+                4 => await ApplyStreakShield(heroId, clientTimeZone!, clientLocalDateTime!.Value),
+                5 => ApplyRecoveryReset(hero),
+                _ => string.Empty
+            };
+        }
+        catch (InvalidOperationException ex)
+        {
+            return (null, ex.Message);
+        }
 
         if (item.ItemType is 1 or 2)
         {
@@ -115,17 +132,55 @@ public class ShopService : IShopService
         return $"+{percent}% XP boost for next 5 tasks";
     }
 
-    private async Task<string> ApplyStreakShield(int heroId)
+    private static DateTimeOffset ToNextLocalMidnightUtc(DateTimeOffset clientLocal, string ianaTz)
+    {
+        var tz = TimeZoneInfo.FindSystemTimeZoneById(ianaTz);
+        var localDate = TimeZoneInfo.ConvertTime(clientLocal, tz).Date;
+        var nextMidnightLocal = localDate.AddDays(1);
+        var unspecified = new DateTime(nextMidnightLocal.Year, nextMidnightLocal.Month, nextMidnightLocal.Day, 0, 0, 0, DateTimeKind.Unspecified);
+        var localWithOffset = TimeZoneInfo.ConvertTimeToUtc(unspecified, tz);
+        return new DateTimeOffset(localWithOffset, TimeSpan.Zero);
+    }
+
+    private async Task<string> ApplyStreakShield(int heroId, string clientTimeZone, DateTimeOffset clientLocalDateTime)
     {
         var streaks = await _db.Streaks.Where(s => s.HeroId == heroId).ToListAsync();
         var now = DateTimeOffset.UtcNow;
+
+        var activeShield = streaks.FirstOrDefault(s => s.IsShieldActive && s.ShieldExpiresAtUtc >= now);
+        if (activeShield is not null)
+            throw new InvalidOperationException("Shield already active until local midnight");
+
+        var expiresUtc = ToNextLocalMidnightUtc(clientLocalDateTime, clientTimeZone);
+
+        var tz = TimeZoneInfo.FindSystemTimeZoneById(clientTimeZone);
+        var clientDate = TimeZoneInfo.ConvertTime(clientLocalDateTime, tz).Date;
+
         foreach (var streak in streaks)
         {
             streak.IsShieldActive = true;
-            streak.ShieldExpiresAt = now.AddDays(1);
+            streak.ShieldExpiresAtUtc = expiresUtc;
+            streak.ShieldFailConsumed = false;
             streak.UpdatedAt = now;
+
+            if (streak.ShieldBackupBreakAtUtc.HasValue)
+            {
+                var breakLocalDate = TimeZoneInfo.ConvertTime(streak.ShieldBackupBreakAtUtc.Value, tz).Date;
+                if (breakLocalDate == clientDate && streak.ShieldBackupCurrentDays.HasValue)
+                {
+                    streak.CurrentDays = streak.ShieldBackupCurrentDays.Value;
+                    streak.ShieldBackupCurrentDays = null;
+                    streak.ShieldBackupBreakAtUtc = null;
+                }
+            }
+            else
+            {
+                streak.ShieldBackupCurrentDays = null;
+                streak.ShieldBackupBreakAtUtc = null;
+            }
         }
-        return streaks.Count == 0 ? "" : "Streak shield active for 1 day";
+
+        return streaks.Count == 0 ? "" : $"Streak shield active until local midnight ({clientTimeZone})";
     }
 
     private static string ApplyRecoveryReset(Hero hero)

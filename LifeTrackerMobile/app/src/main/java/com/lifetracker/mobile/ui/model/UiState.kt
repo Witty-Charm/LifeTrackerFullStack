@@ -1,11 +1,13 @@
 package com.lifetracker.mobile.ui.model
 
 import androidx.compose.runtime.Immutable
-import kotlin.time.Instant
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentSetOf
+import kotlin.time.Clock
+import kotlin.time.Instant
+
 
 @Immutable
 data class HeroScreenState(
@@ -70,7 +72,23 @@ data class TaskUi(
     val streakText: String?,
     val isPendingSync: Boolean,
     val syncError: String? = null,
-)
+    val shieldExpiresAtUtc: Instant? = null,
+    val isShieldActive: Boolean = false,
+) {
+    val shieldCountdownText: String?
+        get() {
+            val expiry = shieldExpiresAtUtc ?: return null
+            if (!isShieldActive) return null
+
+            val now = Clock.System.now()
+            if (expiry <= now) return null
+
+            val duration = expiry - now
+            val hours = duration.inWholeHours
+            val minutes = (duration.inWholeMinutes % 60)
+            return String.format("%02d:%02d left", hours, minutes)
+        }
+}
 
 @Immutable
 data class ChecklistItemUi(

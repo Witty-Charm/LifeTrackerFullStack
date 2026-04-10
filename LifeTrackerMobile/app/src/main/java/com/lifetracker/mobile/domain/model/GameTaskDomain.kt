@@ -35,4 +35,5 @@ data class StreakDomain(
     val multiplier: Double,
     val isFrozen: Boolean,
     val isShieldActive: Boolean,
+    val shieldExpiresAtUtc: kotlinx.datetime.Instant? = null,
 )
