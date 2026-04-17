@@ -39,7 +39,8 @@ public class GameEngineService
         GameTask task,
         Hero hero,
         Streak? streak,
-        EconomyBalance economy)
+        EconomyBalance economy,
+        DateOnly todayLocalDate)
     {
         int oldLevel = hero.Level;
         int streakBonusPercent = streak?.GetBonusXpPercent() ?? 0;
@@ -64,7 +65,7 @@ public class GameEngineService
 
         economy.TotalXpEarned += xpReward;
         economy.TotalGoldEarned += goldReward;
-        economy.IncrementDailyCompletion();
+        economy.IncrementDailyCompletion(todayLocalDate);
         economy.UpdatedAt = DateTime.UtcNow;
 
         task.IsCompleted = task.Type == TaskType.OneTime;
@@ -87,7 +88,8 @@ public class GameEngineService
             GameTask task,
             Hero hero,
             Streak? streak,
-            EconomyBalance economy)
+            EconomyBalance economy,
+            DateOnly? todayLocalDate = null)
     {
         int hpPenalty = task.GetHpPenalty();
         int goldPenalty = task.GetGoldPenalty();
@@ -139,7 +141,7 @@ public class GameEngineService
             streak.ShieldBackupCurrentDays = streak.CurrentDays;
             streak.ShieldBackupBreakAtUtc = DateTimeOffset.UtcNow;
 
-            streak.Break();
+            streak.Break(todayLocalDate);
             streakBroken = true;
         }
 

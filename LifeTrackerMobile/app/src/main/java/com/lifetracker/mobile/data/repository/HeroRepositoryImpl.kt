@@ -8,6 +8,7 @@ import com.lifetracker.mobile.data.mapper.toDomainResult
 import com.lifetracker.mobile.data.mapper.toEntity
 import com.lifetracker.mobile.data.remote.LifeTrackerApi
 import com.lifetracker.mobile.data.remote.dto.CreateHeroRequest
+import com.lifetracker.mobile.data.remote.dto.UpdateHeroTimeZoneRequest
 import com.lifetracker.mobile.domain.model.DomainResult
 import com.lifetracker.mobile.domain.model.HealResult
 import com.lifetracker.mobile.domain.model.HeroDomain
@@ -139,5 +140,22 @@ class HeroRepositoryImpl(
             }
         }
         return remote
+    }
+
+    override suspend fun updateHeroTimeZone(heroId: Int, timeZoneId: String): DomainResult<Unit> {
+        val remote = caller.safeApiCallUnit {
+            api.updateHeroTimeZone(heroId, UpdateHeroTimeZoneRequest(timeZoneId = timeZoneId))
+        }
+
+        return when (remote) {
+            is com.lifetracker.mobile.core.network.NetworkResult.Success -> DomainResult.Success(Unit)
+            is com.lifetracker.mobile.core.network.NetworkResult.Error -> DomainResult.Failure(remote.apiError.toDomain())
+            is com.lifetracker.mobile.core.network.NetworkResult.Exception -> DomainResult.Failure(
+                when (remote.throwable) {
+                    is java.io.IOException -> com.lifetracker.mobile.domain.model.GameError.Network
+                    else -> com.lifetracker.mobile.domain.model.GameError.Unknown(remote.throwable.message ?: "Unexpected error")
+                }
+            )
+        }
     }
 }

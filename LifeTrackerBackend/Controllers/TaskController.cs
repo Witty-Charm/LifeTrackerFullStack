@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using LifeTracker.Data;
 using LifeTracker.Models;
 using LifeTracker.Services;
+using LifeTracker.Services.Time;
 
 namespace LifeTracker.Controllers;
 
@@ -13,11 +14,13 @@ public class TaskController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
     private readonly GameEngineService _gameEngine;
+    private readonly IHeroTimeService _heroTimeService;
 
-    public TaskController(ApplicationDbContext context, GameEngineService gameEngine)
+    public TaskController(ApplicationDbContext context, GameEngineService gameEngine, IHeroTimeService heroTimeService)
     {
         _context = context;
         _gameEngine = gameEngine;
+        _heroTimeService = heroTimeService;
     }
 
     [HttpGet]
@@ -138,8 +141,12 @@ public class TaskController : ControllerBase
             hero.EconomyBalance = economy;
         }
 
-        economy.CheckDailyReset();
-        if (!economy.CanCompleteTask())
+        var utcNow = DateTimeOffset.UtcNow;
+        var effectiveTimeZone = _heroTimeService.ResolveEffectiveTimeZone(hero, utcNow);
+        var todayLocalDate = _heroTimeService.GetLocalDate(utcNow, effectiveTimeZone);
+
+        economy.CheckDailyReset(todayLocalDate);
+        if (!economy.CanCompleteTask(todayLocalDate))
             return BadRequest(new
             {
                 errorCode = "DAILY_LIMIT_REACHED",
@@ -148,7 +155,7 @@ public class TaskController : ControllerBase
                     $"You have completed {economy.DailyTaskCompletions}/{economy.MaxDailyCompletions} tasks today. Try again tomorrow!",
                 dailyCompletions = economy.DailyTaskCompletions,
                 maxDailyCompletions = economy.MaxDailyCompletions,
-                resetTime = economy.DailyResetAt.AddDays(1)
+                resetTime = _heroTimeService.GetNextLocalMidnightUtc(utcNow, effectiveTimeZone)
             });
 
         Streak? streak = null;
@@ -169,13 +176,14 @@ public class TaskController : ControllerBase
                 _context.Streaks.Add(streak);
             }
 
-            streak.RegisterSuccess();
+            streak.RegisterSuccess(todayLocalDate, utcNow);
         }
 
         var (xpReward, goldReward, leveledUp, streakBonus) =
-            _gameEngine.ApplyTaskCompletion(task, hero, streak, economy);
+            _gameEngine.ApplyTaskCompletion(task, hero, streak, economy, todayLocalDate);
 
-        await _context.SaveChangesAsync();
+        if (!await SaveChangesWithSingleRetryAsync())
+            return Conflict(new { errorCode = "CONCURRENCY_CONFLICT", message = "Task state changed concurrently. Please retry." });
 
         return Ok(new CompleteTaskResponse
         {
@@ -240,10 +248,15 @@ public class TaskController : ControllerBase
         var economy = hero.EconomyBalance ?? new EconomyBalance { HeroId = hero.Id };
         var streak = task.Streak;
 
-        var (hpLost, goldLost, heroDied, streakBroken, streakPenalty) =
-            _gameEngine.ApplyTaskFailure(task, hero, streak, economy);
+        var utcNow = DateTimeOffset.UtcNow;
+        var effectiveTimeZone = _heroTimeService.ResolveEffectiveTimeZone(hero, utcNow);
+        var todayLocalDate = _heroTimeService.GetLocalDate(utcNow, effectiveTimeZone);
 
-        await _context.SaveChangesAsync();
+        var (hpLost, goldLost, heroDied, streakBroken, streakPenalty) =
+            _gameEngine.ApplyTaskFailure(task, hero, streak, economy, todayLocalDate);
+
+        if (!await SaveChangesWithSingleRetryAsync())
+            return Conflict(new { errorCode = "CONCURRENCY_CONFLICT", message = "Task state changed concurrently. Please retry." });
 
         var response = new FailTaskResponse
         {
@@ -316,8 +329,12 @@ public class TaskController : ControllerBase
             var economy = hero.EconomyBalance ?? new EconomyBalance { HeroId = hero.Id };
             var streak = task.Streak;
 
+            var utcNow = DateTimeOffset.UtcNow;
+            var effectiveTimeZone = _heroTimeService.ResolveEffectiveTimeZone(hero, utcNow);
+            var todayLocalDate = _heroTimeService.GetLocalDate(utcNow, effectiveTimeZone);
+
             var (hpLost, goldLost, heroDied, streakBroken, streakPenalty) =
-                _gameEngine.ApplyTaskFailure(task, hero, streak, economy);
+                _gameEngine.ApplyTaskFailure(task, hero, streak, economy, todayLocalDate);
 
             task.OverdueProcessedAt = DateTimeOffset.UtcNow;
 
@@ -333,7 +350,8 @@ public class TaskController : ControllerBase
             });
         }
 
-        await _context.SaveChangesAsync();
+        if (!await SaveChangesWithSingleRetryAsync())
+            return Conflict(new { errorCode = "CONCURRENCY_CONFLICT", message = "Overdue state changed concurrently. Please retry." });
 
         return Ok(new OverdueCheckResponse
         {
@@ -392,6 +410,36 @@ public class TaskController : ControllerBase
             }
             : null
     };
+
+    private async Task<bool> SaveChangesWithSingleRetryAsync()
+    {
+        try
+        {
+            await _context.SaveChangesAsync();
+            return true;
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            foreach (var entry in ex.Entries)
+            {
+                var dbValues = await entry.GetDatabaseValuesAsync();
+                if (dbValues == null)
+                    return false;
+
+                entry.OriginalValues.SetValues(dbValues);
+            }
+
+            try
+            {
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return false;
+            }
+        }
+    }
 
     private string GetFailureMessage(bool died, int hp, int gold, bool streakBroken, StreakBreakPenalty? penalty)
     {

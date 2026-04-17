@@ -12,6 +12,7 @@ public class EconomyBalance
     public int DailyTaskCompletions { get; set; } = 0;
     public int MaxDailyCompletions { get; set; } = Constants.GameConstants.DailyTaskCap;
     public DateTimeOffset DailyResetAt { get; set; } = DateTimeOffset.UtcNow.Date;
+    public string? LastDailyResetLocalDate { get; set; }
 
     public decimal XpMultiplier { get; set; } = 1.0m;
     public decimal GoldMultiplier { get; set; } = 1.0m;
@@ -23,27 +24,38 @@ public class EconomyBalance
 
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public byte[] RowVersion { get; set; } = Array.Empty<byte>();
 
     public Hero? Hero { get; set; }
 
-    public void CheckDailyReset()
+    public void CheckDailyReset(DateOnly todayLocalDate)
     {
-        if (DateTimeOffset.UtcNow.Date > DailyResetAt.Date)
+        var todayLocalDateStr = todayLocalDate.ToString("yyyy-MM-dd");
+
+        if (string.IsNullOrWhiteSpace(LastDailyResetLocalDate))
+        {
+            LastDailyResetLocalDate = todayLocalDateStr;
+            return;
+        }
+
+        var last = DateOnly.ParseExact(LastDailyResetLocalDate, "yyyy-MM-dd");
+        if (todayLocalDate > last)
         {
             DailyResetAt = DateTimeOffset.UtcNow.Date;
             DailyTaskCompletions = 0;
+            LastDailyResetLocalDate = todayLocalDateStr;
         }
     }
 
-    public bool CanCompleteTask()
+    public bool CanCompleteTask(DateOnly todayLocalDate)
     {
-        CheckDailyReset();
+        CheckDailyReset(todayLocalDate);
         return DailyTaskCompletions < MaxDailyCompletions;
     }
 
-    public void IncrementDailyCompletion()
+    public void IncrementDailyCompletion(DateOnly todayLocalDate)
     {
-        CheckDailyReset();
+        CheckDailyReset(todayLocalDate);
         DailyTaskCompletions++;
     }
 

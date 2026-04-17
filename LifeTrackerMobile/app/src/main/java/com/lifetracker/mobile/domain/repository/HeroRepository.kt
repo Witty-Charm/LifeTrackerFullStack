@@ -14,4 +14,5 @@ interface HeroRepository {
     suspend fun getHeroStats(heroId: Int): DomainResult<HeroStatsDomain>
     suspend fun respawnHero(heroId: Int): DomainResult<RespawnResult>
     suspend fun healHero(heroId: Int, amount: Int? = null): DomainResult<HealResult>
+    suspend fun updateHeroTimeZone(heroId: Int, timeZoneId: String): DomainResult<Unit>
 }

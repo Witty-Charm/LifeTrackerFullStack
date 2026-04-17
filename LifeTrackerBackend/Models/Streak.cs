@@ -23,6 +23,9 @@ public class Streak
 
     public int TotalBreaks { get; set; } = 0;
     public DateTimeOffset? LastBreakDate { get; set; }
+    public string? LastCheckInLocalDate { get; set; }
+    public string? LastBreakLocalDate { get; set; }
+    public byte[] RowVersion { get; set; } = Array.Empty<byte>();
 
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
@@ -48,19 +51,19 @@ public class Streak
         return true;
     }
 
-    public void RegisterSuccess()
+    public void RegisterSuccess(DateOnly localDate, DateTimeOffset now)
     {
-        var now = DateTime.UtcNow;
+        var localDateStr = localDate.ToString("yyyy-MM-dd");
 
-        if (StartDate == null)
+        if (string.IsNullOrWhiteSpace(LastCheckInLocalDate))
         {
             StartDate = now;
             CurrentDays = 1;
         }
         else
         {
-            var last = LastCheckIn ?? StartDate.Value;
-            int daysDiff = (now.Date - last.Date).Days;
+            var last = DateOnly.ParseExact(LastCheckInLocalDate, "yyyy-MM-dd");
+            var daysDiff = localDate.DayNumber - last.DayNumber;
 
             if (daysDiff == 1)
             {
@@ -74,6 +77,7 @@ public class Streak
         }
 
         LastCheckIn = now;
+        LastCheckInLocalDate = localDateStr;
 
         if (CurrentDays > LongestDays)
             LongestDays = CurrentDays;
@@ -82,12 +86,15 @@ public class Streak
     }
 
 
-    public void Break()
+    public void Break(DateOnly? localDate = null, DateTimeOffset? now = null)
     {
+        var utcNow = now ?? DateTimeOffset.UtcNow;
+
         CurrentDays = 0;
         StartDate = null;
         TotalBreaks++;
-        LastBreakDate = DateTimeOffset.UtcNow;
-        UpdatedAt = DateTimeOffset.UtcNow;
+        LastBreakDate = utcNow;
+        LastBreakLocalDate = localDate?.ToString("yyyy-MM-dd");
+        UpdatedAt = utcNow;
     }
 }

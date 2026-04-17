@@ -10,6 +10,18 @@ public class ApplicationDbContext : DbContext
     {
     }
 
+    public override int SaveChanges()
+    {
+        StampConcurrencyTokens();
+        return base.SaveChanges();
+    }
+
+    public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        StampConcurrencyTokens();
+        return base.SaveChangesAsync(cancellationToken);
+    }
+
     public DbSet<Hero> Heroes { get; set; }
     public DbSet<GameTask> GameTasks { get; set; }
     public DbSet<Streak> Streaks { get; set; }
@@ -49,6 +61,10 @@ public class ApplicationDbContext : DbContext
             .Property(t => t.Difficulty)
             .HasConversion<int>();
 
+        modelBuilder.Entity<Hero>()
+            .Property(h => h.TimeZoneId)
+            .HasDefaultValue("UTC");
+
         modelBuilder.Entity<Purchase>()
             .HasOne(p => p.Hero)
             .WithMany()
@@ -63,5 +79,28 @@ public class ApplicationDbContext : DbContext
 
         modelBuilder.Entity<Purchase>()
             .HasIndex(p => p.HeroId);
+
+        modelBuilder.Entity<Streak>()
+            .Property(s => s.RowVersion)
+            .IsConcurrencyToken();
+
+        modelBuilder.Entity<EconomyBalance>()
+            .Property(e => e.RowVersion)
+            .IsConcurrencyToken();
+    }
+
+    private void StampConcurrencyTokens()
+    {
+        foreach (var entry in ChangeTracker.Entries<Streak>()
+                     .Where(e => e.State is EntityState.Added or EntityState.Modified))
+        {
+            entry.Entity.RowVersion = Guid.NewGuid().ToByteArray();
+        }
+
+        foreach (var entry in ChangeTracker.Entries<EconomyBalance>()
+                     .Where(e => e.State is EntityState.Added or EntityState.Modified))
+        {
+            entry.Entity.RowVersion = Guid.NewGuid().ToByteArray();
+        }
     }
 }

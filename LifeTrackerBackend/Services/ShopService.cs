@@ -1,14 +1,20 @@
 using Microsoft.EntityFrameworkCore;
 using LifeTracker.Data;
 using LifeTracker.Models;
+using LifeTracker.Services.Time;
 
 namespace LifeTracker.Services;
 
 public class ShopService : IShopService
 {
     private readonly ApplicationDbContext _db;
+    private readonly IHeroTimeService _heroTimeService;
 
-    public ShopService(ApplicationDbContext db) => _db = db;
+    public ShopService(ApplicationDbContext db, IHeroTimeService heroTimeService)
+    {
+        _db = db;
+        _heroTimeService = heroTimeService;
+    }
 
     public async Task<IEnumerable<ShopItemDto>> GetItemsAsync()
     {
@@ -30,13 +36,8 @@ public class ShopService : IShopService
             return (null, "Item not found");
 
 
-        if (item.ItemType == 4)
-        {
-            if (string.IsNullOrWhiteSpace(clientTimeZone))
-                return (null, "Client timezone is required for shield purchase");
-            if (clientLocalDateTime is null)
-                return (null, "Client local datetime is required for shield purchase");
-        }
+        if (item.ItemType == 4 && !string.IsNullOrWhiteSpace(clientTimeZone) && !_heroTimeService.IsValidIana(clientTimeZone))
+            return (null, "Invalid IANA timezone id");
 
         if (hero.Gold < item.Price)
             return (null, $"Not enough gold. Need {item.Price}, have {hero.Gold}.");
@@ -50,7 +51,7 @@ public class ShopService : IShopService
             {
                 1 or 2 => ApplyHeal(hero, item.EffectValue),
                 3 => ApplyXpBoost(hero, item.EffectValue),
-                4 => await ApplyStreakShield(heroId, clientTimeZone!, clientLocalDateTime!.Value),
+                4 => await ApplyStreakShield(hero),
                 5 => ApplyRecoveryReset(hero),
                 _ => string.Empty
             };
@@ -132,29 +133,19 @@ public class ShopService : IShopService
         return $"+{percent}% XP boost for next 5 tasks";
     }
 
-    private static DateTimeOffset ToNextLocalMidnightUtc(DateTimeOffset clientLocal, string ianaTz)
+    private async Task<string> ApplyStreakShield(Hero hero)
     {
-        var tz = TimeZoneInfo.FindSystemTimeZoneById(ianaTz);
-        var localDate = TimeZoneInfo.ConvertTime(clientLocal, tz).Date;
-        var nextMidnightLocal = localDate.AddDays(1);
-        var unspecified = new DateTime(nextMidnightLocal.Year, nextMidnightLocal.Month, nextMidnightLocal.Day, 0, 0, 0, DateTimeKind.Unspecified);
-        var localWithOffset = TimeZoneInfo.ConvertTimeToUtc(unspecified, tz);
-        return new DateTimeOffset(localWithOffset, TimeSpan.Zero);
-    }
-
-    private async Task<string> ApplyStreakShield(int heroId, string clientTimeZone, DateTimeOffset clientLocalDateTime)
-    {
-        var streaks = await _db.Streaks.Where(s => s.HeroId == heroId).ToListAsync();
+        var heroTimeZone = _heroTimeService.ResolveEffectiveTimeZone(hero, DateTimeOffset.UtcNow);
         var now = DateTimeOffset.UtcNow;
+        var todayLocalDate = _heroTimeService.GetLocalDate(now, heroTimeZone);
+
+        var streaks = await _db.Streaks.Where(s => s.HeroId == hero.Id).ToListAsync();
 
         var activeShield = streaks.FirstOrDefault(s => s.IsShieldActive && s.ShieldExpiresAtUtc >= now);
         if (activeShield is not null)
             throw new InvalidOperationException("Shield already active until local midnight");
 
-        var expiresUtc = ToNextLocalMidnightUtc(clientLocalDateTime, clientTimeZone);
-
-        var tz = TimeZoneInfo.FindSystemTimeZoneById(clientTimeZone);
-        var clientDate = TimeZoneInfo.ConvertTime(clientLocalDateTime, tz).Date;
+        var expiresUtc = _heroTimeService.GetNextLocalMidnightUtc(now, heroTimeZone);
 
         foreach (var streak in streaks)
         {
@@ -165,22 +156,21 @@ public class ShopService : IShopService
 
             if (streak.ShieldBackupBreakAtUtc.HasValue)
             {
-                var breakLocalDate = TimeZoneInfo.ConvertTime(streak.ShieldBackupBreakAtUtc.Value, tz).Date;
-                if (breakLocalDate == clientDate && streak.ShieldBackupCurrentDays.HasValue)
+                var breakLocalDate = _heroTimeService.GetLocalDate(streak.ShieldBackupBreakAtUtc.Value, heroTimeZone);
+                if (breakLocalDate == todayLocalDate &&
+                    streak.ShieldBackupCurrentDays.HasValue &&
+                    streak.LastBreakLocalDate == _heroTimeService.FormatLocalDate(todayLocalDate))
                 {
                     streak.CurrentDays = streak.ShieldBackupCurrentDays.Value;
-                    streak.ShieldBackupCurrentDays = null;
-                    streak.ShieldBackupBreakAtUtc = null;
+                    streak.LastBreakLocalDate = null;
                 }
             }
-            else
-            {
-                streak.ShieldBackupCurrentDays = null;
-                streak.ShieldBackupBreakAtUtc = null;
-            }
+
+            streak.ShieldBackupCurrentDays = null;
+            streak.ShieldBackupBreakAtUtc = null;
         }
 
-        return streaks.Count == 0 ? "" : $"Streak shield active until local midnight ({clientTimeZone})";
+        return streaks.Count == 0 ? "" : $"Streak shield active until local midnight ({heroTimeZone})";
     }
 
     private static string ApplyRecoveryReset(Hero hero)

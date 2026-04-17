@@ -30,6 +30,11 @@ data class CreateHeroRequest(
 )
 
 @Serializable
+data class UpdateHeroTimeZoneRequest(
+    val timeZoneId: String,
+)
+
+@Serializable
 data class HeroStatsDto(
     val id: Int,
     val name: String,

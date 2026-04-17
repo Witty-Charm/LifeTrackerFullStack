@@ -14,10 +14,12 @@ import com.lifetracker.mobile.data.remote.dto.PurchasedItemDto
 import com.lifetracker.mobile.data.remote.dto.RespawnResponse
 import com.lifetracker.mobile.data.remote.dto.ShopItemDto
 import com.lifetracker.mobile.data.remote.dto.TaskDto
+import com.lifetracker.mobile.data.remote.dto.UpdateHeroTimeZoneRequest
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
@@ -36,6 +38,12 @@ interface LifeTrackerApi {
 
     @GET("api/Hero/{id}/stats")
     suspend fun getHeroStats(@Path("id") id: Int): Response<HeroStatsDto>
+
+    @PATCH("api/Hero/{id}/timezone")
+    suspend fun updateHeroTimeZone(
+        @Path("id") id: Int,
+        @Body request: UpdateHeroTimeZoneRequest,
+    ): Response<Unit>
 
     @POST("api/Hero/{id}/respawn")
     suspend fun respawnHero(@Path("id") id: Int): Response<RespawnResponse>

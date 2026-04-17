@@ -9,6 +9,7 @@ import com.lifetracker.mobile.BuildConfig
 import com.lifetracker.mobile.core.network.SafeApiCaller
 import com.lifetracker.mobile.core.reminder.ReminderScheduler
 import com.lifetracker.mobile.core.serialization.JsonDefaults
+import com.lifetracker.mobile.core.sync.HeroTimeZoneSyncManager
 import com.lifetracker.mobile.core.sync.SyncScheduler
 import com.lifetracker.mobile.core.theme.ThemeController
 import com.lifetracker.mobile.data.local.AppDatabase
@@ -31,6 +32,7 @@ import com.lifetracker.mobile.domain.usecase.hero.GetHeroesUseCase
 import com.lifetracker.mobile.domain.usecase.hero.HealHeroUseCase
 import com.lifetracker.mobile.domain.usecase.hero.HeroUseCases
 import com.lifetracker.mobile.domain.usecase.hero.RespawnHeroUseCase
+import com.lifetracker.mobile.domain.usecase.hero.UpdateHeroTimeZoneUseCase
 import com.lifetracker.mobile.domain.usecase.settings.ObserveThemeModeUseCase
 import com.lifetracker.mobile.domain.usecase.settings.SetThemeModeUseCase
 import com.lifetracker.mobile.domain.usecase.settings.ThemeSettingsUseCases
@@ -92,6 +94,17 @@ val appModule = module {
             getHeroStats = GetHeroStatsUseCase(heroRepo),
             respawnHero = RespawnHeroUseCase(heroRepo),
             healHero = HealHeroUseCase(heroRepo),
+            updateHeroTimeZone = UpdateHeroTimeZoneUseCase(heroRepo),
+        )
+    }
+
+    single {
+        val heroUseCases: HeroUseCases = get()
+        HeroTimeZoneSyncManager(
+            getFirstHero = { heroUseCases.getFirstHero() },
+            updateHeroTimeZone = { heroId, timeZoneId ->
+                heroUseCases.updateHeroTimeZone(heroId, timeZoneId)
+            },
         )
     }
     single {

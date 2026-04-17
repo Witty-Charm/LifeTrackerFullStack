@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using LifeTracker.Data;
 using LifeTracker.Models;
 using LifeTracker.Constants;
+using LifeTracker.Services.Time;
 
 namespace LifeTracker.Controllers;
 
@@ -11,10 +12,12 @@ namespace LifeTracker.Controllers;
 public class HeroController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
+    private readonly IHeroTimeService _heroTimeService;
 
-    public HeroController(ApplicationDbContext context)
+    public HeroController(ApplicationDbContext context, IHeroTimeService heroTimeService)
     {
         _context = context;
+        _heroTimeService = heroTimeService;
     }
 
     [HttpGet]
@@ -25,7 +28,15 @@ public class HeroController : ControllerBase
             .Include(h => h.Streaks)
             .ToListAsync();
 
-        heroes.ForEach(h => h.EconomyBalance?.CheckDailyReset());
+        var utcNow = DateTimeOffset.UtcNow;
+
+        heroes.ForEach(h =>
+        {
+            var effectiveTimeZone = _heroTimeService.ResolveEffectiveTimeZone(h, utcNow);
+            var todayLocalDate = _heroTimeService.GetLocalDate(utcNow, effectiveTimeZone);
+            h.EconomyBalance?.CheckDailyReset(todayLocalDate);
+        });
+
         await _context.SaveChangesAsync();
 
         return Ok(heroes.Select(h => MapToDto(h)));
@@ -42,7 +53,11 @@ public class HeroController : ControllerBase
         if (hero == null)
             return NotFound();
 
-        hero.EconomyBalance?.CheckDailyReset();
+        var utcNow = DateTimeOffset.UtcNow;
+        var effectiveTimeZone = _heroTimeService.ResolveEffectiveTimeZone(hero, utcNow);
+        var todayLocalDate = _heroTimeService.GetLocalDate(utcNow, effectiveTimeZone);
+
+        hero.EconomyBalance?.CheckDailyReset(todayLocalDate);
         await _context.SaveChangesAsync();
 
         return Ok(MapToDto(hero));
@@ -70,12 +85,17 @@ public class HeroController : ControllerBase
         _context.Heroes.Add(hero);
         await _context.SaveChangesAsync();
 
+        var utcNow = DateTimeOffset.UtcNow;
+        var effectiveTimeZone = _heroTimeService.ResolveEffectiveTimeZone(hero, utcNow);
+        var todayLocalDate = _heroTimeService.GetLocalDate(utcNow, effectiveTimeZone);
+
         var economy = new EconomyBalance
         {
             HeroId = hero.Id,
             TotalGoldEarned = hero.Gold,
             MaxDailyCompletions = GameConstants.DailyTaskCap,
             DailyResetAt = DateTimeOffset.UtcNow.Date,
+            LastDailyResetLocalDate = _heroTimeService.FormatLocalDate(todayLocalDate),
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow
         };
@@ -103,7 +123,11 @@ public class HeroController : ControllerBase
         long xpForNextLevel = hero.GetXpRequiredForNextLevel();
         double xpProgress = xpForNextLevel > 0 ? (double)hero.CurrentXp / xpForNextLevel : 0.0;
 
-        economy.CheckDailyReset();
+        var utcNow = DateTimeOffset.UtcNow;
+        var effectiveTimeZone = _heroTimeService.ResolveEffectiveTimeZone(hero, utcNow);
+        var todayLocalDate = _heroTimeService.GetLocalDate(utcNow, effectiveTimeZone);
+
+        economy.CheckDailyReset(todayLocalDate);
         await _context.SaveChangesAsync();
 
         return Ok(new HeroStatsDto
@@ -131,7 +155,7 @@ public class HeroController : ControllerBase
             DailyCompletions = economy.DailyTaskCompletions,
             DailyCompletionsMax = economy.MaxDailyCompletions,
             DailyProgress = (double)economy.DailyTaskCompletions / economy.MaxDailyCompletions,
-            DailyResetTime = economy.DailyResetAt.AddDays(1),
+            DailyResetTime = _heroTimeService.GetNextLocalMidnightUtc(utcNow, effectiveTimeZone),
 
             XpMultiplier = (double)economy.GetFinalXpMultiplier(),
             GoldMultiplier = (double)economy.GoldMultiplier,
@@ -148,6 +172,52 @@ public class HeroController : ControllerBase
             CreatedDate = hero.CreatedDate,
             UpdatedAt = hero.UpdatedAt
         });
+    }
+
+    [HttpPatch("{id}/timezone")]
+    public async Task<ActionResult<HeroTimeZoneUpdateResponse>> UpdateHeroTimeZone(int id, [FromBody] UpdateHeroTimeZoneRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.TimeZoneId))
+            return BadRequest("timeZoneId is required");
+
+        var hero = await _context.Heroes.FindAsync(id);
+        if (hero == null)
+            return NotFound("Hero not found");
+
+        if (!_heroTimeService.IsValidIana(request.TimeZoneId))
+            return BadRequest("Invalid IANA timezone id");
+
+        var utcNow = DateTimeOffset.UtcNow;
+        var currentTimeZone = _heroTimeService.ResolveEffectiveTimeZone(hero, utcNow);
+
+        if (string.Equals(currentTimeZone, request.TimeZoneId, StringComparison.Ordinal))
+        {
+            await _context.SaveChangesAsync();
+            Console.WriteLine($"[AUDIT] Hero timezone change skipped (same timezone). heroId={hero.Id}, timezone={currentTimeZone}, atUtc={utcNow:O}");
+            return Ok(new HeroTimeZoneUpdateResponse(currentTimeZone, null, null, "Timezone unchanged"));
+        }
+
+        if (!_heroTimeService.CanSwitchTimeZone(hero, utcNow))
+            return BadRequest("Timezone can be changed once every 24 hours");
+
+        Console.WriteLine($"[AUDIT] Hero timezone change requested. heroId={hero.Id}, requested={request.TimeZoneId}, atUtc={utcNow:O}");
+
+        var currentLocalDate = _heroTimeService.GetLocalDate(utcNow, currentTimeZone);
+        hero.PendingTimeZoneId = request.TimeZoneId;
+        hero.TimeZoneSwitchAfterLocalDate = _heroTimeService.FormatLocalDate(currentLocalDate);
+        hero.LastTimeZoneChangedAt = utcNow;
+        hero.UpdatedAt = utcNow;
+
+        await _context.SaveChangesAsync();
+
+        Console.WriteLine($"[AUDIT] Hero timezone change scheduled. heroId={hero.Id}, from={currentTimeZone}, to={hero.PendingTimeZoneId}, switchAfterLocalDate={hero.TimeZoneSwitchAfterLocalDate}, atUtc={utcNow:O}");
+
+        return Ok(new HeroTimeZoneUpdateResponse(
+            CurrentTimeZoneId: currentTimeZone,
+            PendingTimeZoneId: hero.PendingTimeZoneId,
+            SwitchAfterLocalDate: hero.TimeZoneSwitchAfterLocalDate,
+            Message: "Timezone switch scheduled for next local day"
+        ));
     }
 
     [HttpPost("{id}/respawn")]
@@ -348,3 +418,12 @@ public class HealResponse
     public int NewGold { get; set; }
     public string Message { get; set; } = string.Empty;
 }
+
+public record UpdateHeroTimeZoneRequest(string TimeZoneId);
+
+public record HeroTimeZoneUpdateResponse(
+    string CurrentTimeZoneId,
+    string? PendingTimeZoneId,
+    string? SwitchAfterLocalDate,
+    string Message
+);

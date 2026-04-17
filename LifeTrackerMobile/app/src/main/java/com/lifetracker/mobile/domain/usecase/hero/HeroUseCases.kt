@@ -8,4 +8,5 @@ data class HeroUseCases(
     val getHeroStats: GetHeroStatsUseCase,
     val respawnHero: RespawnHeroUseCase,
     val healHero: HealHeroUseCase,
+    val updateHeroTimeZone: UpdateHeroTimeZoneUseCase,
 )
