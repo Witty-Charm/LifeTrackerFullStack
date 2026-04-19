@@ -17,8 +17,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Backpack
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.LocalHospital
+import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.Shield
-import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.ShoppingCart
 import androidx.compose.material3.Button
@@ -235,11 +235,11 @@ private fun InventoryItemCard(inv: InventoryItemUi) {
     }
 }
 
-private fun iconForItemType(itemType: Int): ImageVector =
+internal fun iconForItemType(itemType: Int): ImageVector =
     when (itemType) {
         1 -> Icons.Filled.LocalHospital
-        2 -> Icons.Filled.ShoppingBag
-        3 -> Icons.Filled.Shield
-        4 -> Icons.Filled.Inventory2
+        2 -> Icons.Filled.Science
+        3 -> Icons.Filled.Star
+        4 -> Icons.Filled.Shield
         else -> Icons.Filled.Star
     }
