@@ -51,7 +51,7 @@ public class ShopService : IShopService
             {
                 1 or 2 => ApplyHeal(hero, item.EffectValue),
                 3 => ApplyXpBoost(hero, item.EffectValue),
-                4 => await ApplyStreakShield(hero),
+                4 => await ApplyStreakShield(hero, clientTimeZone, clientLocalDateTime),
                 5 => ApplyRecoveryReset(hero),
                 _ => string.Empty
             };
@@ -133,10 +133,12 @@ public class ShopService : IShopService
         return $"+{percent}% XP boost for next 5 tasks";
     }
 
-    private async Task<string> ApplyStreakShield(Hero hero)
+    private async Task<string> ApplyStreakShield(Hero hero, string? clientTimeZone, DateTimeOffset? clientLocalDateTime)
     {
-        var heroTimeZone = _heroTimeService.ResolveEffectiveTimeZone(hero, DateTimeOffset.UtcNow);
-        var now = DateTimeOffset.UtcNow;
+        var now = clientLocalDateTime ?? DateTimeOffset.UtcNow;
+        var heroTimeZone = !string.IsNullOrWhiteSpace(clientTimeZone)
+            ? clientTimeZone
+            : _heroTimeService.ResolveEffectiveTimeZone(hero, now);
         var todayLocalDate = _heroTimeService.GetLocalDate(now, heroTimeZone);
 
         var streaks = await _db.Streaks.Where(s => s.HeroId == hero.Id).ToListAsync();

@@ -53,9 +53,10 @@ fun ShopScreen(
     snackbarHostState: SnackbarHostState,
 ) {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Spacer(Modifier.height(12.dp))
@@ -102,7 +103,10 @@ fun ShopScreen(
 }
 
 @Composable
-private fun ShopItemsList(state: ShopScreenState, onBuy: (Int) -> Unit) {
+private fun ShopItemsList(
+    state: ShopScreenState,
+    onBuy: (Int) -> Unit,
+) {
     if (state.isLoadingItems) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
@@ -123,7 +127,11 @@ private fun ShopItemsList(state: ShopScreenState, onBuy: (Int) -> Unit) {
 }
 
 @Composable
-private fun ShopItemCard(item: ShopItemUi, isLoading: Boolean, onBuy: () -> Unit) {
+private fun ShopItemCard(
+    item: ShopItemUi,
+    isLoading: Boolean,
+    onBuy: () -> Unit,
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
@@ -144,19 +152,32 @@ private fun ShopItemCard(item: ShopItemUi, isLoading: Boolean, onBuy: () -> Unit
                 Spacer(Modifier.height(2.dp))
                 Text(item.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(4.dp))
-                Text("${item.cost} Gold", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.SemiBold)
+                Text(
+                    "${item.cost} Gold",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.secondary,
+                    fontWeight = FontWeight.SemiBold,
+                )
             }
             Spacer(Modifier.width(8.dp))
             Button(
                 onClick = onBuy,
                 enabled = item.canAfford && !isLoading,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (item.canAfford) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.surfaceVariant,
-                ),
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor =
+                            if (item.canAfford) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.surfaceVariant
+                            },
+                    ),
             ) {
-                if (isLoading) CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                else Text(if (item.canAfford) "Buy" else "Can't afford")
+                if (isLoading) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                } else {
+                    Text(if (item.canAfford) "Buy" else "Can't afford")
+                }
             }
         }
     }
@@ -214,9 +235,11 @@ private fun InventoryItemCard(inv: InventoryItemUi) {
     }
 }
 
-private fun iconForItemType(itemType: Int): ImageVector = when (itemType) {
-    1 -> Icons.Filled.LocalHospital
-    2 -> Icons.Filled.ShoppingBag
-    3 -> Icons.Filled.Shield
-    else -> Icons.Filled.Star
-}
+private fun iconForItemType(itemType: Int): ImageVector =
+    when (itemType) {
+        1 -> Icons.Filled.LocalHospital
+        2 -> Icons.Filled.ShoppingBag
+        3 -> Icons.Filled.Shield
+        4 -> Icons.Filled.Inventory2
+        else -> Icons.Filled.Star
+    }

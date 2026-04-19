@@ -83,8 +83,7 @@ public class GameEngineService
         streak.ShieldExpiresAtUtc.HasValue &&
         DateTimeOffset.UtcNow <= streak.ShieldExpiresAtUtc.Value;
 
-    public (int hpLost, int goldLost, bool heroDied, bool streakBroken, StreakBreakPenalty? penalty)
-        ApplyTaskFailure(
+    public TaskFailureResult ApplyTaskFailure(
             GameTask task,
             Hero hero,
             Streak? streak,
@@ -113,7 +112,7 @@ public class GameEngineService
         if (streak != null && ShieldActiveNow(streak) && !streak.ShieldFailConsumed)
         {
             streak.ShieldFailConsumed = true;
-            return (hpPenalty, goldPenalty, hero.IsDead, false, null);
+            return new TaskFailureResult(hpPenalty, goldPenalty, hero.IsDead, false, true, null);
         }
 
         bool streakBroken = false;
@@ -157,7 +156,7 @@ public class GameEngineService
             }
         }
 
-        return (hpPenalty, goldPenalty, hero.IsDead, streakBroken, streakPenalty);
+        return new TaskFailureResult(hpPenalty, goldPenalty, hero.IsDead, streakBroken, false, streakPenalty);
     }
 
 
@@ -170,6 +169,15 @@ public class GameEngineService
         }
     }
 }
+
+public sealed record TaskFailureResult(
+    int HpLost,
+    int GoldLost,
+    bool HeroDied,
+    bool StreakBroken,
+    bool ShieldAbsorbed,
+    StreakBreakPenalty? Penalty
+);
 
 public class StreakBreakPenalty
 {

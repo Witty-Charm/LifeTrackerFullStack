@@ -252,8 +252,7 @@ public class TaskController : ControllerBase
         var effectiveTimeZone = _heroTimeService.ResolveEffectiveTimeZone(hero, utcNow);
         var todayLocalDate = _heroTimeService.GetLocalDate(utcNow, effectiveTimeZone);
 
-        var (hpLost, goldLost, heroDied, streakBroken, streakPenalty) =
-            _gameEngine.ApplyTaskFailure(task, hero, streak, economy, todayLocalDate);
+        var failureResult = _gameEngine.ApplyTaskFailure(task, hero, streak, economy, todayLocalDate);
 
         if (!await SaveChangesWithSingleRetryAsync())
             return Conflict(new { errorCode = "CONCURRENCY_CONFLICT", message = "Task state changed concurrently. Please retry." });
@@ -264,8 +263,8 @@ public class TaskController : ControllerBase
             TaskId = task.Id,
             TaskTitle = task.Title,
 
-            DamageDealt = hpLost,
-            GoldLost = goldLost,
+            DamageDealt = failureResult.HpLost,
+            GoldLost = failureResult.GoldLost,
 
             HeroId = hero.Id,
             NewHp = hero.CurrentHp,
@@ -274,7 +273,7 @@ public class TaskController : ControllerBase
             CurrentLevel = hero.Level,
             CurrentXp = hero.CurrentXp,
 
-            HeroDied = heroDied,
+            HeroDied = failureResult.HeroDied,
             DeathCount = hero.DeathCount,
             XpForNextLevel = hero.GetXpRequiredForNextLevel(),
             DailyCompletions = economy.DailyTaskCompletions,
@@ -282,18 +281,19 @@ public class TaskController : ControllerBase
             XpBoostPercent = hero.XpBoostPercent,
             XpBoostTasksRemaining = hero.XpBoostTasksRemaining,
 
-            StreakBroken = streakBroken,
-            StreakPenalty = streakPenalty != null
+            StreakBroken = failureResult.StreakBroken,
+            ShieldAbsorbed = failureResult.ShieldAbsorbed,
+            StreakPenalty = failureResult.Penalty != null
                 ? new StreakPenaltyDto
                 {
-                    StreakDays = streakPenalty.StreakDays,
-                    XpLost = streakPenalty.XpLost,
-                    GoldLost = streakPenalty.GoldLost,
-                    CooldownHours = streakPenalty.CooldownHours
+                    StreakDays = failureResult.Penalty.StreakDays,
+                    XpLost = failureResult.Penalty.XpLost,
+                    GoldLost = failureResult.Penalty.GoldLost,
+                    CooldownHours = failureResult.Penalty.CooldownHours
                 }
                 : null,
 
-            Message = GetFailureMessage(heroDied, hpLost, goldLost, streakBroken, streakPenalty)
+            Message = GetFailureMessage(failureResult.HeroDied, failureResult.HpLost, failureResult.GoldLost, failureResult.StreakBroken, failureResult.Penalty)
         };
 
         return Ok(response);
@@ -333,8 +333,7 @@ public class TaskController : ControllerBase
             var effectiveTimeZone = _heroTimeService.ResolveEffectiveTimeZone(hero, utcNow);
             var todayLocalDate = _heroTimeService.GetLocalDate(utcNow, effectiveTimeZone);
 
-            var (hpLost, goldLost, heroDied, streakBroken, streakPenalty) =
-                _gameEngine.ApplyTaskFailure(task, hero, streak, economy, todayLocalDate);
+            var failureResult = _gameEngine.ApplyTaskFailure(task, hero, streak, economy, todayLocalDate);
 
             task.OverdueProcessedAt = DateTimeOffset.UtcNow;
 
@@ -343,10 +342,10 @@ public class TaskController : ControllerBase
                 TaskId = task.Id,
                 TaskTitle = task.Title,
                 DueDate = task.DueDate!.Value,
-                HpLost = hpLost,
-                GoldLost = goldLost,
-                HeroDied = heroDied,
-                StreakBroken = streakBroken
+                HpLost = failureResult.HpLost,
+                GoldLost = failureResult.GoldLost,
+                HeroDied = failureResult.HeroDied,
+                StreakBroken = failureResult.StreakBroken
             });
         }
 
@@ -567,6 +566,7 @@ public class FailTaskResponse
     public bool HeroDied { get; set; }
     public int DeathCount { get; set; }
     public bool StreakBroken { get; set; }
+    public bool ShieldAbsorbed { get; set; }
     public StreakPenaltyDto? StreakPenalty { get; set; }
     public int XpBoostPercent { get; set; }
     public int XpBoostTasksRemaining { get; set; }
