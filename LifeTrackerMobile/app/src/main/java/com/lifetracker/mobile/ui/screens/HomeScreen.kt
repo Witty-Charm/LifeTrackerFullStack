@@ -6,6 +6,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -14,11 +16,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -92,12 +92,13 @@ fun HomeScreen(
 
     LaunchedEffect(createdTaskType) {
         createdTaskType?.let {
-            selectedTabState.value = when (it) {
-                UiTaskType.Habit -> HomeTab.Habits
-                UiTaskType.OneTime -> HomeTab.ToDos
-                UiTaskType.Daily -> HomeTab.Dailies
-                UiTaskType.Unknown -> HomeTab.ToDos
-            }
+            selectedTabState.value =
+                when (it) {
+                    UiTaskType.Habit -> HomeTab.Habits
+                    UiTaskType.OneTime -> HomeTab.ToDos
+                    UiTaskType.Daily -> HomeTab.Dailies
+                    UiTaskType.Unknown -> HomeTab.ToDos
+                }
         }
     }
 
@@ -106,7 +107,7 @@ fun HomeScreen(
         snackbarHost = {
             SnackbarHost(
                 hostState = shopSnackbar,
-                modifier = Modifier.padding(bottom = 80.dp)
+                modifier = Modifier.padding(bottom = 80.dp),
             )
         },
         topBar = {
@@ -126,16 +127,17 @@ fun HomeScreen(
                             leadingIcon = { Icon(Icons.Filled.EmojiEvents, contentDescription = null) },
                         )
                     }
-                }
+                },
             )
         },
         bottomBar = {
             val heroId = state.hero?.id
-            val route = if (selectedTab == HomeTab.Dailies && heroId != null) {
-                Screen.CreateDaily.route(heroId)
-            } else {
-                Screen.CreateTask.route
-            }
+            val route =
+                if (selectedTab == HomeTab.Dailies && heroId != null) {
+                    Screen.CreateDaily.route(heroId)
+                } else {
+                    Screen.CreateTask.route
+                }
             GameBottomNavigationBar(
                 selectedTab = selectedTab,
                 onTabSelected = onTabSelected,
@@ -145,14 +147,15 @@ fun HomeScreen(
         },
     ) { innerPadding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(
-                    start = innerPadding.calculateStartPadding(LocalLayoutDirection.current),
-                    end = innerPadding.calculateEndPadding(LocalLayoutDirection.current),
-                    bottom = innerPadding.calculateBottomPadding(),
-                    top = (innerPadding.calculateTopPadding() - 28.dp).coerceAtLeast(0.dp),
-                )
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(
+                        start = innerPadding.calculateStartPadding(LocalLayoutDirection.current),
+                        end = innerPadding.calculateEndPadding(LocalLayoutDirection.current),
+                        bottom = innerPadding.calculateBottomPadding(),
+                        top = (innerPadding.calculateTopPadding() - 28.dp).coerceAtLeast(0.dp),
+                    ),
         ) {
             when {
                 state.isLoading -> {
@@ -160,11 +163,12 @@ fun HomeScreen(
                         CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                     }
                 }
+
                 state.criticalError != null -> {
                     ErrorView(onRetry = { vm.loadData() })
                 }
+
                 else -> {
-                    val onHeal = remember { { vm.healHero() } }
                     val onRespawn = remember { { vm.respawnHero() } }
 
                     if (selectedTab == HomeTab.Shop) {
@@ -180,21 +184,20 @@ fun HomeScreen(
                         state.hero?.let { hero ->
                             HeroSection(
                                 hero = hero,
-                                onHeal = onHeal,
                                 onRespawn = onRespawn,
-                                isHealLoading = state.isHealLoading,
                                 isRespawnLoading = state.isRespawnLoading,
                             )
                             DailyObjectiveCard(hero = hero, modifier = Modifier.padding(top = 4.dp, bottom = 8.dp))
                         }
-                        val filteredTasks = remember(selectedTab, state.tasks) {
-                            when (selectedTab) {
-                                HomeTab.Habits  -> state.tasks.filter { it.type == UiTaskType.Habit }
-                                HomeTab.ToDos   -> state.tasks.filter { it.type == UiTaskType.OneTime }
-                                HomeTab.Dailies -> state.tasks.filter { it.type == UiTaskType.Daily }
-                                else -> emptyList()
+                        val filteredTasks =
+                            remember(selectedTab, state.tasks) {
+                                when (selectedTab) {
+                                    HomeTab.Habits -> state.tasks.filter { it.type == UiTaskType.Habit }
+                                    HomeTab.ToDos -> state.tasks.filter { it.type == UiTaskType.OneTime }
+                                    HomeTab.Dailies -> state.tasks.filter { it.type == UiTaskType.Daily }
+                                    else -> emptyList()
+                                }
                             }
-                        }
                         if (filteredTasks.isEmpty() && !state.isLoading) {
                             EmptyTasksPlaceholder()
                         } else {
