@@ -8,7 +8,6 @@ import kotlinx.collections.immutable.persistentSetOf
 import kotlin.time.Clock
 import kotlin.time.Instant
 
-
 @Immutable
 data class HeroScreenState(
     val hero: HeroUi? = null,
@@ -23,10 +22,11 @@ data class HeroScreenState(
 val HeroScreenState.isAnyActionLoading get() = loadingActions.isNotEmpty()
 val HeroScreenState.isHealLoading get() = "hero_heal" in loadingActions
 val HeroScreenState.isRespawnLoading get() = "hero_respawn" in loadingActions
+
 fun HeroScreenState.isTaskLoading(taskId: Int) =
     "task_complete_$taskId" in loadingActions ||
-    "task_fail_$taskId" in loadingActions ||
-    "task_delete_$taskId" in loadingActions
+        "task_fail_$taskId" in loadingActions ||
+        "task_delete_$taskId" in loadingActions
 
 @Immutable
 data class HeroUi(
@@ -99,32 +99,76 @@ data class ChecklistItemUi(
 
 sealed interface UiError {
     data object HeroDead : UiError
+
     data class DailyLimitReached(
         val completions: Int,
         val max: Int,
         val resetTime: String?,
     ) : UiError
+
     data class Validation(
         val fieldErrors: Map<String, List<String>>,
     ) : UiError
+
     data object Network : UiError
-    data class Generic(val message: String) : UiError
+
+    data class Generic(
+        val message: String,
+    ) : UiError
+}
+
+sealed interface TaskActionFeedback {
+    data class Completed(
+        val xpGained: Long,
+        val goldGained: Int,
+        val leveledUp: Boolean,
+        val newLevel: Int?,
+    ) : TaskActionFeedback
+
+    data class Failed(
+        val hpLost: Int,
+        val goldLost: Int,
+        val shieldAbsorbed: Boolean,
+    ) : TaskActionFeedback
 }
 
 sealed interface UiEvent {
-    data class ShowSnackbar(val message: String) : UiEvent
-    data class TaskCreated(val type: UiTaskType) : UiEvent
-    data class TaskCompleted(val message: String) : UiEvent
-    data class TaskFailed(val message: String) : UiEvent
+    data class ShowSnackbar(
+        val message: String,
+    ) : UiEvent
+
+    data class TaskCreated(
+        val type: UiTaskType,
+    ) : UiEvent
+
+    data class TaskAction(
+        val feedback: TaskActionFeedback,
+    ) : UiEvent
+
     data class HeroRespawned(
         val message: String,
         val recoveryEndsAt: Instant?,
     ) : UiEvent
-    data class HeroHealed(val message: String) : UiEvent
-    data class HeroGoldUpdated(val newGold: Int) : UiEvent
-    data class HeroHpUpdated(val newHp: Int, val maxHp: Int) : UiEvent
-    data class HeroXpBoostUpdated(val percent: Int, val tasksRemaining: Int) : UiEvent
+
+    data class HeroHealed(
+        val message: String,
+    ) : UiEvent
+
+    data class HeroGoldUpdated(
+        val newGold: Int,
+    ) : UiEvent
+
+    data class HeroHpUpdated(
+        val newHp: Int,
+        val maxHp: Int,
+    ) : UiEvent
+
+    data class HeroXpBoostUpdated(
+        val percent: Int,
+        val tasksRemaining: Int,
+    ) : UiEvent
 }
+
 @Immutable
 data class ShopScreenState(
     val items: ImmutableList<ShopItemUi> = persistentListOf(),
