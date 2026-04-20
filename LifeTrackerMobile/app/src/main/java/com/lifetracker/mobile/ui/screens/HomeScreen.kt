@@ -114,7 +114,7 @@ fun HomeScreen(
         snackbarHost = {
             SnackbarHost(
                 hostState = shopSnackbar,
-                modifier = Modifier.padding(bottom = 80.dp),
+                modifier = Modifier.padding(bottom = 104.dp),
             )
         },
         topBar = {
@@ -180,10 +180,11 @@ fun HomeScreen(
 
                     if (selectedTab == HomeTab.Shop) {
                         val hero = state.hero ?: return@Column
+                        val hasActiveShield = state.tasks.any { it.isShieldActive }
                         ShopScreen(
                             state = shopState,
                             hero = hero,
-                            onBuy = { itemId -> shopVm.buyItem(hero.id, itemId, hero.gold) },
+                            onBuy = { itemId -> shopVm.buyItem(hero.id, itemId, hero, hasActiveShield) },
                             onShowInventory = shopVm::showInventory,
                             snackbarHostState = shopSnackbar,
                         )

@@ -7,6 +7,7 @@ import com.lifetracker.mobile.domain.model.onSuccess
 import com.lifetracker.mobile.domain.usecase.shop.ShopUseCases
 import com.lifetracker.mobile.ui.mapper.toUi
 import com.lifetracker.mobile.ui.mapper.toUiError
+import com.lifetracker.mobile.ui.model.HeroUi
 import com.lifetracker.mobile.ui.model.ShopScreenState
 import com.lifetracker.mobile.ui.model.UiEvent
 import kotlinx.collections.immutable.toPersistentList
@@ -67,17 +68,26 @@ class ShopViewModel(
     fun buyItem(
         heroId: Int,
         itemId: Int,
-        heroGold: Int,
+        hero: HeroUi,
+        hasActiveShield: Boolean,
     ) {
         val key = ActionKeys.buy(itemId)
         viewModelScope.launch {
             _state.update { it.copy(actionError = null) }
 
-            val cost =
+            val item =
                 _state.value.items
                     .firstOrNull { it.id == itemId }
-                    ?.cost ?: 0
-            val previousGold = if (currentHeroGold > 0) currentHeroGold else heroGold
+                    ?: return@launch
+
+            val guardMessage = getPurchaseGuardMessage(item.itemType, hero, hasActiveShield)
+            if (guardMessage != null) {
+                _events.send(UiEvent.ShowSnackbar(guardMessage))
+                return@launch
+            }
+
+            val cost = item.cost
+            val previousGold = if (currentHeroGold > 0) currentHeroGold else hero.gold
             val optimisticGold = (previousGold - cost).coerceAtLeast(0)
             currentHeroGold = optimisticGold
             _state.update { state ->
@@ -125,6 +135,19 @@ class ShopViewModel(
     }
 
     fun dismissError() = _state.update { it.copy(actionError = null) }
+
+    private fun getPurchaseGuardMessage(
+        itemType: Int,
+        hero: HeroUi,
+        hasActiveShield: Boolean,
+    ): String? =
+        when {
+            itemType in 1..2 && hero.currentHp >= hero.maxHp -> "HP is already full."
+            itemType == 3 && hero.xpBoostPercent > 0 && hero.xpBoostTasksRemaining > 0 -> "XP Boost is already active."
+            itemType == 4 && hasActiveShield -> "Shield is already active."
+            itemType == 5 && !hero.isInRecovery -> "Revival Token is not needed right now."
+            else -> null
+        }
 
     private fun loadItems(heroId: Int) {
         viewModelScope.launch {

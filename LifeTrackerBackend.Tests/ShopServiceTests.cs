@@ -128,7 +128,85 @@ public class ShopServiceTests
         var (result, error) = await service.BuyItemAsync(hero.Id, item.Id, null, null);
 
         Assert.Null(result);
-        Assert.Equal("Revival Token can only be used during recovery.", error);
+        Assert.Equal("Revival Token is not needed right now.", error);
+        Assert.Equal(200, db.Heroes.Single().Gold);
+        Assert.Empty(db.Purchases);
+    }
+
+    [Fact]
+    public async Task BuyItem_HealthPotion_RejectsWhenHpIsFull()
+    {
+        var db = CreateContext(nameof(BuyItem_HealthPotion_RejectsWhenHpIsFull));
+        var hero = new Hero { Id = 1, CurrentHp = 20, MaxHp = 20, Gold = 100 };
+        var item = new ShopItem { Id = 1, Name = "Health Potion", ItemType = 1, EffectValue = 15, Price = 20 };
+        db.Heroes.Add(hero);
+        db.ShopItems.Add(item);
+        await db.SaveChangesAsync();
+
+        var service = CreateService(db);
+        var (result, error) = await service.BuyItemAsync(hero.Id, item.Id, null, null);
+
+        Assert.Null(result);
+        Assert.Equal("HP is already full.", error);
+        Assert.Equal(100, db.Heroes.Single().Gold);
+        Assert.Empty(db.Purchases);
+    }
+
+    [Fact]
+    public async Task BuyItem_ElixirOfLife_RejectsWhenHpIsFull()
+    {
+        var db = CreateContext(nameof(BuyItem_ElixirOfLife_RejectsWhenHpIsFull));
+        var hero = new Hero { Id = 1, CurrentHp = 50, MaxHp = 50, Gold = 150 };
+        var item = new ShopItem { Id = 1, Name = "Elixir of Life", ItemType = 2, EffectValue = 100, Price = 40 };
+        db.Heroes.Add(hero);
+        db.ShopItems.Add(item);
+        await db.SaveChangesAsync();
+
+        var service = CreateService(db);
+        var (result, error) = await service.BuyItemAsync(hero.Id, item.Id, null, null);
+
+        Assert.Null(result);
+        Assert.Equal("HP is already full.", error);
+        Assert.Equal(150, db.Heroes.Single().Gold);
+        Assert.Empty(db.Purchases);
+    }
+
+    [Fact]
+    public async Task BuyItem_XpBoost_RejectsWhenBoostIsAlreadyActive()
+    {
+        var db = CreateContext(nameof(BuyItem_XpBoost_RejectsWhenBoostIsAlreadyActive));
+        var hero = new Hero { Id = 1, Gold = 200, XpBoostPercent = 25, XpBoostTasksRemaining = 3 };
+        var item = new ShopItem { Id = 1, Name = "XP Boost", ItemType = 3, EffectValue = 25, Price = 60 };
+        db.Heroes.Add(hero);
+        db.ShopItems.Add(item);
+        await db.SaveChangesAsync();
+
+        var service = CreateService(db);
+        var (result, error) = await service.BuyItemAsync(hero.Id, item.Id, null, null);
+
+        Assert.Null(result);
+        Assert.Equal("XP Boost is already active.", error);
+        Assert.Equal(200, db.Heroes.Single().Gold);
+        Assert.Empty(db.Purchases);
+    }
+
+    [Fact]
+    public async Task BuyItem_StreakShield_RejectsWhenShieldIsAlreadyActive()
+    {
+        var db = CreateContext(nameof(BuyItem_StreakShield_RejectsWhenShieldIsAlreadyActive));
+        var hero = new Hero { Id = 1, Gold = 200 };
+        var item = new ShopItem { Id = 1, Name = "Streak Shield", ItemType = 4, EffectValue = 1, Price = 80 };
+        var now = DateTimeOffset.UtcNow;
+        db.Heroes.Add(hero);
+        db.ShopItems.Add(item);
+        db.Streaks.Add(new Streak { Id = 1, HeroId = hero.Id, CurrentDays = 5, IsShieldActive = true, ShieldExpiresAtUtc = now.AddHours(2) });
+        await db.SaveChangesAsync();
+
+        var service = CreateService(db);
+        var (result, error) = await service.BuyItemAsync(hero.Id, item.Id, "UTC", now);
+
+        Assert.Null(result);
+        Assert.Equal("Shield is already active until local midnight.", error);
         Assert.Equal(200, db.Heroes.Single().Gold);
         Assert.Empty(db.Purchases);
     }

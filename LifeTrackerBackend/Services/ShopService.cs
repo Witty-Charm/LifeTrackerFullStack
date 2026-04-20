@@ -39,8 +39,9 @@ public class ShopService : IShopService
         if (item.ItemType == 4 && !string.IsNullOrWhiteSpace(clientTimeZone) && !_heroTimeService.IsValidIana(clientTimeZone))
             return (null, "Invalid IANA timezone id");
 
-        if (item.ItemType == 5 && !hero.IsInRecovery())
-            return (null, "Revival Token can only be used during recovery.");
+        var purchaseValidationError = await GetPurchaseValidationErrorAsync(hero, item, clientLocalDateTime);
+        if (purchaseValidationError is not null)
+            return (null, purchaseValidationError);
 
         if (hero.Gold < item.Price)
             return (null, $"Not enough gold. Need {item.Price}, have {hero.Gold}.");
@@ -124,6 +125,28 @@ public class ShopService : IShopService
 
     private static ShopItemDto MapItemToDto(ShopItem item) =>
         new(item.Id, item.Name, item.Description, item.Price, item.ItemType, item.EffectValue);
+
+    private async Task<string?> GetPurchaseValidationErrorAsync(Hero hero, ShopItem item, DateTimeOffset? clientLocalDateTime)
+    {
+        if (item.ItemType is 1 or 2 && hero.CurrentHp >= hero.MaxHp)
+            return "HP is already full.";
+
+        if (item.ItemType == 3 && hero.XpBoostPercent > 0 && hero.XpBoostTasksRemaining > 0)
+            return "XP Boost is already active.";
+
+        if (item.ItemType == 4)
+        {
+            var now = clientLocalDateTime ?? DateTimeOffset.UtcNow;
+            var hasActiveShield = await _db.Streaks.AnyAsync(s => s.HeroId == hero.Id && s.IsShieldActive && s.ShieldExpiresAtUtc >= now);
+            if (hasActiveShield)
+                return "Shield is already active until local midnight.";
+        }
+
+        if (item.ItemType == 5 && !hero.IsInRecovery())
+            return "Revival Token is not needed right now.";
+
+        return null;
+    }
 
     private static string ApplyHeal(Hero hero, int healAmount)
     {

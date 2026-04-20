@@ -39,6 +39,8 @@ data class HeroUi(
     val hpProgress: Float,
     val goldText: String,
     val gold: Int,
+    val currentHp: Int,
+    val maxHp: Int,
     val isDead: Boolean,
     val isInRecovery: Boolean,
     val xpBoostPercent: Int = 0,

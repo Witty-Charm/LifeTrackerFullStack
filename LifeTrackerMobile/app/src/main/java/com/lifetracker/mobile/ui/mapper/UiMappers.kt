@@ -1,24 +1,24 @@
 package com.lifetracker.mobile.ui.mapper
 
+import com.lifetracker.mobile.core.serialization.JsonDefaults
+import com.lifetracker.mobile.domain.model.ChecklistItem
 import com.lifetracker.mobile.domain.model.GameTaskDomain
 import com.lifetracker.mobile.domain.model.HeroDomain
 import com.lifetracker.mobile.domain.model.InventoryItemDomain
 import com.lifetracker.mobile.domain.model.ShopItemDomain
 import com.lifetracker.mobile.domain.model.TaskDifficulty
 import com.lifetracker.mobile.domain.model.TaskType
-import com.lifetracker.mobile.core.serialization.JsonDefaults
-import com.lifetracker.mobile.domain.model.ChecklistItem
 import com.lifetracker.mobile.ui.model.ChecklistItemUi
+import com.lifetracker.mobile.ui.model.HeroStatusBadge
+import com.lifetracker.mobile.ui.model.HeroUi
 import com.lifetracker.mobile.ui.model.InventoryItemUi
 import com.lifetracker.mobile.ui.model.ShopItemUi
+import com.lifetracker.mobile.ui.model.TaskUi
 import com.lifetracker.mobile.ui.model.UiDifficulty
+import com.lifetracker.mobile.ui.model.UiTaskType
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
-import com.lifetracker.mobile.ui.model.UiTaskType
-import com.lifetracker.mobile.ui.model.HeroStatusBadge
-import com.lifetracker.mobile.ui.model.HeroUi
-import com.lifetracker.mobile.ui.model.TaskUi
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toJavaLocalDate
 import kotlinx.datetime.toLocalDateTime
@@ -27,88 +27,101 @@ import java.time.format.FormatStyle
 import java.util.Locale
 import kotlin.time.Instant
 
-fun HeroDomain.toUi(): HeroUi = HeroUi(
-    id = id,
-    name = name,
-    level = level,
-    xpText = "%,d / %,d XP".format(currentXp, maxXp),
-    xpProgress = xpProgress,
-    hpText = "$currentHp / $maxHp HP",
-    hpProgress = hpProgress,
-    goldText = "%,d Gold".format(gold),
-    gold = gold,
-    isDead = isDead,
-    isInRecovery = isInRecovery,
-    xpBoostPercent = xpBoostPercent,
-    xpBoostTasksRemaining = xpBoostTasksRemaining,
-    dailyText = "$dailyCompletions / $dailyCompletionsMax tasks today",
-    dailyProgress = dailyProgress,
-    statusBadge = when {
-        isDead -> HeroStatusBadge.Dead
-        isInRecovery -> HeroStatusBadge.Recovery
-        else -> HeroStatusBadge.Alive
-    },
-)
+fun HeroDomain.toUi(): HeroUi =
+    HeroUi(
+        id = id,
+        name = name,
+        level = level,
+        xpText = "%,d / %,d XP".format(currentXp, maxXp),
+        xpProgress = xpProgress,
+        hpText = "$currentHp / $maxHp HP",
+        hpProgress = hpProgress,
+        goldText = "%,d Gold".format(gold),
+        gold = gold,
+        currentHp = currentHp,
+        maxHp = maxHp,
+        isDead = isDead,
+        isInRecovery = isInRecovery,
+        xpBoostPercent = xpBoostPercent,
+        xpBoostTasksRemaining = xpBoostTasksRemaining,
+        dailyText = "$dailyCompletions / $dailyCompletionsMax tasks today",
+        dailyProgress = dailyProgress,
+        statusBadge =
+            when {
+                isDead -> HeroStatusBadge.Dead
+                isInRecovery -> HeroStatusBadge.Recovery
+                else -> HeroStatusBadge.Alive
+            },
+    )
 
-fun GameTaskDomain.toUi(): TaskUi = TaskUi(
-    id = id,
-    title = title,
-    description = description,
-    type = when (type) {
-        TaskType.Habit   -> UiTaskType.Habit
+fun GameTaskDomain.toUi(): TaskUi =
+    TaskUi(
+        id = id,
+        title = title,
+        description = description,
+        type =
+            when (type) {
+                TaskType.Habit -> UiTaskType.Habit
+                TaskType.OneTime -> UiTaskType.OneTime
+                TaskType.Daily -> UiTaskType.Daily
+                TaskType.Unknown -> UiTaskType.Unknown
+            },
+        difficultyLabel =
+            when (difficulty) {
+                TaskDifficulty.Easy -> "Easy"
+                TaskDifficulty.Medium -> "Medium"
+                TaskDifficulty.Hard -> "Hard"
+                TaskDifficulty.Epic -> "Epic"
+                TaskDifficulty.Unknown -> "Unknown"
+            },
+        difficultyColor =
+            when (difficulty) {
+                TaskDifficulty.Easy -> 0xFF4CAF50
+                TaskDifficulty.Medium -> 0xFFFFC107
+                TaskDifficulty.Hard -> 0xFFFF5722
+                TaskDifficulty.Epic -> 0xFF9C27B0
+                TaskDifficulty.Unknown -> 0xFF9E9E9E
+            },
+        isCompleted = isCompleted,
+        isOverdue = isOverdue,
+        dueDateText = dueDate?.toDisplayDate(),
+        repeatPatternText = repeatPattern?.toRepeatText(),
+        checklistItems = parseChecklist(checklistJson),
+        rewardText = "+$baseXp XP +$baseGold Gold",
+        penaltyText = "-$hpPenalty HP -$goldPenalty Gold",
+        streakText =
+            streak
+                ?.takeIf { it.currentDays > 0 }
+                ?.let { "\uD83D\uDD25 ${it.currentDays} days (+${it.bonusXpPercent}%)" },
+        isPendingSync = pendingSync,
+        syncError = syncError,
+        shieldExpiresAtUtc = streak?.shieldExpiresAtUtc,
+        isShieldActive = streak?.isShieldActive ?: false,
+    )
+
+fun TaskType.toUi(): UiTaskType =
+    when (this) {
+        TaskType.Habit -> UiTaskType.Habit
         TaskType.OneTime -> UiTaskType.OneTime
-        TaskType.Daily   -> UiTaskType.Daily
+        TaskType.Daily -> UiTaskType.Daily
         TaskType.Unknown -> UiTaskType.Unknown
-    },
-    difficultyLabel = when (difficulty) {
-        TaskDifficulty.Easy    -> "Easy"
-        TaskDifficulty.Medium  -> "Medium"
-        TaskDifficulty.Hard    -> "Hard"
-        TaskDifficulty.Epic    -> "Epic"
-        TaskDifficulty.Unknown -> "Unknown"
-    },
-    difficultyColor = when (difficulty) {
-        TaskDifficulty.Easy   -> 0xFF4CAF50
-        TaskDifficulty.Medium -> 0xFFFFC107
-        TaskDifficulty.Hard   -> 0xFFFF5722
-        TaskDifficulty.Epic   -> 0xFF9C27B0
-        TaskDifficulty.Unknown -> 0xFF9E9E9E
-    },
-    isCompleted = isCompleted,
-    isOverdue = isOverdue,
-    dueDateText = dueDate?.toDisplayDate(),
-    repeatPatternText = repeatPattern?.toRepeatText(),
-    checklistItems = parseChecklist(checklistJson),
-    rewardText = "+$baseXp XP +$baseGold Gold",
-    penaltyText = "-$hpPenalty HP -$goldPenalty Gold",
-    streakText = streak?.takeIf { it.currentDays > 0 }
-        ?.let { "\uD83D\uDD25 ${it.currentDays} days (+${it.bonusXpPercent}%)" },
-    isPendingSync = pendingSync,
-    syncError = syncError,
-    shieldExpiresAtUtc = streak?.shieldExpiresAtUtc,
-    isShieldActive = streak?.isShieldActive ?: false,
-)
+    }
 
-fun TaskType.toUi(): UiTaskType = when (this) {
-    TaskType.Habit -> UiTaskType.Habit
-    TaskType.OneTime -> UiTaskType.OneTime
-    TaskType.Daily -> UiTaskType.Daily
-    TaskType.Unknown -> UiTaskType.Unknown
-}
+fun UiTaskType.toDomain(): TaskType =
+    when (this) {
+        UiTaskType.Habit -> TaskType.Habit
+        UiTaskType.OneTime -> TaskType.OneTime
+        UiTaskType.Daily -> TaskType.Daily
+        UiTaskType.Unknown -> TaskType.Unknown
+    }
 
-fun UiTaskType.toDomain(): TaskType = when (this) {
-    UiTaskType.Habit   -> TaskType.Habit
-    UiTaskType.OneTime -> TaskType.OneTime
-    UiTaskType.Daily   -> TaskType.Daily
-    UiTaskType.Unknown -> TaskType.Unknown
-}
-
-fun UiDifficulty.toDomain(): TaskDifficulty = when (this) {
-    UiDifficulty.Easy   -> TaskDifficulty.Easy
-    UiDifficulty.Medium -> TaskDifficulty.Medium
-    UiDifficulty.Hard   -> TaskDifficulty.Hard
-    UiDifficulty.Epic   -> TaskDifficulty.Epic
-}
+fun UiDifficulty.toDomain(): TaskDifficulty =
+    when (this) {
+        UiDifficulty.Easy -> TaskDifficulty.Easy
+        UiDifficulty.Medium -> TaskDifficulty.Medium
+        UiDifficulty.Hard -> TaskDifficulty.Hard
+        UiDifficulty.Epic -> TaskDifficulty.Epic
+    }
 
 private val shortDateFormatter: DateTimeFormatter by lazy {
     DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT).withLocale(Locale.getDefault())
@@ -136,27 +149,31 @@ private fun parseChecklist(checklistJson: String?): ImmutableList<ChecklistItemU
     if (checklistJson.isNullOrBlank()) return persistentListOf()
     return runCatching {
         JsonDefaults.decodeFromString<List<ChecklistItem>>(checklistJson)
-    }
-        .onFailure { timber.log.Timber.w(it, "parseChecklist: failed to parse JSON") }
+    }.onFailure { timber.log.Timber.w(it, "parseChecklist: failed to parse JSON") }
         .getOrDefault(emptyList())
         .map { ChecklistItemUi(id = it.id, text = it.text, isCompleted = it.isCompleted) }
         .toImmutableList()
 }
 
-fun ShopItemDomain.toUi(heroGold: Int): ShopItemUi = ShopItemUi(
-    id = id,
-    name = name,
-    description = description,
-    cost = price,
-    itemType = itemType,
-    effectValue = effectValue,
-    canAfford = heroGold >= price,
-)
+fun ShopItemDomain.toUi(heroGold: Int): ShopItemUi =
+    ShopItemUi(
+        id = id,
+        name = name,
+        description = description,
+        cost = price,
+        itemType = itemType,
+        effectValue = effectValue,
+        canAfford = heroGold >= price,
+    )
 
-fun InventoryItemDomain.toUi(heroGold: Int): InventoryItemUi = InventoryItemUi(
-    purchaseId = purchaseId,
-    item = item.toUi(heroGold),
-    purchasedAt = purchasedAt.toLocalDateTime(TimeZone.currentSystemDefault())
-        .date.toJavaLocalDate()
-        .format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(Locale.getDefault())),
-)
+fun InventoryItemDomain.toUi(heroGold: Int): InventoryItemUi =
+    InventoryItemUi(
+        purchaseId = purchaseId,
+        item = item.toUi(heroGold),
+        purchasedAt =
+            purchasedAt
+                .toLocalDateTime(TimeZone.currentSystemDefault())
+                .date
+                .toJavaLocalDate()
+                .format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(Locale.getDefault())),
+    )

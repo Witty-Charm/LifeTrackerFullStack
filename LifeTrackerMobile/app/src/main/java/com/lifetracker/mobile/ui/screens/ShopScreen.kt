@@ -29,7 +29,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -97,8 +96,6 @@ fun ShopScreen(
         } else {
             InventoryList(state = state)
         }
-
-        SnackbarHost(hostState = snackbarHostState, modifier = Modifier.padding(bottom = 8.dp))
     }
 }
 
