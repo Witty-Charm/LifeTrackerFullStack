@@ -6,6 +6,7 @@ data class HeroUseCases(
     val getFirstHero: GetFirstHeroUseCase,
     val createHero: CreateHeroUseCase,
     val getHeroStats: GetHeroStatsUseCase,
+    val getHeroAchievements: GetHeroAchievementsUseCase,
     val respawnHero: RespawnHeroUseCase,
     val healHero: HealHeroUseCase,
     val updateHeroTimeZone: UpdateHeroTimeZoneUseCase,

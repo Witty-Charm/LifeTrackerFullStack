@@ -21,6 +21,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddSingleton<GameEngineService>();
+builder.Services.AddScoped<LifeTracker.Services.Achievements.AchievementService>();
 builder.Services.AddScoped<IShopService, ShopService>();
 builder.Services.AddScoped<LifeTracker.Services.Time.IHeroTimeService, LifeTracker.Services.Time.HeroTimeService>();
 builder.Services.AddProblemDetails();

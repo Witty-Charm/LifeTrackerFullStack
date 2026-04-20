@@ -13,6 +13,7 @@ data class TaskCompletionResult(
     val currentStreak: Int,
     val message: String,
     val heroSnapshot: HeroSnapshot,
+    val unlockedAchievements: List<AchievementDomain> = emptyList(),
 )
 
 data class TaskFailureResult(

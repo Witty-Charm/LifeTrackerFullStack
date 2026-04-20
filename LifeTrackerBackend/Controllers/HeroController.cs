@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using LifeTracker.Data;
 using LifeTracker.Models;
 using LifeTracker.Constants;
+using LifeTracker.Services.Achievements;
 using LifeTracker.Services.Time;
 
 namespace LifeTracker.Controllers;
@@ -12,11 +13,18 @@ namespace LifeTracker.Controllers;
 public class HeroController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
+    private readonly AchievementService _achievementService;
     private readonly IHeroTimeService _heroTimeService;
 
     public HeroController(ApplicationDbContext context, IHeroTimeService heroTimeService)
+        : this(context, new AchievementService(context), heroTimeService)
+    {
+    }
+
+    public HeroController(ApplicationDbContext context, AchievementService achievementService, IHeroTimeService heroTimeService)
     {
         _context = context;
+        _achievementService = achievementService;
         _heroTimeService = heroTimeService;
     }
 
@@ -106,6 +114,23 @@ public class HeroController : ControllerBase
         hero.EconomyBalance = economy;
 
         return CreatedAtAction(nameof(GetHero), new { id = hero.Id }, MapToDto(hero));
+    }
+
+    [HttpGet("{id}/achievements")]
+    public async Task<ActionResult<HeroAchievementsResponse>> GetAchievements(int id)
+    {
+        var heroExists = await _context.Heroes.AnyAsync(h => h.Id == id);
+        if (!heroExists)
+            return NotFound();
+
+        var achievements = await _achievementService.GetAchievementsAsync(id);
+        return Ok(new HeroAchievementsResponse
+        {
+            HeroId = id,
+            TotalCount = achievements.Count,
+            UnlockedCount = achievements.Count(x => x.Unlocked),
+            Achievements = achievements.ToList()
+        });
     }
 
     [HttpGet("{id}/stats")]
@@ -355,6 +380,14 @@ public class CreateHeroRequest
 {
     public string Name { get; set; } = string.Empty;
     public int? StartingGold { get; set; }
+}
+
+public class HeroAchievementsResponse
+{
+    public int HeroId { get; set; }
+    public int TotalCount { get; set; }
+    public int UnlockedCount { get; set; }
+    public List<AchievementListItem> Achievements { get; set; } = new();
 }
 
 public class HeroStatsDto

@@ -11,6 +11,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.lifetracker.mobile.ui.model.HeroScreenState
 import com.lifetracker.mobile.ui.model.UiTaskType
+import com.lifetracker.mobile.ui.screens.AchievementsScreenRoot
 import com.lifetracker.mobile.ui.screens.CreateDailyScreen
 import com.lifetracker.mobile.ui.screens.CreateHeroScreen
 import com.lifetracker.mobile.ui.screens.CreateTaskScreen
@@ -33,6 +34,12 @@ sealed interface Screen {
 
     data object CreateTask : Screen {
         override val route = "create_task"
+    }
+
+    data object Achievements : Screen {
+        override val route = "achievements/{heroId}"
+
+        fun route(heroId: Int) = "achievements/$heroId"
     }
 
     data object CreateDaily : Screen {
@@ -85,6 +92,14 @@ fun NavGraph(
 
         composable(Screen.CreateHero.route) {
             CreateHeroScreen(state = state, vm = vm, navController = navController)
+        }
+
+        composable(
+            route = Screen.Achievements.route,
+            arguments = listOf(navArgument("heroId") { type = NavType.IntType }),
+        ) { backStackEntry ->
+            val heroId = backStackEntry.arguments?.getInt("heroId") ?: return@composable
+            AchievementsScreenRoot(heroId = heroId, onBack = { navController.popBackStack() })
         }
 
         composable(

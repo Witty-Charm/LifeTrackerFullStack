@@ -26,6 +26,7 @@ import com.lifetracker.mobile.domain.repository.ShopRepository
 import com.lifetracker.mobile.domain.repository.TaskRepository
 import com.lifetracker.mobile.domain.usecase.hero.CreateHeroUseCase
 import com.lifetracker.mobile.domain.usecase.hero.GetFirstHeroUseCase
+import com.lifetracker.mobile.domain.usecase.hero.GetHeroAchievementsUseCase
 import com.lifetracker.mobile.domain.usecase.hero.GetHeroStatsUseCase
 import com.lifetracker.mobile.domain.usecase.hero.GetHeroUseCase
 import com.lifetracker.mobile.domain.usecase.hero.GetHeroesUseCase
@@ -50,6 +51,7 @@ import com.lifetracker.mobile.domain.usecase.task.GetTaskUseCase
 import com.lifetracker.mobile.domain.usecase.task.GetTasksUseCase
 import com.lifetracker.mobile.domain.usecase.task.RetryTaskSyncUseCase
 import com.lifetracker.mobile.domain.usecase.task.TaskUseCases
+import com.lifetracker.mobile.ui.viewmodel.AchievementsViewModel
 import com.lifetracker.mobile.ui.viewmodel.CreateDailyViewModel
 import com.lifetracker.mobile.ui.viewmodel.HeroViewModel
 import com.lifetracker.mobile.ui.viewmodel.ShopViewModel
@@ -58,94 +60,98 @@ import org.koin.core.module.dsl.viewModel
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
 
-val appModule = module {
-    single { JsonDefaults }
-    single { SafeApiCaller(json = get()) }
-    single { NetworkModule.provideOkHttpClient(isDebug = BuildConfig.DEBUG) }
-    single { NetworkModule.provideApi(baseUrl = BuildConfig.BASE_URL, client = get(), json = get()) }
-    single { SyncScheduler(workManager = get()) }
-    single { ReminderScheduler(workManager = get(), json = get()) }
+val appModule =
+    module {
+        single { JsonDefaults }
+        single { SafeApiCaller(json = get()) }
+        single { NetworkModule.provideOkHttpClient(isDebug = BuildConfig.DEBUG) }
+        single { NetworkModule.provideApi(baseUrl = BuildConfig.BASE_URL, client = get(), json = get()) }
+        single { SyncScheduler(workManager = get()) }
+        single { ReminderScheduler(workManager = get(), json = get()) }
 
-    single<HeroRepository> { HeroRepositoryImpl(api = get(), caller = get(), heroDao = get()) }
-    single<TaskRepository> { TaskRepositoryImpl(api = get(), caller = get(), taskDao = get(), syncScheduler = get()) }
-    single<ShopRepository> { ShopRepositoryImpl(api = get(), caller = get()) }
+        single<HeroRepository> { HeroRepositoryImpl(api = get(), caller = get(), heroDao = get()) }
+        single<TaskRepository> { TaskRepositoryImpl(api = get(), caller = get(), taskDao = get(), syncScheduler = get()) }
+        single<ShopRepository> { ShopRepositoryImpl(api = get(), caller = get()) }
 
-    single<DataStore<Preferences>> {
-        PreferenceDataStoreFactory.create {
-            androidContext().preferencesDataStoreFile("settings")
+        single<DataStore<Preferences>> {
+            PreferenceDataStoreFactory.create {
+                androidContext().preferencesDataStoreFile("settings")
+            }
         }
-    }
-    single<SettingsRepository> { DataStoreSettingsRepository(dataStore = get()) }
-    single {
-        ThemeSettingsUseCases(
-            observeThemeMode = ObserveThemeModeUseCase(get()),
-            setThemeMode = SetThemeModeUseCase(get()),
-        )
-    }
-    single { ThemeController(themeSettingsUseCases = get()) }
+        single<SettingsRepository> { DataStoreSettingsRepository(dataStore = get()) }
+        single {
+            ThemeSettingsUseCases(
+                observeThemeMode = ObserveThemeModeUseCase(get()),
+                setThemeMode = SetThemeModeUseCase(get()),
+            )
+        }
+        single { ThemeController(themeSettingsUseCases = get()) }
 
-    single {
-        val heroRepo: HeroRepository = get()
-        HeroUseCases(
-            getHeroes = GetHeroesUseCase(heroRepo),
-            getHero = GetHeroUseCase(heroRepo),
-            getFirstHero = GetFirstHeroUseCase(heroRepo),
-            createHero = CreateHeroUseCase(heroRepo),
-            getHeroStats = GetHeroStatsUseCase(heroRepo),
-            respawnHero = RespawnHeroUseCase(heroRepo),
-            healHero = HealHeroUseCase(heroRepo),
-            updateHeroTimeZone = UpdateHeroTimeZoneUseCase(heroRepo),
-        )
-    }
+        single {
+            val heroRepo: HeroRepository = get()
+            HeroUseCases(
+                getHeroes = GetHeroesUseCase(heroRepo),
+                getHero = GetHeroUseCase(heroRepo),
+                getFirstHero = GetFirstHeroUseCase(heroRepo),
+                createHero = CreateHeroUseCase(heroRepo),
+                getHeroStats = GetHeroStatsUseCase(heroRepo),
+                getHeroAchievements = GetHeroAchievementsUseCase(heroRepo),
+                respawnHero = RespawnHeroUseCase(heroRepo),
+                healHero = HealHeroUseCase(heroRepo),
+                updateHeroTimeZone = UpdateHeroTimeZoneUseCase(heroRepo),
+            )
+        }
 
-    single {
-        val heroUseCases: HeroUseCases = get()
-        HeroTimeZoneSyncManager(
-            getFirstHero = { heroUseCases.getFirstHero() },
-            updateHeroTimeZone = { heroId, timeZoneId ->
-                heroUseCases.updateHeroTimeZone(heroId, timeZoneId)
-            },
-        )
-    }
-    single {
-        val taskRepo: TaskRepository = get()
-        TaskUseCases(
-            getTask = GetTaskUseCase(taskRepo),
-            getTasks = GetTasksUseCase(taskRepo),
-            completeTask = CompleteTaskUseCase(taskRepo),
-            createTask = CreateTaskUseCase(taskRepo),
-            failTask = FailTaskUseCase(taskRepo),
-            deleteTask = DeleteTaskUseCase(taskRepo),
-            checkOverdue = CheckOverdueTasksUseCase(taskRepo),
-            retryTaskSync = RetryTaskSyncUseCase(taskRepo),
-            deleteLocalTask = DeleteLocalTaskUseCase(taskRepo),
-        )
-    }
-    single {
-        val shopRepo: ShopRepository = get()
-        ShopUseCases(
-            getShopItems = GetShopItemsUseCase(shopRepo),
-            buyItem = BuyItemUseCase(shopRepo),
-            getInventory = GetInventoryUseCase(shopRepo),
-        )
-    }
+        single {
+            val heroUseCases: HeroUseCases = get()
+            HeroTimeZoneSyncManager(
+                getFirstHero = { heroUseCases.getFirstHero() },
+                updateHeroTimeZone = { heroId, timeZoneId ->
+                    heroUseCases.updateHeroTimeZone(heroId, timeZoneId)
+                },
+            )
+        }
+        single {
+            val taskRepo: TaskRepository = get()
+            TaskUseCases(
+                getTask = GetTaskUseCase(taskRepo),
+                getTasks = GetTasksUseCase(taskRepo),
+                completeTask = CompleteTaskUseCase(taskRepo),
+                createTask = CreateTaskUseCase(taskRepo),
+                failTask = FailTaskUseCase(taskRepo),
+                deleteTask = DeleteTaskUseCase(taskRepo),
+                checkOverdue = CheckOverdueTasksUseCase(taskRepo),
+                retryTaskSync = RetryTaskSyncUseCase(taskRepo),
+                deleteLocalTask = DeleteLocalTaskUseCase(taskRepo),
+            )
+        }
+        single {
+            val shopRepo: ShopRepository = get()
+            ShopUseCases(
+                getShopItems = GetShopItemsUseCase(shopRepo),
+                buyItem = BuyItemUseCase(shopRepo),
+                getInventory = GetInventoryUseCase(shopRepo),
+            )
+        }
 
-    viewModel { params ->
-        CreateDailyViewModel(
-            heroId = params.get(),
-            taskUseCases = get(),
-            reminderScheduler = get(),
-        )
-    }
-    viewModelOf(::HeroViewModel)
-    viewModelOf(::ShopViewModel)
+        viewModel { params ->
+            CreateDailyViewModel(
+                heroId = params.get(),
+                taskUseCases = get(),
+                reminderScheduler = get(),
+            )
+        }
+        viewModelOf(::HeroViewModel)
+        viewModelOf(::ShopViewModel)
+        viewModelOf(::AchievementsViewModel)
 
-    single {
-        Room.databaseBuilder(androidContext(), AppDatabase::class.java, "lifetracker.db")
-            .addMigrations(MIGRATION_2_3, MIGRATION_3_4)
-            .fallbackToDestructiveMigration(dropAllTables = true)
-            .build()
+        single {
+            Room
+                .databaseBuilder(androidContext(), AppDatabase::class.java, "lifetracker.db")
+                .addMigrations(MIGRATION_2_3, MIGRATION_3_4)
+                .fallbackToDestructiveMigration(dropAllTables = true)
+                .build()
+        }
+        single { get<AppDatabase>().heroDao() }
+        single { get<AppDatabase>().taskDao() }
     }
-    single { get<AppDatabase>().heroDao() }
-    single { get<AppDatabase>().taskDao() }
-}

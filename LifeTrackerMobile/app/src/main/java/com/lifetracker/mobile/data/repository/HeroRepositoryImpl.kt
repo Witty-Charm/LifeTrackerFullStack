@@ -22,17 +22,19 @@ class HeroRepositoryImpl(
     private val caller: SafeApiCaller,
     private val heroDao: HeroDao,
 ) : HeroRepository {
-
     override suspend fun getHeroes(): DomainResult<List<HeroDomain>> {
-        val remote = caller.safeApiCall { api.getHeroes() }
-            .map { list -> list.map { it.toDomain() } }
-            .toDomainResult()
+        val remote =
+            caller
+                .safeApiCall { api.getHeroes() }
+                .map { list -> list.map { it.toDomain() } }
+                .toDomainResult()
 
         return when (remote) {
             is DomainResult.Success -> {
                 remote.data.forEach { heroDao.upsert(it.toEntity()) }
                 remote
             }
+
             is DomainResult.Failure -> {
                 val local = heroDao.getAll().map { it.toDomain() }
                 if (local.isNotEmpty()) {
@@ -46,15 +48,18 @@ class HeroRepositoryImpl(
     }
 
     override suspend fun getHero(id: Int): DomainResult<HeroDomain> {
-        val remote = caller.safeApiCall { api.getHero(id) }
-            .map { it.toDomain() }
-            .toDomainResult()
+        val remote =
+            caller
+                .safeApiCall { api.getHero(id) }
+                .map { it.toDomain() }
+                .toDomainResult()
 
         return when (remote) {
             is DomainResult.Success -> {
                 heroDao.upsert(remote.data.toEntity())
                 remote
             }
+
             is DomainResult.Failure -> {
                 val local = heroDao.getById(id)?.toDomain()
                 if (local != null) DomainResult.Success(local) else remote
@@ -63,15 +68,18 @@ class HeroRepositoryImpl(
     }
 
     override suspend fun getFirstHero(): DomainResult<HeroDomain?> {
-        val remote = caller.safeApiCall { api.getHeroes() }
-            .map { it.firstOrNull()?.toDomain() }
-            .toDomainResult()
+        val remote =
+            caller
+                .safeApiCall { api.getHeroes() }
+                .map { it.firstOrNull()?.toDomain() }
+                .toDomainResult()
 
         return when (remote) {
             is DomainResult.Success -> {
                 remote.data?.let { heroDao.upsert(it.toEntity()) }
                 remote
             }
+
             is DomainResult.Failure -> {
                 val local = heroDao.getFirst()?.toDomain()
                 if (local != null) DomainResult.Success(local) else remote
@@ -83,9 +91,12 @@ class HeroRepositoryImpl(
         name: String,
         startingGold: Int?,
     ): DomainResult<HeroDomain> {
-        val remote = caller.safeApiCall {
-            api.createHero(CreateHeroRequest(name = name, startingGold = startingGold))
-        }.map { it.toDomain() }.toDomainResult()
+        val remote =
+            caller
+                .safeApiCall {
+                    api.createHero(CreateHeroRequest(name = name, startingGold = startingGold))
+                }.map { it.toDomain() }
+                .toDomainResult()
 
         if (remote is DomainResult.Success) {
             heroDao.upsert(remote.data.toEntity())
@@ -94,14 +105,23 @@ class HeroRepositoryImpl(
     }
 
     override suspend fun getHeroStats(heroId: Int): DomainResult<HeroStatsDomain> =
-        caller.safeApiCall { api.getHeroStats(heroId) }
+        caller
+            .safeApiCall { api.getHeroStats(heroId) }
+            .map { it.toDomain() }
+            .toDomainResult()
+
+    override suspend fun getHeroAchievements(heroId: Int): DomainResult<List<com.lifetracker.mobile.domain.model.AchievementDomain>> =
+        caller
+            .safeApiCall { api.getHeroAchievements(heroId) }
             .map { it.toDomain() }
             .toDomainResult()
 
     override suspend fun respawnHero(heroId: Int): DomainResult<RespawnResult> {
-        val remote = caller.safeApiCall { api.respawnHero(heroId) }
-            .map { it.toDomain() }
-            .toDomainResult()
+        val remote =
+            caller
+                .safeApiCall { api.respawnHero(heroId) }
+                .map { it.toDomain() }
+                .toDomainResult()
 
         if (remote is DomainResult.Success) {
             heroDao.getById(heroId)?.let { entity ->
@@ -113,7 +133,7 @@ class HeroRepositoryImpl(
                         isInRecovery = remote.data.recoveryDebuffActive,
                         recoveryMultiplier = remote.data.recoveryMultiplier,
                         deathCount = remote.data.deathCount,
-                    )
+                    ),
                 )
             }
         }
@@ -124,9 +144,11 @@ class HeroRepositoryImpl(
         heroId: Int,
         amount: Int?,
     ): DomainResult<HealResult> {
-        val remote = caller.safeApiCall { api.healHero(heroId, amount) }
-            .map { it.toDomain() }
-            .toDomainResult()
+        val remote =
+            caller
+                .safeApiCall { api.healHero(heroId, amount) }
+                .map { it.toDomain() }
+                .toDomainResult()
 
         if (remote is DomainResult.Success) {
             heroDao.getById(heroId)?.let { entity ->
@@ -135,27 +157,45 @@ class HeroRepositoryImpl(
                         currentHp = remote.data.newHp,
                         maxHp = remote.data.maxHp,
                         gold = remote.data.newGold,
-                    )
+                    ),
                 )
             }
         }
         return remote
     }
 
-    override suspend fun updateHeroTimeZone(heroId: Int, timeZoneId: String): DomainResult<Unit> {
-        val remote = caller.safeApiCallUnit {
-            api.updateHeroTimeZone(heroId, UpdateHeroTimeZoneRequest(timeZoneId = timeZoneId))
-        }
+    override suspend fun updateHeroTimeZone(
+        heroId: Int,
+        timeZoneId: String,
+    ): DomainResult<Unit> {
+        val remote =
+            caller.safeApiCallUnit {
+                api.updateHeroTimeZone(heroId, UpdateHeroTimeZoneRequest(timeZoneId = timeZoneId))
+            }
 
         return when (remote) {
-            is com.lifetracker.mobile.core.network.NetworkResult.Success -> DomainResult.Success(Unit)
-            is com.lifetracker.mobile.core.network.NetworkResult.Error -> DomainResult.Failure(remote.apiError.toDomain())
-            is com.lifetracker.mobile.core.network.NetworkResult.Exception -> DomainResult.Failure(
-                when (remote.throwable) {
-                    is java.io.IOException -> com.lifetracker.mobile.domain.model.GameError.Network
-                    else -> com.lifetracker.mobile.domain.model.GameError.Unknown(remote.throwable.message ?: "Unexpected error")
-                }
-            )
+            is com.lifetracker.mobile.core.network.NetworkResult.Success -> {
+                DomainResult.Success(Unit)
+            }
+
+            is com.lifetracker.mobile.core.network.NetworkResult.Error -> {
+                DomainResult.Failure(remote.apiError.toDomain())
+            }
+
+            is com.lifetracker.mobile.core.network.NetworkResult.Exception -> {
+                DomainResult.Failure(
+                    when (remote.throwable) {
+                        is java.io.IOException -> {
+                            com.lifetracker.mobile.domain.model.GameError.Network
+                        }
+
+                        else -> {
+                            com.lifetracker.mobile.domain.model.GameError
+                                .Unknown(remote.throwable.message ?: "Unexpected error")
+                        }
+                    },
+                )
+            }
         }
     }
 }

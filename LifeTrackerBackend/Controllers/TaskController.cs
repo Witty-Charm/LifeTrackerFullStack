@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using LifeTracker.Data;
 using LifeTracker.Models;
 using LifeTracker.Services;
+using LifeTracker.Services.Achievements;
 using LifeTracker.Services.Time;
 
 namespace LifeTracker.Controllers;
@@ -14,12 +15,19 @@ public class TaskController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
     private readonly GameEngineService _gameEngine;
+    private readonly AchievementService _achievementService;
     private readonly IHeroTimeService _heroTimeService;
 
     public TaskController(ApplicationDbContext context, GameEngineService gameEngine, IHeroTimeService heroTimeService)
+        : this(context, gameEngine, new AchievementService(context), heroTimeService)
+    {
+    }
+
+    public TaskController(ApplicationDbContext context, GameEngineService gameEngine, AchievementService achievementService, IHeroTimeService heroTimeService)
     {
         _context = context;
         _gameEngine = gameEngine;
+        _achievementService = achievementService;
         _heroTimeService = heroTimeService;
     }
 
@@ -179,11 +187,20 @@ public class TaskController : ControllerBase
             streak.RegisterSuccess(todayLocalDate, utcNow);
         }
 
+        await using var transaction = await _context.Database.BeginTransactionAsync();
+
         var (xpReward, goldReward, leveledUp, streakBonus) =
             _gameEngine.ApplyTaskCompletion(task, hero, streak, economy, todayLocalDate);
 
         if (!await SaveChangesWithSingleRetryAsync())
             return Conflict(new { errorCode = "CONCURRENCY_CONFLICT", message = "Task state changed concurrently. Please retry." });
+
+        var unlockedAchievements = await _achievementService.EvaluateAndStageNewUnlocksAsync(hero.Id);
+
+        if (!await SaveChangesWithSingleRetryAsync())
+            return Conflict(new { errorCode = "CONCURRENCY_CONFLICT", message = "Task state changed concurrently. Please retry." });
+
+        await transaction.CommitAsync();
 
         return Ok(new CompleteTaskResponse
         {
@@ -206,6 +223,7 @@ public class TaskController : ControllerBase
             DeathCount = hero.DeathCount,
             XpBoostPercent = hero.XpBoostPercent,
             XpBoostTasksRemaining = hero.XpBoostTasksRemaining,
+            UnlockedAchievements = unlockedAchievements.ToList(),
 
             StreakBonus = streakBonus,
             CurrentStreak = streak?.CurrentDays ?? 0,
@@ -544,6 +562,7 @@ public class CompleteTaskResponse
     public int MaxDailyCompletions { get; set; }
     public int XpBoostPercent { get; set; }
     public int XpBoostTasksRemaining { get; set; }
+    public List<AchievementUnlock> UnlockedAchievements { get; set; } = new();
     public string Message { get; set; } = string.Empty;
 }
 

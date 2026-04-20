@@ -7,6 +7,7 @@ import com.lifetracker.mobile.data.remote.dto.CreateHeroRequest
 import com.lifetracker.mobile.data.remote.dto.CreateTaskRequest
 import com.lifetracker.mobile.data.remote.dto.FailTaskResponse
 import com.lifetracker.mobile.data.remote.dto.HealResponse
+import com.lifetracker.mobile.data.remote.dto.HeroAchievementsResponseDto
 import com.lifetracker.mobile.data.remote.dto.HeroDto
 import com.lifetracker.mobile.data.remote.dto.HeroStatsDto
 import com.lifetracker.mobile.data.remote.dto.OverdueCheckResponse
@@ -26,18 +27,28 @@ import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface LifeTrackerApi {
-
     @GET("api/Hero")
     suspend fun getHeroes(): Response<List<HeroDto>>
 
     @GET("api/Hero/{id}")
-    suspend fun getHero(@Path("id") id: Int): Response<HeroDto>
+    suspend fun getHero(
+        @Path("id") id: Int,
+    ): Response<HeroDto>
 
     @POST("api/Hero")
-    suspend fun createHero(@Body request: CreateHeroRequest): Response<HeroDto>
+    suspend fun createHero(
+        @Body request: CreateHeroRequest,
+    ): Response<HeroDto>
 
     @GET("api/Hero/{id}/stats")
-    suspend fun getHeroStats(@Path("id") id: Int): Response<HeroStatsDto>
+    suspend fun getHeroStats(
+        @Path("id") id: Int,
+    ): Response<HeroStatsDto>
+
+    @GET("api/Hero/{id}/achievements")
+    suspend fun getHeroAchievements(
+        @Path("id") id: Int,
+    ): Response<HeroAchievementsResponseDto>
 
     @PATCH("api/Hero/{id}/timezone")
     suspend fun updateHeroTimeZone(
@@ -46,7 +57,9 @@ interface LifeTrackerApi {
     ): Response<Unit>
 
     @POST("api/Hero/{id}/respawn")
-    suspend fun respawnHero(@Path("id") id: Int): Response<RespawnResponse>
+    suspend fun respawnHero(
+        @Path("id") id: Int,
+    ): Response<RespawnResponse>
 
     @POST("api/Hero/{id}/heal")
     suspend fun healHero(
@@ -55,32 +68,50 @@ interface LifeTrackerApi {
     ): Response<HealResponse>
 
     @GET("api/Task")
-    suspend fun getTasks(@Query("heroId") heroId: Int? = null): Response<List<TaskDto>>
+    suspend fun getTasks(
+        @Query("heroId") heroId: Int? = null,
+    ): Response<List<TaskDto>>
 
     @GET("api/Task/{id}")
-    suspend fun getTask(@Path("id") id: Int): Response<TaskDto>
+    suspend fun getTask(
+        @Path("id") id: Int,
+    ): Response<TaskDto>
 
     @POST("api/Task")
-    suspend fun createTask(@Body request: CreateTaskRequest): Response<TaskDto>
+    suspend fun createTask(
+        @Body request: CreateTaskRequest,
+    ): Response<TaskDto>
 
     @PUT("api/Task/{id}/complete")
-    suspend fun completeTask(@Path("id") id: Int): Response<CompleteTaskResponse>
+    suspend fun completeTask(
+        @Path("id") id: Int,
+    ): Response<CompleteTaskResponse>
 
     @PUT("api/Task/{id}/fail")
-    suspend fun failTask(@Path("id") id: Int): Response<FailTaskResponse>
+    suspend fun failTask(
+        @Path("id") id: Int,
+    ): Response<FailTaskResponse>
 
     @POST("api/Task/check-overdue")
-    suspend fun checkOverdueTasks(@Query("heroId") heroId: Int? = null): Response<OverdueCheckResponse>
+    suspend fun checkOverdueTasks(
+        @Query("heroId") heroId: Int? = null,
+    ): Response<OverdueCheckResponse>
 
     @DELETE("api/Task/{id}")
-    suspend fun deleteTask(@Path("id") id: Int): Response<Unit>
+    suspend fun deleteTask(
+        @Path("id") id: Int,
+    ): Response<Unit>
 
     @GET("api/Shop/items")
     suspend fun getShopItems(): Response<List<ShopItemDto>>
 
     @POST("api/Shop/buy")
-    suspend fun buyItem(@Body request: BuyItemRequestDto): Response<BuyResultDto>
+    suspend fun buyItem(
+        @Body request: BuyItemRequestDto,
+    ): Response<BuyResultDto>
 
     @GET("api/Shop/inventory/{heroId}")
-    suspend fun getInventory(@Path("heroId") heroId: Int): Response<List<PurchasedItemDto>>
+    suspend fun getInventory(
+        @Path("heroId") heroId: Int,
+    ): Response<List<PurchasedItemDto>>
 }

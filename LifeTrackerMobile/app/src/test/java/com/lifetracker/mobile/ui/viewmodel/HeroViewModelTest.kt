@@ -1,6 +1,7 @@
 package com.lifetracker.mobile.ui.viewmodel
 
 import androidx.work.WorkManager
+import com.lifetracker.mobile.domain.model.AchievementDomain
 import com.lifetracker.mobile.domain.model.CreateTaskParams
 import com.lifetracker.mobile.domain.model.DomainResult
 import com.lifetracker.mobile.domain.model.GameError
@@ -18,6 +19,7 @@ import com.lifetracker.mobile.domain.repository.HeroRepository
 import com.lifetracker.mobile.domain.repository.TaskRepository
 import com.lifetracker.mobile.domain.usecase.hero.CreateHeroUseCase
 import com.lifetracker.mobile.domain.usecase.hero.GetFirstHeroUseCase
+import com.lifetracker.mobile.domain.usecase.hero.GetHeroAchievementsUseCase
 import com.lifetracker.mobile.domain.usecase.hero.GetHeroStatsUseCase
 import com.lifetracker.mobile.domain.usecase.hero.GetHeroUseCase
 import com.lifetracker.mobile.domain.usecase.hero.GetHeroesUseCase
@@ -35,11 +37,15 @@ import com.lifetracker.mobile.domain.usecase.task.GetTaskUseCase
 import com.lifetracker.mobile.domain.usecase.task.GetTasksUseCase
 import com.lifetracker.mobile.domain.usecase.task.RetryTaskSyncUseCase
 import com.lifetracker.mobile.domain.usecase.task.TaskUseCases
+import com.lifetracker.mobile.ui.model.UiEvent
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -50,6 +56,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import java.util.UUID
+import kotlin.time.Instant
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HeroViewModelTest {
@@ -124,6 +131,58 @@ class HeroViewModelTest {
             assertEquals(1, taskRepository.checkOverdueCalls)
         }
 
+    @Test
+    fun completeTask_sendsAchievementSnackbar_whenResponseContainsUnlockedAchievements() =
+        runTest {
+            val heroRepository = FakeHeroRepository()
+            val taskRepository =
+                FakeTaskRepository().apply {
+                    completeTaskResult =
+                        DomainResult.Success(
+                            TaskCompletionResult(
+                                taskId = 1,
+                                taskTitle = "Task",
+                                xpGained = 10,
+                                goldGained = 8,
+                                leveledUp = false,
+                                newLevel = 3,
+                                streakBonus = 0,
+                                currentStreak = 0,
+                                message = "Task completed!",
+                                heroSnapshot = createHeroSnapshot(gold = 33),
+                                unlockedAchievements =
+                                    listOf(
+                                        AchievementDomain(
+                                            key = "tasks_10",
+                                            title = "Task Starter",
+                                            description = "Complete 10 tasks.",
+                                            category = "TasksCompleted",
+                                            threshold = 10,
+                                            sortOrder = 10,
+                                            goldReward = 25,
+                                            unlocked = true,
+                                            unlockedAt = Instant.parse("2026-04-20T10:00:00Z"),
+                                        ),
+                                    ),
+                            ),
+                        )
+                }
+            val viewModel = buildViewModel(heroRepository, taskRepository)
+            advanceUntilIdle()
+
+            val eventsDeferred = async { viewModel.events.take(2).toList() }
+
+            viewModel.completeTask(1)
+            advanceUntilIdle()
+
+            val events = eventsDeferred.await()
+            assertEquals(2, events.size)
+            assertEquals(
+                UiEvent.ShowSnackbar("Achievement unlocked: Task Starter (+25 Gold)"),
+                events[1],
+            )
+        }
+
     private fun buildViewModel(
         heroRepository: FakeHeroRepository,
         taskRepository: FakeTaskRepository,
@@ -139,6 +198,7 @@ class HeroViewModelTest {
                     getFirstHero = GetFirstHeroUseCase(heroRepository),
                     createHero = CreateHeroUseCase(heroRepository),
                     getHeroStats = GetHeroStatsUseCase(heroRepository),
+                    getHeroAchievements = GetHeroAchievementsUseCase(heroRepository),
                     respawnHero = RespawnHeroUseCase(heroRepository),
                     healHero = HealHeroUseCase(heroRepository),
                     updateHeroTimeZone = UpdateHeroTimeZoneUseCase(heroRepository),
@@ -160,6 +220,7 @@ class HeroViewModelTest {
     }
 
     private class FakeHeroRepository : HeroRepository {
+        var achievementsResult: DomainResult<List<AchievementDomain>> = DomainResult.Success(emptyList())
         var getFirstHeroCalls: Int = 0
         private val hero = createTestHero()
 
@@ -180,6 +241,8 @@ class HeroViewModelTest {
         override suspend fun getHeroStats(heroId: Int): DomainResult<HeroStatsDomain> =
             DomainResult.Failure(GameError.Unknown("Not used in this test"))
 
+        override suspend fun getHeroAchievements(heroId: Int): DomainResult<List<AchievementDomain>> = achievementsResult
+
         override suspend fun respawnHero(heroId: Int): DomainResult<RespawnResult> =
             DomainResult.Failure(GameError.Unknown("Not used in this test"))
 
@@ -197,6 +260,7 @@ class HeroViewModelTest {
     private class FakeTaskRepository : TaskRepository {
         var getTasksCalls: Int = 0
         var checkOverdueCalls: Int = 0
+        var completeTaskResult: DomainResult<TaskCompletionResult> = DomainResult.Failure(GameError.Unknown("Not used in this test"))
         private val tasks = listOf(createTestTask())
 
         override suspend fun getTasks(heroId: Int): DomainResult<List<GameTaskDomain>> {
@@ -209,8 +273,7 @@ class HeroViewModelTest {
         override suspend fun createTask(params: CreateTaskParams): DomainResult<GameTaskDomain> =
             DomainResult.Failure(GameError.Unknown("Not used in this test"))
 
-        override suspend fun completeTask(taskId: Int): DomainResult<TaskCompletionResult> =
-            DomainResult.Failure(GameError.Unknown("Not used in this test"))
+        override suspend fun completeTask(taskId: Int): DomainResult<TaskCompletionResult> = completeTaskResult
 
         override suspend fun failTask(taskId: Int): DomainResult<TaskFailureResult> =
             DomainResult.Failure(GameError.Unknown("Not used in this test"))
@@ -246,6 +309,23 @@ class HeroViewModelTest {
                 xpBoostTasksRemaining = 0,
                 dailyCompletions = 1,
                 dailyCompletionsMax = 5,
+            )
+
+        private fun createHeroSnapshot(gold: Int) =
+            com.lifetracker.mobile.domain.model.HeroSnapshot(
+                heroId = 1,
+                level = 3,
+                currentXp = 40,
+                xpForNextLevel = 100,
+                currentHp = 90,
+                maxHp = 100,
+                gold = gold,
+                deathCount = 0,
+                dailyCompletions = 1,
+                dailyCompletionsMax = 5,
+                isDead = false,
+                xpBoostPercent = 0,
+                xpBoostTasksRemaining = 0,
             )
 
         private fun createTestTask() =
