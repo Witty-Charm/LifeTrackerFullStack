@@ -16,17 +16,15 @@ public class HeroController : ControllerBase
     private readonly AchievementService _achievementService;
     private readonly IHeroTimeService _heroTimeService;
 
-    public HeroController(ApplicationDbContext context, IHeroTimeService heroTimeService)
-        : this(context, new AchievementService(context), heroTimeService)
-    {
-    }
-
     public HeroController(ApplicationDbContext context, AchievementService achievementService, IHeroTimeService heroTimeService)
     {
         _context = context;
         _achievementService = achievementService;
         _heroTimeService = heroTimeService;
     }
+
+    internal static HeroController CreateForTests(ApplicationDbContext context, IHeroTimeService heroTimeService) =>
+        new(context, new AchievementService(context), heroTimeService);
 
     [HttpGet]
     public async Task<ActionResult<IEnumerable<HeroDto>>> GetHeroes()

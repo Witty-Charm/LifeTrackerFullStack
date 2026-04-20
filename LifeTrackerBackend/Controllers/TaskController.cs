@@ -18,11 +18,6 @@ public class TaskController : ControllerBase
     private readonly AchievementService _achievementService;
     private readonly IHeroTimeService _heroTimeService;
 
-    public TaskController(ApplicationDbContext context, GameEngineService gameEngine, IHeroTimeService heroTimeService)
-        : this(context, gameEngine, new AchievementService(context), heroTimeService)
-    {
-    }
-
     public TaskController(ApplicationDbContext context, GameEngineService gameEngine, AchievementService achievementService, IHeroTimeService heroTimeService)
     {
         _context = context;
@@ -30,6 +25,9 @@ public class TaskController : ControllerBase
         _achievementService = achievementService;
         _heroTimeService = heroTimeService;
     }
+
+    internal static TaskController CreateForTests(ApplicationDbContext context, GameEngineService gameEngine, IHeroTimeService heroTimeService) =>
+        new(context, gameEngine, new AchievementService(context), heroTimeService);
 
     [HttpGet]
     public async Task<ActionResult<IEnumerable<TaskDto>>> GetTasks([FromQuery] int? heroId = null)
