@@ -39,6 +39,9 @@ public class ShopService : IShopService
         if (item.ItemType == 4 && !string.IsNullOrWhiteSpace(clientTimeZone) && !_heroTimeService.IsValidIana(clientTimeZone))
             return (null, "Invalid IANA timezone id");
 
+        if (item.ItemType == 5 && !hero.IsInRecovery())
+            return (null, "Revival Token can only be used during recovery.");
+
         if (hero.Gold < item.Price)
             return (null, $"Not enough gold. Need {item.Price}, have {hero.Gold}.");
 
@@ -94,7 +97,9 @@ public class ShopService : IShopService
             Message: $"Purchased {item.Name} for {item.Price} gold!",
             Effect: effectMessage,
             XpBoostPercent: hero.XpBoostPercent,
-            XpBoostTasksRemaining: hero.XpBoostTasksRemaining
+            XpBoostTasksRemaining: hero.XpBoostTasksRemaining,
+            RecoveryDebuffActive: hero.IsInRecovery(),
+            RecoveryMultiplier: hero.GetRecoveryMultiplier()
         );
         return (result, null);
     }

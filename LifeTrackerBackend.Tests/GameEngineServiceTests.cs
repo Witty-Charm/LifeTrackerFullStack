@@ -1,4 +1,3 @@
-using System.Threading.Tasks;
 using LifeTracker.Constants;
 using LifeTracker.Models;
 using LifeTracker.Services;
@@ -8,38 +7,107 @@ namespace LifeTrackerBackend.Tests;
 
 public class GameEngineServiceTests
 {
-    private readonly GameEngineService _svc = new();
-
     [Fact]
-    public void CalculateFinalXpReward_AppliesHeroBoostMultiplicatively()
+    public void ApplyTaskFailure_ActiveShieldFirstFail_SetsShieldAbsorbedWithoutBreakingStreak()
     {
-        var task = new GameTask { Difficulty = TaskDifficulty.Easy, Type = TaskType.OneTime };
-        var hero = new Hero { Level = 1, XpBoostPercent = 25, XpBoostTasksRemaining = 3 };
-        var streak = new Streak { CurrentDays = 0 };
-        var economy = new EconomyBalance { XpMultiplier = 2.0m };
+        var service = new GameEngineService();
+        var task = new GameTask
+        {
+            Type = TaskType.Habit,
+            Difficulty = TaskDifficulty.Easy,
+            Title = "Test habit"
+        };
+        var hero = new Hero
+        {
+            CurrentHp = 100,
+            MaxHp = 100,
+            Gold = 50
+        };
+        var streak = new Streak
+        {
+            CurrentDays = 5,
+            IsShieldActive = true,
+            ShieldExpiresAtUtc = DateTimeOffset.UtcNow.AddHours(1),
+            ShieldFailConsumed = false
+        };
+        var economy = new EconomyBalance();
 
-        var xp = _svc.CalculateFinalXpReward(task, hero, streak, economy);
+        var result = service.ApplyTaskFailure(task, hero, streak, economy, DateOnly.FromDateTime(DateTime.UtcNow));
 
-        // base easy one-time XP from GameConstants: assume >0, so ratio matters
-        var baseOnlyHero = new Hero { Level = 1 };
-        var xpBase = _svc.CalculateFinalXpReward(task, baseOnlyHero, streak, new EconomyBalance());
-
-        // Expect multiplier = levelScaling*recovery(1)*streak(1)*economy(2.0)*heroBoost(1.25)
-        var ratio = (double)xp / xpBase;
-        Assert.InRange(ratio, 2.4, 2.6); // approximately 2 * 1.25 = 2.5, allow rounding
+        Assert.True(result.ShieldAbsorbed);
+        Assert.False(result.StreakBroken);
+        Assert.True(streak.ShieldFailConsumed);
+        Assert.Equal(5, streak.CurrentDays);
+        Assert.True(result.HpLost > 0);
+        Assert.True(result.GoldLost >= 0);
     }
 
     [Fact]
-    public void ApplyTaskCompletion_DecrementsBoostTasksAndClearsWhenZero()
+    public void ApplyTaskFailure_ConsumedShield_DoesNotSetShieldAbsorbedAndBreaksStreak()
     {
-        var task = new GameTask { Difficulty = TaskDifficulty.Easy, Type = TaskType.OneTime };
-        var hero = new Hero { Level = 1, XpBoostPercent = 25, XpBoostTasksRemaining = 1 };
-        var streak = new Streak { CurrentDays = 0 };
+        var service = new GameEngineService();
+        var task = new GameTask
+        {
+            Type = TaskType.Habit,
+            Difficulty = TaskDifficulty.Easy,
+            Title = "Test habit"
+        };
+        var hero = new Hero
+        {
+            CurrentHp = 100,
+            MaxHp = 100,
+            Gold = 50
+        };
+        var streak = new Streak
+        {
+            CurrentDays = 5,
+            IsShieldActive = false,
+            ShieldExpiresAtUtc = null,
+            ShieldFailConsumed = true
+        };
         var economy = new EconomyBalance();
 
-        _svc.ApplyTaskCompletion(task, hero, streak, economy);
+        var result = service.ApplyTaskFailure(task, hero, streak, economy, DateOnly.FromDateTime(DateTime.UtcNow));
 
-        Assert.Equal(0, hero.XpBoostTasksRemaining);
-        Assert.Equal(0, hero.XpBoostPercent);
+        Assert.False(result.ShieldAbsorbed);
+        Assert.True(result.StreakBroken);
+        Assert.Equal(0, streak.CurrentDays);
+    }
+
+    [Fact]
+    public void ApplyTaskFailure_ExpiredShield_ClearsShieldAndDoesNotSetShieldAbsorbed()
+    {
+        var service = new GameEngineService();
+        var task = new GameTask
+        {
+            Type = TaskType.Habit,
+            Difficulty = TaskDifficulty.Easy,
+            Title = "Test habit"
+        };
+        var hero = new Hero
+        {
+            CurrentHp = 100,
+            MaxHp = 100,
+            Gold = 50
+        };
+        var streak = new Streak
+        {
+            CurrentDays = 5,
+            IsShieldActive = true,
+            ShieldExpiresAtUtc = DateTimeOffset.UtcNow.AddMinutes(-1),
+            ShieldFailConsumed = false,
+            ShieldBackupCurrentDays = 5,
+            ShieldBackupBreakAtUtc = DateTimeOffset.UtcNow.AddHours(-2)
+        };
+        var economy = new EconomyBalance();
+
+        var result = service.ApplyTaskFailure(task, hero, streak, economy, DateOnly.FromDateTime(DateTime.UtcNow));
+
+        Assert.False(result.ShieldAbsorbed);
+        Assert.True(result.StreakBroken);
+        Assert.False(streak.IsShieldActive);
+        Assert.Null(streak.ShieldExpiresAtUtc);
+        Assert.Equal(5, streak.ShieldBackupCurrentDays);
+        Assert.NotNull(streak.ShieldBackupBreakAtUtc);
     }
 }

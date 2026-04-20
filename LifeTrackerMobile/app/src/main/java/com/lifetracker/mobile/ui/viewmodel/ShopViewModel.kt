@@ -99,6 +99,7 @@ class ShopViewModel(
                     _events.send(UiEvent.HeroGoldUpdated(result.newGold))
                     _events.send(UiEvent.HeroHpUpdated(result.newHp, result.maxHp))
                     _events.send(UiEvent.HeroXpBoostUpdated(result.xpBoostPercent, result.xpBoostTasksRemaining))
+                    _events.send(UiEvent.HeroRecoveryUpdated(result.recoveryDebuffActive, result.recoveryMultiplier))
                     _events.send(UiEvent.ShowSnackbar(result.message))
                     viewModelScope.launch { loadInventory(currentHeroId) }
                 }.onFailure { error ->

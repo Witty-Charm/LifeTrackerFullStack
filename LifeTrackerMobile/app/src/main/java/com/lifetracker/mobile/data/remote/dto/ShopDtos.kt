@@ -28,8 +28,11 @@ data class BuyResultDto(
     @SerialName("maxHp") val maxHp: Int,
     @SerialName("purchasedItem") val purchasedItem: ShopItemDto,
     @SerialName("message") val message: String,
+    @SerialName("effect") val effect: String = "",
     @SerialName("xpBoostPercent") val xpBoostPercent: Int = 0,
     @SerialName("xpBoostTasksRemaining") val xpBoostTasksRemaining: Int = 0,
+    @SerialName("recoveryDebuffActive") val recoveryDebuffActive: Boolean = false,
+    @SerialName("recoveryMultiplier") val recoveryMultiplier: Double = 1.0,
 )
 
 @Serializable

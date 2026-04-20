@@ -306,6 +306,13 @@ class HeroViewModel(
         updateHero { copy(xpBoostPercent = percent, xpBoostTasksRemaining = tasksRemaining) }
     }
 
+    fun updateHeroRecovery(
+        isInRecovery: Boolean,
+        recoveryMultiplier: Double,
+    ) {
+        updateHero { copy(isInRecovery = isInRecovery, recoveryMultiplier = recoveryMultiplier) }
+    }
+
     fun clearError() {
         _state.update { it.copy(criticalError = null, actionError = null) }
     }

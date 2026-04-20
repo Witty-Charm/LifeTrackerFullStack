@@ -90,6 +90,7 @@ fun HomeScreen(
                 is UiEvent.HeroGoldUpdated -> vm.updateHeroGold(event.newGold)
                 is UiEvent.HeroHpUpdated -> vm.updateHeroHp(event.newHp, event.maxHp)
                 is UiEvent.HeroXpBoostUpdated -> vm.updateHeroXpBoost(event.percent, event.tasksRemaining)
+                is UiEvent.HeroRecoveryUpdated -> vm.updateHeroRecovery(event.isInRecovery, event.recoveryMultiplier)
                 is UiEvent.ShowSnackbar -> launch { shopSnackbar.showSnackbar(event.message) }
                 else -> Unit
             }

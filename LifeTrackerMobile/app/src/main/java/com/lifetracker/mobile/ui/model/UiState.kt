@@ -167,6 +167,11 @@ sealed interface UiEvent {
         val percent: Int,
         val tasksRemaining: Int,
     ) : UiEvent
+
+    data class HeroRecoveryUpdated(
+        val isInRecovery: Boolean,
+        val recoveryMultiplier: Double,
+    ) : UiEvent
 }
 
 @Immutable

@@ -112,6 +112,10 @@ class MainActivity : ComponentActivity() {
                             is UiEvent.HeroXpBoostUpdated -> {
                                 Unit
                             }
+
+                            is UiEvent.HeroRecoveryUpdated -> {
+                                Unit
+                            }
                         }
                     }
                 }

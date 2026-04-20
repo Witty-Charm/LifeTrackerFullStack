@@ -241,5 +241,6 @@ internal fun iconForItemType(itemType: Int): ImageVector =
         2 -> Icons.Filled.Science
         3 -> Icons.Filled.Star
         4 -> Icons.Filled.Shield
+        5 -> Icons.Filled.Inventory2
         else -> Icons.Filled.Star
     }

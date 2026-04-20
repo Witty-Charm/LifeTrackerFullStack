@@ -11,7 +11,7 @@ public record BuyItemRequest(
     DateTimeOffset? ClientLocalDateTime = null
 );
 
-public record BuyResultDto(int NewGold, int NewHp, int MaxHp, ShopItemDto PurchasedItem, string Message, string Effect, int XpBoostPercent, int XpBoostTasksRemaining);
+public record BuyResultDto(int NewGold, int NewHp, int MaxHp, ShopItemDto PurchasedItem, string Message, string Effect, int XpBoostPercent, int XpBoostTasksRemaining, bool RecoveryDebuffActive, double RecoveryMultiplier);
 
 public record PurchasedItemDto(int PurchaseId, ShopItemDto Item, DateTimeOffset PurchasedAt);
 
