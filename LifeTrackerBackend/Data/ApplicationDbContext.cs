@@ -28,6 +28,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<EconomyBalance> EconomyBalances { get; set; }
     public DbSet<ShopItem> ShopItems { get; set; }
     public DbSet<Purchase> Purchases { get; set; }
+    public DbSet<HeroAchievement> HeroAchievements { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -79,6 +80,16 @@ public class ApplicationDbContext : DbContext
 
         modelBuilder.Entity<Purchase>()
             .HasIndex(p => p.HeroId);
+
+        modelBuilder.Entity<HeroAchievement>()
+            .HasIndex(a => new { a.HeroId, a.Key })
+            .IsUnique();
+
+        modelBuilder.Entity<HeroAchievement>()
+            .Property(a => a.UnlockedAt)
+            .HasConversion(
+                value => value,
+                value => DateTime.SpecifyKind(value, DateTimeKind.Utc));
 
         modelBuilder.Entity<Streak>()
             .Property(s => s.RowVersion)

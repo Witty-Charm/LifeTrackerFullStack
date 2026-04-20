@@ -77,6 +77,7 @@ data class CompleteTaskResponse(
     val deathCount: Int,
     val xpBoostPercent: Int = 0,
     val xpBoostTasksRemaining: Int = 0,
+    val unlockedAchievements: List<AchievementDto> = emptyList(),
     val message: String,
 )
 

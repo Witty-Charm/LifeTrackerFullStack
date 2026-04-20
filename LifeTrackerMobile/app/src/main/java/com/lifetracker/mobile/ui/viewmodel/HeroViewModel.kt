@@ -170,6 +170,9 @@ class HeroViewModel(
                             ),
                         ),
                     )
+                    for (achievement in result.unlockedAchievements) {
+                        _events.send(UiEvent.ShowSnackbar("Achievement unlocked: ${achievement.title} (+${achievement.goldReward} Gold)"))
+                    }
                 }
         }
 

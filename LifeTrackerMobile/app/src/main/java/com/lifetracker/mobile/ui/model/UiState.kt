@@ -134,6 +134,26 @@ sealed interface TaskActionFeedback {
     ) : TaskActionFeedback
 }
 
+@Immutable
+data class AchievementUi(
+    val key: String,
+    val title: String,
+    val description: String,
+    val category: String,
+    val threshold: Int,
+    val sortOrder: Int,
+    val goldReward: Int,
+    val unlocked: Boolean,
+    val unlockedAt: Instant?,
+)
+
+@Immutable
+data class AchievementsScreenState(
+    val achievements: ImmutableList<AchievementUi> = persistentListOf(),
+    val isLoading: Boolean = false,
+    val actionError: UiError? = null,
+)
+
 sealed interface UiEvent {
     data class ShowSnackbar(
         val message: String,

@@ -130,7 +130,10 @@ fun HomeScreen(
                     DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                         DropdownMenuItem(
                             text = { Text("Rewards") },
-                            onClick = { showMenu = false },
+                            onClick = {
+                                showMenu = false
+                                state.hero?.id?.let { navController.navigate(Screen.Achievements.route(it)) }
+                            },
                             leadingIcon = { Icon(Icons.Filled.EmojiEvents, contentDescription = null) },
                         )
                     }
