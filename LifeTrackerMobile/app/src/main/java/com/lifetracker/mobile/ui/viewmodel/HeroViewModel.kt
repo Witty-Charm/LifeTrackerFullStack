@@ -55,6 +55,10 @@ class HeroViewModel(
 ) : ViewModel() {
     private val isDebug: Boolean = BuildConfig.DEBUG
 
+    private companion object {
+        const val FOREGROUND_REFRESH_DEBOUNCE_MS = 30_000L
+    }
+
     private object ActionKeys {
         const val HERO_CREATE = "hero_create"
         const val HERO_RESPAWN = "hero_respawn"
@@ -75,6 +79,7 @@ class HeroViewModel(
     val events = _events.receiveAsFlow()
 
     private var loadJob: Job? = null
+    private var lastForegroundRefreshAt: Long = 0L
 
     // confined to Main thread via viewModelScope - do not read/write from IO/Default context
     private var heroDomain: HeroDomain? = null
@@ -136,6 +141,13 @@ class HeroViewModel(
                     _state.update { it.copy(isLoading = false) }
                 }
             }
+    }
+
+    fun refreshOnForeground(nowMillis: Long = System.currentTimeMillis()) {
+        if (loadJob?.isActive == true) return
+        if (lastForegroundRefreshAt != 0L && nowMillis - lastForegroundRefreshAt < FOREGROUND_REFRESH_DEBOUNCE_MS) return
+        lastForegroundRefreshAt = nowMillis
+        loadData()
     }
 
     fun completeTask(taskId: Int) =

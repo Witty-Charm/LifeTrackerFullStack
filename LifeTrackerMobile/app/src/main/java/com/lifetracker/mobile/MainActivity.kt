@@ -31,16 +31,27 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.get
-import org.koin.androidx.compose.koinViewModel
+import org.koin.androidx.viewmodel.ext.android.viewModel
 
 class MainActivity : ComponentActivity() {
+    private val vm: HeroViewModel by viewModel()
+    private var hasStarted = false
+
+    override fun onStart() {
+        super.onStart()
+        if (hasStarted) {
+            vm.refreshOnForeground()
+        } else {
+            hasStarted = true
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             val themeController: ThemeController = get()
             val themeMode by themeController.themeMode.collectAsState()
             LifeTrackerMobileTheme(themeMode = themeMode) {
-                val vm = koinViewModel<HeroViewModel>()
                 val state by vm.state.collectAsState()
                 val navController = rememberNavController()
                 val snackbarHostState = remember { SnackbarHostState() }

@@ -74,6 +74,12 @@ fun HomeScreen(
         state.hero?.id?.let { shopVm.loadForHero(it) }
     }
 
+    LaunchedEffect(selectedTab, state.hero?.id) {
+        if (selectedTab == HomeTab.Shop) {
+            state.hero?.id?.let { shopVm.loadForHero(it) }
+        }
+    }
+
     LaunchedEffect(state.hero?.gold) {
         state.hero?.gold?.let { shopVm.refreshWithGold(it) }
     }

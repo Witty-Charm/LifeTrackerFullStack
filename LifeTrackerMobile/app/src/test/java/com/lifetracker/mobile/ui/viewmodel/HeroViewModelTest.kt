@@ -1,0 +1,279 @@
+package com.lifetracker.mobile.ui.viewmodel
+
+import androidx.work.WorkManager
+import com.lifetracker.mobile.domain.model.CreateTaskParams
+import com.lifetracker.mobile.domain.model.DomainResult
+import com.lifetracker.mobile.domain.model.GameError
+import com.lifetracker.mobile.domain.model.GameTaskDomain
+import com.lifetracker.mobile.domain.model.HealResult
+import com.lifetracker.mobile.domain.model.HeroDomain
+import com.lifetracker.mobile.domain.model.HeroStatsDomain
+import com.lifetracker.mobile.domain.model.OverdueResult
+import com.lifetracker.mobile.domain.model.RespawnResult
+import com.lifetracker.mobile.domain.model.TaskCompletionResult
+import com.lifetracker.mobile.domain.model.TaskDifficulty
+import com.lifetracker.mobile.domain.model.TaskFailureResult
+import com.lifetracker.mobile.domain.model.TaskType
+import com.lifetracker.mobile.domain.repository.HeroRepository
+import com.lifetracker.mobile.domain.repository.TaskRepository
+import com.lifetracker.mobile.domain.usecase.hero.CreateHeroUseCase
+import com.lifetracker.mobile.domain.usecase.hero.GetFirstHeroUseCase
+import com.lifetracker.mobile.domain.usecase.hero.GetHeroStatsUseCase
+import com.lifetracker.mobile.domain.usecase.hero.GetHeroUseCase
+import com.lifetracker.mobile.domain.usecase.hero.GetHeroesUseCase
+import com.lifetracker.mobile.domain.usecase.hero.HealHeroUseCase
+import com.lifetracker.mobile.domain.usecase.hero.HeroUseCases
+import com.lifetracker.mobile.domain.usecase.hero.RespawnHeroUseCase
+import com.lifetracker.mobile.domain.usecase.hero.UpdateHeroTimeZoneUseCase
+import com.lifetracker.mobile.domain.usecase.task.CheckOverdueTasksUseCase
+import com.lifetracker.mobile.domain.usecase.task.CompleteTaskUseCase
+import com.lifetracker.mobile.domain.usecase.task.CreateTaskUseCase
+import com.lifetracker.mobile.domain.usecase.task.DeleteLocalTaskUseCase
+import com.lifetracker.mobile.domain.usecase.task.DeleteTaskUseCase
+import com.lifetracker.mobile.domain.usecase.task.FailTaskUseCase
+import com.lifetracker.mobile.domain.usecase.task.GetTaskUseCase
+import com.lifetracker.mobile.domain.usecase.task.GetTasksUseCase
+import com.lifetracker.mobile.domain.usecase.task.RetryTaskSyncUseCase
+import com.lifetracker.mobile.domain.usecase.task.TaskUseCases
+import io.mockk.every
+import io.mockk.mockk
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Before
+import org.junit.Test
+import java.util.UUID
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class HeroViewModelTest {
+    private val dispatcher = StandardTestDispatcher()
+
+    @Before
+    fun setUp() {
+        Dispatchers.setMain(dispatcher)
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
+    @Test
+    fun refreshOnForeground_reloadsData_whenOutsideDebounceWindow() =
+        runTest {
+            val heroRepository = FakeHeroRepository()
+            val taskRepository = FakeTaskRepository()
+            val viewModel = buildViewModel(heroRepository, taskRepository)
+
+            advanceUntilIdle()
+            assertEquals(1, heroRepository.getFirstHeroCalls)
+            assertEquals(1, taskRepository.getTasksCalls)
+            assertEquals(1, taskRepository.checkOverdueCalls)
+
+            viewModel.refreshOnForeground(nowMillis = 31_000L)
+            advanceUntilIdle()
+
+            assertEquals(2, heroRepository.getFirstHeroCalls)
+            assertEquals(2, taskRepository.getTasksCalls)
+            assertEquals(2, taskRepository.checkOverdueCalls)
+        }
+
+    @Test
+    fun refreshOnForeground_debouncesRepeatedCalls_untilIntervalPasses() =
+        runTest {
+            val heroRepository = FakeHeroRepository()
+            val taskRepository = FakeTaskRepository()
+            val viewModel = buildViewModel(heroRepository, taskRepository)
+
+            advanceUntilIdle()
+
+            viewModel.refreshOnForeground(nowMillis = 31_000L)
+            advanceUntilIdle()
+            viewModel.refreshOnForeground(nowMillis = 40_000L)
+            advanceUntilIdle()
+
+            assertEquals(2, heroRepository.getFirstHeroCalls)
+            assertEquals(2, taskRepository.getTasksCalls)
+
+            viewModel.refreshOnForeground(nowMillis = 62_000L)
+            advanceUntilIdle()
+
+            assertEquals(3, heroRepository.getFirstHeroCalls)
+            assertEquals(3, taskRepository.getTasksCalls)
+        }
+
+    @Test
+    fun refreshOnForeground_skipsReload_whenInitialLoadIsStillRunning() =
+        runTest {
+            val heroRepository = FakeHeroRepository()
+            val taskRepository = FakeTaskRepository()
+            val viewModel = buildViewModel(heroRepository, taskRepository)
+
+            viewModel.refreshOnForeground(nowMillis = 31_000L)
+            advanceUntilIdle()
+
+            assertEquals(1, heroRepository.getFirstHeroCalls)
+            assertEquals(1, taskRepository.getTasksCalls)
+            assertEquals(1, taskRepository.checkOverdueCalls)
+        }
+
+    private fun buildViewModel(
+        heroRepository: FakeHeroRepository,
+        taskRepository: FakeTaskRepository,
+    ): HeroViewModel {
+        val workManager = mockk<WorkManager>()
+        every { workManager.getWorkInfosForUniqueWorkFlow(any()) } returns emptyFlow()
+
+        return HeroViewModel(
+            heroUseCases =
+                HeroUseCases(
+                    getHeroes = GetHeroesUseCase(heroRepository),
+                    getHero = GetHeroUseCase(heroRepository),
+                    getFirstHero = GetFirstHeroUseCase(heroRepository),
+                    createHero = CreateHeroUseCase(heroRepository),
+                    getHeroStats = GetHeroStatsUseCase(heroRepository),
+                    respawnHero = RespawnHeroUseCase(heroRepository),
+                    healHero = HealHeroUseCase(heroRepository),
+                    updateHeroTimeZone = UpdateHeroTimeZoneUseCase(heroRepository),
+                ),
+            taskUseCases =
+                TaskUseCases(
+                    getTasks = GetTasksUseCase(taskRepository),
+                    getTask = GetTaskUseCase(taskRepository),
+                    createTask = CreateTaskUseCase(taskRepository),
+                    completeTask = CompleteTaskUseCase(taskRepository),
+                    failTask = FailTaskUseCase(taskRepository),
+                    checkOverdue = CheckOverdueTasksUseCase(taskRepository),
+                    deleteTask = DeleteTaskUseCase(taskRepository),
+                    retryTaskSync = RetryTaskSyncUseCase(taskRepository),
+                    deleteLocalTask = DeleteLocalTaskUseCase(taskRepository),
+                ),
+            workManager = workManager,
+        )
+    }
+
+    private class FakeHeroRepository : HeroRepository {
+        var getFirstHeroCalls: Int = 0
+        private val hero = createTestHero()
+
+        override suspend fun getHeroes(): DomainResult<List<HeroDomain>> = DomainResult.Success(listOf(hero))
+
+        override suspend fun getHero(id: Int): DomainResult<HeroDomain> = DomainResult.Success(hero)
+
+        override suspend fun getFirstHero(): DomainResult<HeroDomain?> {
+            getFirstHeroCalls++
+            return DomainResult.Success(hero)
+        }
+
+        override suspend fun createHero(
+            name: String,
+            startingGold: Int?,
+        ): DomainResult<HeroDomain> = DomainResult.Success(hero.copy(name = name, gold = startingGold ?: hero.gold))
+
+        override suspend fun getHeroStats(heroId: Int): DomainResult<HeroStatsDomain> =
+            DomainResult.Failure(GameError.Unknown("Not used in this test"))
+
+        override suspend fun respawnHero(heroId: Int): DomainResult<RespawnResult> =
+            DomainResult.Failure(GameError.Unknown("Not used in this test"))
+
+        override suspend fun healHero(
+            heroId: Int,
+            amount: Int?,
+        ): DomainResult<HealResult> = DomainResult.Failure(GameError.Unknown("Not used in this test"))
+
+        override suspend fun updateHeroTimeZone(
+            heroId: Int,
+            timeZoneId: String,
+        ): DomainResult<Unit> = DomainResult.Success(Unit)
+    }
+
+    private class FakeTaskRepository : TaskRepository {
+        var getTasksCalls: Int = 0
+        var checkOverdueCalls: Int = 0
+        private val tasks = listOf(createTestTask())
+
+        override suspend fun getTasks(heroId: Int): DomainResult<List<GameTaskDomain>> {
+            getTasksCalls++
+            return DomainResult.Success(tasks)
+        }
+
+        override suspend fun getTask(id: Int): DomainResult<GameTaskDomain> = DomainResult.Success(tasks.first())
+
+        override suspend fun createTask(params: CreateTaskParams): DomainResult<GameTaskDomain> =
+            DomainResult.Failure(GameError.Unknown("Not used in this test"))
+
+        override suspend fun completeTask(taskId: Int): DomainResult<TaskCompletionResult> =
+            DomainResult.Failure(GameError.Unknown("Not used in this test"))
+
+        override suspend fun failTask(taskId: Int): DomainResult<TaskFailureResult> =
+            DomainResult.Failure(GameError.Unknown("Not used in this test"))
+
+        override suspend fun checkOverdueTasks(heroId: Int): DomainResult<OverdueResult> {
+            checkOverdueCalls++
+            return DomainResult.Success(OverdueResult(overdueCount = 0, penalties = emptyList(), message = ""))
+        }
+
+        override suspend fun deleteTask(taskId: Int): DomainResult<Unit> = DomainResult.Success(Unit)
+
+        override suspend fun retryTaskSync(taskId: Int): DomainResult<Unit> = DomainResult.Success(Unit)
+
+        override suspend fun deleteLocalTask(taskId: Int): DomainResult<Unit> = DomainResult.Success(Unit)
+    }
+
+    companion object {
+        private fun createTestHero() =
+            HeroDomain(
+                id = 1,
+                name = "Alex",
+                level = 3,
+                currentXp = 40,
+                maxXp = 100,
+                currentHp = 90,
+                maxHp = 100,
+                gold = 50,
+                isDead = false,
+                deathCount = 0,
+                isInRecovery = false,
+                recoveryMultiplier = 1.0,
+                xpBoostPercent = 0,
+                xpBoostTasksRemaining = 0,
+                dailyCompletions = 1,
+                dailyCompletionsMax = 5,
+            )
+
+        private fun createTestTask() =
+            GameTaskDomain(
+                id = 1,
+                heroId = 1,
+                title = "Task",
+                description = "",
+                type = TaskType.OneTime,
+                difficulty = TaskDifficulty.Easy,
+                isCompleted = false,
+                isActive = true,
+                dueDate = null,
+                repeatPattern = null,
+                checklistJson = null,
+                remindersJson = null,
+                isOverdue = false,
+                completionCount = 0,
+                failCount = 0,
+                lastCompletedAt = null,
+                overdueProcessedAt = null,
+                baseXp = 10,
+                baseGold = 5,
+                hpPenalty = 0,
+                goldPenalty = 0,
+                streak = null,
+                pendingSync = false,
+                syncError = null,
+            )
+    }
+}
