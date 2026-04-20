@@ -2,31 +2,42 @@ package com.lifetracker.mobile.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.lifetracker.mobile.ui.model.HeroScreenState
+import com.lifetracker.mobile.ui.model.UiTaskType
 import com.lifetracker.mobile.ui.screens.CreateDailyScreen
 import com.lifetracker.mobile.ui.screens.CreateHeroScreen
 import com.lifetracker.mobile.ui.screens.CreateTaskScreen
 import com.lifetracker.mobile.ui.screens.HomeScreen
-import com.lifetracker.mobile.ui.model.HeroScreenState
-import com.lifetracker.mobile.ui.model.UiTaskType
 import com.lifetracker.mobile.ui.viewmodel.CreateDailyViewModel
 import com.lifetracker.mobile.ui.viewmodel.HeroViewModel
-import androidx.compose.runtime.getValue
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 
 sealed interface Screen {
     val route: String
-    data object Home : Screen { override val route = "home" }
-    data object CreateHero : Screen { override val route = "create_hero" }
-    data object CreateTask : Screen { override val route = "create_task" }
+
+    data object Home : Screen {
+        override val route = "home"
+    }
+
+    data object CreateHero : Screen {
+        override val route = "create_hero"
+    }
+
+    data object CreateTask : Screen {
+        override val route = "create_task"
+    }
+
     data object CreateDaily : Screen {
         override val route = "create_daily/{heroId}"
+
         fun route(heroId: Int) = "create_daily/$heroId"
     }
 }
@@ -35,7 +46,7 @@ sealed interface Screen {
 fun NavGraph(
     navController: NavHostController,
     vm: HeroViewModel,
-    state: HeroScreenState
+    state: HeroScreenState,
 ) {
     LaunchedEffect(state.needsHeroCreation) {
         if (state.needsHeroCreation) {
@@ -47,12 +58,13 @@ fun NavGraph(
 
     NavHost(
         navController = navController,
-        startDestination = Screen.Home.route
+        startDestination = Screen.Home.route,
     ) {
         composable(Screen.Home.route) {
-            val createdTaskType = navController.currentBackStackEntry
-                ?.savedStateHandle
-                ?.remove<UiTaskType>("task_created")
+            val createdTaskType =
+                navController.currentBackStackEntry
+                    ?.savedStateHandle
+                    ?.remove<UiTaskType>("task_created")
 
             LaunchedEffect(createdTaskType) {
                 if (createdTaskType != null) {
@@ -64,7 +76,6 @@ fun NavGraph(
                 state = state,
                 vm = vm,
                 navController = navController,
-                createdTaskType = createdTaskType
             )
         }
 
@@ -82,9 +93,10 @@ fun NavGraph(
         ) { backStackEntry ->
             val heroId = backStackEntry.arguments?.getInt("heroId") ?: return@composable
 
-            val createDailyVm: CreateDailyViewModel = koinViewModel(
-                parameters = { parametersOf(heroId) }
-            )
+            val createDailyVm: CreateDailyViewModel =
+                koinViewModel(
+                    parameters = { parametersOf(heroId) },
+                )
             val createDailyState by createDailyVm.state.collectAsStateWithLifecycle()
 
             CreateDailyScreen(

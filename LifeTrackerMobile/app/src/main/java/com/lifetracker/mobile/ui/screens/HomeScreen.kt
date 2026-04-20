@@ -26,6 +26,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,9 +60,8 @@ fun HomeScreen(
     state: HeroScreenState,
     vm: HeroViewModel,
     navController: NavController,
-    createdTaskType: UiTaskType?,
 ) {
-    val selectedTabState = remember { mutableStateOf(HomeTab.ToDos) }
+    val selectedTabState = rememberSaveable { mutableStateOf(HomeTab.ToDos) }
     val selectedTab by selectedTabState
     val onTabSelected: (HomeTab) -> Unit = remember { { selectedTabState.value = it } }
     val hazeState = rememberHazeState()
@@ -94,18 +94,6 @@ fun HomeScreen(
                 is UiEvent.ShowSnackbar -> launch { shopSnackbar.showSnackbar(event.message) }
                 else -> Unit
             }
-        }
-    }
-
-    LaunchedEffect(createdTaskType) {
-        createdTaskType?.let {
-            selectedTabState.value =
-                when (it) {
-                    UiTaskType.Habit -> HomeTab.Habits
-                    UiTaskType.OneTime -> HomeTab.ToDos
-                    UiTaskType.Daily -> HomeTab.Dailies
-                    UiTaskType.Unknown -> HomeTab.ToDos
-                }
         }
     }
 
