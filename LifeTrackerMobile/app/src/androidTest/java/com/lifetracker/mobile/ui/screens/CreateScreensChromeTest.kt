@@ -1,23 +1,21 @@
 package com.lifetracker.mobile.ui.screens
 
+import android.content.Context
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import androidx.navigation.compose.rememberNavController
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.work.WorkManager
+import com.lifetracker.mobile.core.reminder.ReminderScheduler
+import com.lifetracker.mobile.core.serialization.JsonDefaults
 import com.lifetracker.mobile.domain.model.AchievementDomain
 import com.lifetracker.mobile.domain.model.CreateTaskParams
 import com.lifetracker.mobile.domain.model.DomainResult
@@ -54,82 +52,77 @@ import com.lifetracker.mobile.domain.usecase.task.GetTaskUseCase
 import com.lifetracker.mobile.domain.usecase.task.GetTasksUseCase
 import com.lifetracker.mobile.domain.usecase.task.RetryTaskSyncUseCase
 import com.lifetracker.mobile.domain.usecase.task.TaskUseCases
+import com.lifetracker.mobile.ui.model.CreateDailyFormState
 import com.lifetracker.mobile.ui.model.HeroScreenState
-import com.lifetracker.mobile.ui.model.TaskUi
-import com.lifetracker.mobile.ui.model.UiTaskType
+import com.lifetracker.mobile.ui.model.RepeatFrequency
+import com.lifetracker.mobile.ui.model.UiDifficulty
 import com.lifetracker.mobile.ui.theme.LifeTrackerMobileTheme
+import com.lifetracker.mobile.ui.viewmodel.CreateDailyViewModel
 import com.lifetracker.mobile.ui.viewmodel.HeroViewModel
-import kotlinx.collections.immutable.persistentListOf
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
-class HomeScreenTabRetentionTest {
+class CreateScreensChromeTest {
     @get:Rule
     val composeRule = createAndroidComposeRule<ComponentActivity>()
 
     @Test
-    fun keeps_selected_tab_after_state_restoration() {
-        val restorationTester = StateRestorationTester(composeRule)
-
-        restorationTester.setContent {
-            TestHomeScreen(homeState = testHomeState())
+    fun createTaskScreen_showsBackAndBottomSave_insteadOfTopBarSave() {
+        composeRule.setContent {
+            LifeTrackerMobileTheme {
+                CreateTaskScreen(
+                    state = HeroScreenState(),
+                    vm = rememberHeroViewModel(),
+                    navController = rememberNavController(),
+                )
+            }
         }
 
-        composeRule.onNodeWithContentDescription("Habits").performClick()
-        assertHabitsSelected()
-
-        restorationTester.emulateSavedInstanceStateRestore()
-
-        assertHabitsSelected()
+        composeRule.onNodeWithTag("create_top_bar").assertIsDisplayed()
+        composeRule.onNodeWithText("Create task").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Back").assertIsDisplayed()
+        composeRule.onNodeWithTag("create_primary_action_footer").assertIsDisplayed()
+        composeRule.onAllNodesWithText("Save").assertCountEquals(1)
     }
 
     @Test
-    fun keeps_selected_tab_when_home_state_updates_after_save() {
-        var homeState by mutableStateOf(testHomeState())
-
+    fun createDailyScreen_showsBackAndBottomSave() {
         composeRule.setContent {
-            TestHomeScreen(homeState = homeState)
-        }
-
-        composeRule.onNodeWithContentDescription("Habits").performClick()
-        assertHabitsSelected()
-
-        composeRule.runOnUiThread {
-            homeState =
-                homeState.copy(
-                    tasks =
-                        persistentListOf(
-                            testTask(id = 1, title = "Habit task", type = UiTaskType.Habit),
-                            testTask(id = 2, title = "Todo task", type = UiTaskType.OneTime),
-                            testTask(id = 3, title = "Todo task 2", type = UiTaskType.OneTime),
-                        ),
+            LifeTrackerMobileTheme {
+                CreateDailyScreen(
+                    state = CreateDailyFormState(title = "Daily", frequency = RepeatFrequency.DAILY, interval = 1),
+                    vm = rememberCreateDailyViewModel(),
+                    navController = rememberNavController(),
                 )
+            }
         }
 
-        composeRule.waitForIdle()
-
-        assertHabitsSelected()
+        composeRule.onNodeWithTag("create_top_bar").assertIsDisplayed()
+        composeRule.onNodeWithText("Create daily").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Back").assertIsDisplayed()
+        composeRule.onNodeWithTag("create_primary_action_footer").assertIsDisplayed()
+        composeRule.onAllNodesWithText("Save").assertCountEquals(1)
     }
 
-    private fun assertHabitsSelected() {
-        composeRule.onNodeWithText("Habit task").assertIsDisplayed()
-        composeRule.onAllNodesWithText("Todo task").assertCountEquals(0)
-        composeRule.onAllNodesWithText("Todo task 2").assertCountEquals(0)
-    }
-}
+    @Test
+    fun createHeroScreen_showsBackAndBottomCreate() {
+        composeRule.setContent {
+            LifeTrackerMobileTheme {
+                CreateHeroScreen(
+                    state = HeroScreenState(),
+                    vm = rememberHeroViewModel(),
+                    navController = rememberNavController(),
+                )
+            }
+        }
 
-@Composable
-private fun TestHomeScreen(homeState: HeroScreenState) {
-    val navController = rememberNavController()
-
-    LifeTrackerMobileTheme {
-        HomeScreen(
-            state = homeState,
-            vm = rememberHeroViewModel(),
-            navController = navController,
-        )
+        composeRule.onNodeWithTag("create_top_bar").assertIsDisplayed()
+        composeRule.onNodeWithText("Create hero").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Back").assertIsDisplayed()
+        composeRule.onNodeWithTag("create_primary_action_footer").assertIsDisplayed()
+        composeRule.onAllNodesWithText("Create").assertCountEquals(1)
     }
 }
 
@@ -137,9 +130,9 @@ private fun TestHomeScreen(homeState: HeroScreenState) {
 private fun rememberHeroViewModel(): HeroViewModel {
     val context = LocalContext.current
 
-    return remember {
-        val heroRepository = FakeHeroRepository()
-        val taskRepository = FakeTaskRepository()
+    return androidx.compose.runtime.remember {
+        val heroRepository = CreateScreenFakeHeroRepository()
+        val taskRepository = CreateScreenFakeTaskRepository()
 
         HeroViewModel(
             heroUseCases =
@@ -158,51 +151,45 @@ private fun rememberHeroViewModel(): HeroViewModel {
                 TaskUseCases(
                     getTask = GetTaskUseCase(taskRepository),
                     getTasks = GetTasksUseCase(taskRepository),
-                    completeTask = CompleteTaskUseCase(taskRepository),
                     createTask = CreateTaskUseCase(taskRepository),
+                    completeTask = CompleteTaskUseCase(taskRepository),
                     failTask = FailTaskUseCase(taskRepository),
-                    deleteTask = DeleteTaskUseCase(taskRepository),
                     checkOverdue = CheckOverdueTasksUseCase(taskRepository),
                     retryTaskSync = RetryTaskSyncUseCase(taskRepository),
                     deleteLocalTask = DeleteLocalTaskUseCase(taskRepository),
+                    deleteTask = DeleteTaskUseCase(taskRepository),
                 ),
             workManager = WorkManager.getInstance(context),
         )
     }
 }
 
-private fun testHomeState(): HeroScreenState =
-    HeroScreenState(
-        hero = null,
-        tasks =
-            persistentListOf(
-                testTask(id = 1, title = "Habit task", type = UiTaskType.Habit),
-                testTask(id = 2, title = "Todo task", type = UiTaskType.OneTime),
-            ),
-    )
+@Composable
+private fun rememberCreateDailyViewModel(): CreateDailyViewModel {
+    val context = LocalContext.current
 
-private fun testTask(
-    id: Int,
-    title: String,
-    type: UiTaskType,
-): TaskUi =
-    TaskUi(
-        id = id,
-        title = title,
-        description = "",
-        type = type,
-        difficultyLabel = "Easy",
-        difficultyColor = 0L,
-        isCompleted = false,
-        isOverdue = false,
-        dueDateText = null,
-        rewardText = "+10 XP • +5 Gold",
-        penaltyText = "",
-        streakText = null,
-        isPendingSync = false,
-    )
+    return androidx.compose.runtime.remember {
+        val taskRepository = CreateScreenFakeTaskRepository()
+        CreateDailyViewModel(
+            heroId = 1,
+            taskUseCases =
+                TaskUseCases(
+                    getTask = GetTaskUseCase(taskRepository),
+                    getTasks = GetTasksUseCase(taskRepository),
+                    createTask = CreateTaskUseCase(taskRepository),
+                    completeTask = CompleteTaskUseCase(taskRepository),
+                    failTask = FailTaskUseCase(taskRepository),
+                    checkOverdue = CheckOverdueTasksUseCase(taskRepository),
+                    retryTaskSync = RetryTaskSyncUseCase(taskRepository),
+                    deleteLocalTask = DeleteLocalTaskUseCase(taskRepository),
+                    deleteTask = DeleteTaskUseCase(taskRepository),
+                ),
+            reminderScheduler = ReminderScheduler(WorkManager.getInstance(context), JsonDefaults),
+        )
+    }
+}
 
-private class FakeHeroRepository : HeroRepository {
+private class CreateScreenFakeHeroRepository : HeroRepository {
     private val hero =
         HeroDomain(
             id = 1,
@@ -253,22 +240,26 @@ private class FakeHeroRepository : HeroRepository {
     ): DomainResult<Unit> = DomainResult.Success(Unit)
 }
 
-private class FakeTaskRepository : TaskRepository {
-    private val tasks =
-        listOf(
+private class CreateScreenFakeTaskRepository : TaskRepository {
+    override suspend fun getTasks(heroId: Int): DomainResult<List<GameTaskDomain>> = DomainResult.Success(emptyList())
+
+    override suspend fun getTask(id: Int): DomainResult<GameTaskDomain> = DomainResult.Failure(GameError.Unknown("task"))
+
+    override suspend fun createTask(params: CreateTaskParams): DomainResult<GameTaskDomain> =
+        DomainResult.Success(
             GameTaskDomain(
                 id = 1,
-                heroId = 1,
-                title = "Todo task",
-                description = "",
-                type = TaskType.OneTime,
-                difficulty = TaskDifficulty.Easy,
+                heroId = params.heroId,
+                title = params.title,
+                description = params.description.orEmpty(),
+                type = params.type,
+                difficulty = params.difficulty,
                 isCompleted = false,
                 isActive = true,
-                dueDate = null,
-                repeatPattern = null,
-                checklistJson = null,
-                remindersJson = null,
+                dueDate = params.dueDate,
+                repeatPattern = params.repeatPattern,
+                checklistJson = params.checklistJson,
+                remindersJson = params.remindersJson,
                 isOverdue = false,
                 completionCount = 0,
                 failCount = 0,
@@ -283,13 +274,6 @@ private class FakeTaskRepository : TaskRepository {
                 syncError = null,
             ),
         )
-
-    override suspend fun getTasks(heroId: Int): DomainResult<List<GameTaskDomain>> = DomainResult.Success(tasks)
-
-    override suspend fun getTask(id: Int): DomainResult<GameTaskDomain> = DomainResult.Success(tasks.first())
-
-    override suspend fun createTask(params: CreateTaskParams): DomainResult<GameTaskDomain> =
-        DomainResult.Failure(GameError.Unknown("Not used in this test"))
 
     override suspend fun completeTask(taskId: Int): DomainResult<TaskCompletionResult> =
         DomainResult.Failure(GameError.Unknown("Not used in this test"))

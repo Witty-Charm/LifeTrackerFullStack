@@ -11,7 +11,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Close
@@ -30,7 +29,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -45,9 +43,10 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.lifetracker.mobile.domain.model.ChecklistItem
 import com.lifetracker.mobile.domain.model.ReminderItem
-import com.lifetracker.mobile.ui.mapper.toUi
-import com.lifetracker.mobile.ui.model.UiTaskType
+import com.lifetracker.mobile.ui.components.CreateScreenFloatingFooter
+import com.lifetracker.mobile.ui.components.CreateScreenTopBar
 import com.lifetracker.mobile.ui.components.GameDatePickerDialog
+import com.lifetracker.mobile.ui.mapper.toUi
 import com.lifetracker.mobile.ui.model.CreateDailyFormState
 import com.lifetracker.mobile.ui.model.RepeatFrequency
 import com.lifetracker.mobile.ui.model.UiDifficulty
@@ -96,13 +95,26 @@ fun CreateDailyScreen(
 
     LaunchedEffect(state.actionError) {
         state.actionError?.let {
-            val msg = when (it) {
-                is com.lifetracker.mobile.ui.model.UiError.Network -> "Network error. Try again."
-                is com.lifetracker.mobile.ui.model.UiError.Validation ->
-                    it.fieldErrors.values.flatten().joinToString(", ")
-                is com.lifetracker.mobile.ui.model.UiError.Generic -> it.message
-                else -> "Something went wrong."
-            }
+            val msg =
+                when (it) {
+                    is com.lifetracker.mobile.ui.model.UiError.Network -> {
+                        "Network error. Try again."
+                    }
+
+                    is com.lifetracker.mobile.ui.model.UiError.Validation -> {
+                        it.fieldErrors.values
+                            .flatten()
+                            .joinToString(", ")
+                    }
+
+                    is com.lifetracker.mobile.ui.model.UiError.Generic -> {
+                        it.message
+                    }
+
+                    else -> {
+                        "Something went wrong."
+                    }
+                }
             snackbarHostState.showSnackbar(msg)
         }
     }
@@ -110,32 +122,29 @@ fun CreateDailyScreen(
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            TopAppBar(
-                title = { Text("Create daily") },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                actions = {
-                    TextButton(
-                        onClick = { vm.onSubmit() },
-                        enabled = state.canSubmit,
-                    ) {
-                        Text("Save")
-                    }
-                }
+            CreateScreenTopBar(
+                title = "Create daily",
+                onBack = { navController.popBackStack() },
             )
-        }
+        },
+        bottomBar = {
+            CreateScreenFloatingFooter(
+                actionLabel = "Save",
+                enabled = state.canSubmit,
+                onClick = { vm.onSubmit() },
+                isLoading = state.isSaving,
+            )
+        },
     ) { paddingValues ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .hazeSource(hazeState)
-                .padding(paddingValues)
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .hazeSource(hazeState)
+                    .padding(paddingValues)
+                    .padding(horizontal = 16.dp)
+                    .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             OutlinedTextField(
                 value = state.title,
@@ -172,7 +181,7 @@ fun CreateDailyScreen(
                     FilterChip(
                         selected = state.difficulty == difficulty,
                         onClick = { vm.onDifficultyChange(difficulty) },
-                        label = { Text(label) }
+                        label = { Text(label) },
                     )
                 }
             }
@@ -207,10 +216,11 @@ fun CreateDailyScreen(
         GameDatePickerDialog(
             visible = showDatePicker,
             hazeState = hazeState,
-            initialDate = state.startDate
-                ?.toLocalDateTime(TimeZone.currentSystemDefault())
-                ?.date
-                ?: Clock.System.todayIn(TimeZone.currentSystemDefault()),
+            initialDate =
+                state.startDate
+                    ?.toLocalDateTime(TimeZone.currentSystemDefault())
+                    ?.date
+                    ?: Clock.System.todayIn(TimeZone.currentSystemDefault()),
             onDateSelected = { date ->
                 vm.onStartDateChange(date.atStartOfDayIn(TimeZone.currentSystemDefault()))
             },
@@ -247,7 +257,7 @@ fun CreateDailyScreen(
                 },
                 dismissButton = {
                     TextButton(onClick = { showTimePicker = false }) { Text("Cancel") }
-                }
+                },
             )
         }
     }
@@ -353,7 +363,7 @@ private fun SchedulingSection(
             )
             ExposedDropdownMenu(
                 expanded = expanded,
-                onDismissRequest = { onExpandedChange(false) }
+                onDismissRequest = { onExpandedChange(false) },
             ) {
                 RepeatFrequency.entries.forEach { option ->
                     androidx.compose.material3.DropdownMenuItem(
@@ -361,7 +371,7 @@ private fun SchedulingSection(
                         onClick = {
                             onFrequencyChange(option)
                             onExpandedChange(false)
-                        }
+                        },
                     )
                 }
             }
@@ -408,5 +418,3 @@ private fun Instant.toDisplayDate(): String {
     val javaDate = this.toLocalDateTime(TimeZone.currentSystemDefault()).date.toJavaLocalDate()
     return mediumDateFormatter.format(javaDate)
 }
-
-

@@ -1,5 +1,7 @@
 package com.lifetracker.mobile.ui.screens
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Backpack
 import androidx.compose.material.icons.filled.Inventory2
@@ -34,6 +37,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -129,30 +133,56 @@ private fun ShopItemCard(
     isLoading: Boolean,
     onBuy: () -> Unit,
 ) {
+    val colors = MaterialTheme.colorScheme
+    val accentAlpha = if (item.canAfford) 0.2f else 0.1f
+
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = colors.surface),
+        border = BorderStroke(1.dp, colors.outline.copy(alpha = 0.16f)),
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .background(
+                        brush =
+                            Brush.verticalGradient(
+                                colors =
+                                    listOf(
+                                        colors.primary.copy(alpha = accentAlpha),
+                                        colors.surface,
+                                    ),
+                            ),
+                    ).padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
                 imageVector = iconForItemType(item.itemType),
                 contentDescription = item.name,
                 modifier = Modifier.size(44.dp),
-                tint = MaterialTheme.colorScheme.primary,
+                tint = colors.primary,
             )
             Spacer(Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(item.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(
+                    item.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = colors.onSurface,
+                )
                 Spacer(Modifier.height(2.dp))
-                Text(item.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    item.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.onSurfaceVariant,
+                )
                 Spacer(Modifier.height(4.dp))
                 Text(
                     "${item.cost} Gold",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.secondary,
+                    color = colors.secondary,
                     fontWeight = FontWeight.SemiBold,
                 )
             }
@@ -160,13 +190,27 @@ private fun ShopItemCard(
             Button(
                 onClick = onBuy,
                 enabled = item.canAfford && !isLoading,
+                shape = RoundedCornerShape(18.dp),
+                border =
+                    BorderStroke(
+                        1.dp,
+                        if (item.canAfford) colors.primary.copy(alpha = 0.28f) else colors.outline.copy(alpha = 0.16f),
+                    ),
                 colors =
                     ButtonDefaults.buttonColors(
-                        containerColor =
+                        containerColor = colors.primary,
+                        contentColor = colors.onPrimary,
+                        disabledContainerColor =
                             if (item.canAfford) {
-                                MaterialTheme.colorScheme.primary
+                                colors.primary.copy(alpha = 0.58f)
                             } else {
-                                MaterialTheme.colorScheme.surfaceVariant
+                                colors.surface.copy(alpha = 0.96f)
+                            },
+                        disabledContentColor =
+                            if (item.canAfford) {
+                                colors.onPrimary.copy(alpha = 0.92f)
+                            } else {
+                                colors.onSurfaceVariant
                             },
                     ),
             ) {
@@ -207,27 +251,52 @@ private fun InventoryList(state: ShopScreenState) {
 
 @Composable
 private fun InventoryItemCard(inv: InventoryItemUi) {
+    val colors = MaterialTheme.colorScheme
+
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = colors.surface),
+        border = BorderStroke(1.dp, colors.outline.copy(alpha = 0.16f)),
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .background(
+                        brush =
+                            Brush.verticalGradient(
+                                colors =
+                                    listOf(
+                                        colors.primary.copy(alpha = 0.12f),
+                                        colors.surface,
+                                    ),
+                            ),
+                    ).padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
                 imageVector = iconForItemType(inv.item.itemType),
                 contentDescription = inv.item.name,
                 modifier = Modifier.size(40.dp),
-                tint = MaterialTheme.colorScheme.primary,
+                tint = colors.primary,
             )
             Spacer(Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(inv.item.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(
+                    inv.item.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = colors.onSurface,
+                )
                 Spacer(Modifier.height(2.dp))
-                Text(inv.item.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    inv.item.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.onSurfaceVariant,
+                )
             }
-            Text(inv.purchasedAt, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(inv.purchasedAt, style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant)
         }
     }
 }

@@ -47,7 +47,7 @@ public class HeroAchievementsEndpointTests : IAsyncLifetime
         db.Heroes.Add(hero);
         await db.SaveChangesAsync();
 
-        var controller = new HeroController(db, new HeroTimeService());
+        var controller = HeroController.CreateForTests(db, new HeroTimeService());
 
         var actionResult = await controller.GetAchievements(hero.Id);
 

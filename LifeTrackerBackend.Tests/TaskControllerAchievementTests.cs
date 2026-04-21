@@ -69,7 +69,7 @@ public class TaskControllerAchievementTests : IAsyncLifetime
         await db.SaveChangesAsync();
 
         var expectedBaseGold = task.GetGoldReward();
-        var controller = new TaskController(db, new GameEngineService(), new HeroTimeService());
+        var controller = TaskController.CreateForTests(db, new GameEngineService(), new HeroTimeService());
 
         var actionResult = await controller.CompleteTask(task.Id);
 
