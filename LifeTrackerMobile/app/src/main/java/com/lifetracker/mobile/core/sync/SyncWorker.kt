@@ -8,20 +8,21 @@ import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import com.lifetracker.mobile.R
-import com.lifetracker.mobile.core.network.SafeApiCaller
 import com.lifetracker.mobile.core.network.NetworkResult
+import com.lifetracker.mobile.core.network.SafeApiCaller
 import com.lifetracker.mobile.data.local.dao.TaskDao
+import com.lifetracker.mobile.data.local.entity.TaskEntity
 import com.lifetracker.mobile.data.mapper.toDomain
+import com.lifetracker.mobile.data.mapper.toDto
 import com.lifetracker.mobile.data.mapper.toEntity
 import com.lifetracker.mobile.data.remote.LifeTrackerApi
 import com.lifetracker.mobile.data.remote.dto.CreateTaskRequest
-import com.lifetracker.mobile.data.remote.dto.TaskType as DtoTaskType
-import com.lifetracker.mobile.data.remote.dto.TaskDifficulty as DtoDifficulty
-import com.lifetracker.mobile.data.local.entity.TaskEntity
 import com.lifetracker.mobile.domain.model.TaskDifficulty
 import com.lifetracker.mobile.domain.model.TaskType
-import kotlin.time.Instant
 import timber.log.Timber
+import kotlin.time.Instant
+import com.lifetracker.mobile.data.remote.dto.TaskDifficulty as DtoDifficulty
+import com.lifetracker.mobile.data.remote.dto.TaskType as DtoTaskType
 
 class SyncWorker(
     appContext: Context,
@@ -30,11 +31,10 @@ class SyncWorker(
     private val api: LifeTrackerApi,
     private val caller: SafeApiCaller,
 ) : CoroutineWorker(appContext, workerParams) {
-
     companion object {
         const val CHANNEL_ID = "sync_channel"
         const val NOTIFICATION_PROGRESS_ID = 1001
-        const val NOTIFICATION_FAILURE_ID  = 1002
+        const val NOTIFICATION_FAILURE_ID = 1002
     }
 
     override suspend fun doWork(): Result {
@@ -81,67 +81,86 @@ class SyncWorker(
 
     override suspend fun getForegroundInfo(): ForegroundInfo {
         ensureChannel()
-        val notification = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
-            .setContentTitle("Tasks synchronizing")
-            .setContentText("Send tasks to server...")
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setOngoing(true)
-            .build()
+        val notification =
+            NotificationCompat
+                .Builder(applicationContext, CHANNEL_ID)
+                .setContentTitle("Tasks synchronizing")
+                .setContentText("Send tasks to server...")
+                .setSmallIcon(R.drawable.ic_launcher_foreground)
+                .setOngoing(true)
+                .build()
         return ForegroundInfo(NOTIFICATION_PROGRESS_ID, notification)
     }
 
     private fun showFailureNotification(titles: List<String>) {
         ensureChannel()
-        val text = if (titles.size == 1) {
-            "Save task failed: «${titles[0]}»"
-        } else {
-            "Failed save ${titles.size} task: ${titles.joinToString(", ") { "«$it»" }}"
-        }
-        val notification = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
-            .setContentTitle("Sync error")
-            .setContentText(text)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setAutoCancel(true)
-            .build()
+        val text =
+            if (titles.size == 1) {
+                "Save task failed: «${titles[0]}»"
+            } else {
+                "Failed save ${titles.size} task: ${titles.joinToString(", ") { "«$it»" }}"
+            }
+        val notification =
+            NotificationCompat
+                .Builder(applicationContext, CHANNEL_ID)
+                .setContentTitle("Sync error")
+                .setContentText(text)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+                .setSmallIcon(R.drawable.ic_launcher_foreground)
+                .setAutoCancel(true)
+                .build()
 
-        val manager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE)
-            as NotificationManager
+        val manager =
+            applicationContext.getSystemService(Context.NOTIFICATION_SERVICE)
+                as NotificationManager
         manager.notify(NOTIFICATION_FAILURE_ID, notification)
     }
 
     private fun ensureChannel() {
-        val manager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE)
-            as NotificationManager
+        val manager =
+            applicationContext.getSystemService(Context.NOTIFICATION_SERVICE)
+                as NotificationManager
         if (manager.getNotificationChannel(CHANNEL_ID) != null) return
-        val channel = NotificationChannel(
-            CHANNEL_ID,
-            "Sync",
-            NotificationManager.IMPORTANCE_DEFAULT,
-        )
+        val channel =
+            NotificationChannel(
+                CHANNEL_ID,
+                "Sync",
+                NotificationManager.IMPORTANCE_DEFAULT,
+            )
         manager.createNotificationChannel(channel)
     }
 }
 
-private fun TaskEntity.toCreateRequest(): CreateTaskRequest = CreateTaskRequest(
-    heroId = heroId,
-    title = title,
-    description = description.ifBlank { null },
-    type = when (type) {
-        TaskType.Habit -> DtoTaskType.Habit
-        TaskType.OneTime -> DtoTaskType.OneTime
-        TaskType.Daily -> DtoTaskType.Daily
-        TaskType.Unknown -> DtoTaskType.OneTime
-    },
-    difficulty = when (difficulty) {
-        TaskDifficulty.Easy -> DtoDifficulty.Easy
-        TaskDifficulty.Medium -> DtoDifficulty.Medium
-        TaskDifficulty.Hard -> DtoDifficulty.Hard
-        TaskDifficulty.Epic -> DtoDifficulty.Epic
-        TaskDifficulty.Unknown -> DtoDifficulty.Easy
-    },
-    dueDate = dueDate?.let { Instant.fromEpochMilliseconds(it) },
-    repeatPattern = repeatPattern,
-    checklistJson = checklistJson,
-    remindersJson = remindersJson,
-)
+private fun TaskEntity.toCreateRequest(): CreateTaskRequest =
+    CreateTaskRequest(
+        heroId = heroId,
+        title = title,
+        description = description.ifBlank { null },
+        type =
+            when (type) {
+                TaskType.Habit -> DtoTaskType.Habit
+                TaskType.OneTime -> DtoTaskType.OneTime
+                TaskType.Daily -> DtoTaskType.Daily
+                TaskType.Unknown -> DtoTaskType.OneTime
+            },
+        difficulty =
+            when (difficulty) {
+                TaskDifficulty.Easy -> DtoDifficulty.Easy
+                TaskDifficulty.Medium -> DtoDifficulty.Medium
+                TaskDifficulty.Hard -> DtoDifficulty.Hard
+                TaskDifficulty.Epic -> DtoDifficulty.Epic
+                TaskDifficulty.Unknown -> DtoDifficulty.Easy
+            },
+        habitPolarity =
+            if (type ==
+                TaskType.Habit
+            ) {
+                (habitPolarity ?: com.lifetracker.mobile.domain.model.HabitPolarity.Both).toDto()
+            } else {
+                null
+            },
+        dueDate = dueDate?.let { Instant.fromEpochMilliseconds(it) },
+        repeatPattern = repeatPattern,
+        checklistJson = checklistJson,
+        remindersJson = remindersJson,
+    )

@@ -62,6 +62,11 @@ public class ApplicationDbContext : DbContext
             .Property(t => t.Difficulty)
             .HasConversion<int>();
 
+        modelBuilder.Entity<GameTask>()
+            .Property(t => t.Polarity)
+            .HasConversion<int>()
+            .HasDefaultValue(HabitPolarity.Both);
+
         modelBuilder.Entity<Hero>()
             .Property(h => h.TimeZoneId)
             .HasDefaultValue("UTC");

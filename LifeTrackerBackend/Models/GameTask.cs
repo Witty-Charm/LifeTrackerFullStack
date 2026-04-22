@@ -9,6 +9,13 @@ public enum TaskType
     Daily = 3
 }
 
+public enum HabitPolarity
+{
+    Positive = 1,
+    Negative = 2,
+    Both = 3
+}
+
 public class GameTask
 {
     public int Id { get; set; }
@@ -19,6 +26,7 @@ public class GameTask
 
     public TaskType Type { get; set; } = TaskType.OneTime;
     public TaskDifficulty Difficulty { get; set; } = TaskDifficulty.Easy;
+    public HabitPolarity Polarity { get; set; } = HabitPolarity.Both;
 
     public bool IsActive { get; set; } = true;
     public DateTimeOffset? DueDate { get; set; }

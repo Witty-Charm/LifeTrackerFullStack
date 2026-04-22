@@ -8,6 +8,7 @@ data class CreateTaskParams(
     val description: String? = null,
     val type: TaskType = TaskType.OneTime,
     val difficulty: TaskDifficulty = TaskDifficulty.Easy,
+    val habitPolarity: HabitPolarity = HabitPolarity.Both,
     val dueDate: Instant? = null,
     val repeatPattern: String? = null,
     val initialStreak: Int = 0,

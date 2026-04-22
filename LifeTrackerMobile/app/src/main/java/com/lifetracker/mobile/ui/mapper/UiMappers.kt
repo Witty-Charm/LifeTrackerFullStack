@@ -3,6 +3,7 @@ package com.lifetracker.mobile.ui.mapper
 import com.lifetracker.mobile.core.serialization.JsonDefaults
 import com.lifetracker.mobile.domain.model.ChecklistItem
 import com.lifetracker.mobile.domain.model.GameTaskDomain
+import com.lifetracker.mobile.domain.model.HabitPolarity
 import com.lifetracker.mobile.domain.model.HeroDomain
 import com.lifetracker.mobile.domain.model.InventoryItemDomain
 import com.lifetracker.mobile.domain.model.ShopItemDomain
@@ -66,6 +67,7 @@ fun GameTaskDomain.toUi(): TaskUi =
                 TaskType.Daily -> UiTaskType.Daily
                 TaskType.Unknown -> UiTaskType.Unknown
             },
+        habitPolarity = if (type == TaskType.Habit) habitPolarity else HabitPolarity.Both,
         difficultyLabel =
             when (difficulty) {
                 TaskDifficulty.Easy -> "Easy"

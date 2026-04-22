@@ -123,7 +123,7 @@ fun CreateDailyScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             CreateScreenTopBar(
-                title = "Create daily",
+                title = "Create Daily",
                 onBack = { navController.popBackStack() },
             )
         },

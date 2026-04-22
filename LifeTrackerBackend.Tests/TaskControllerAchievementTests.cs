@@ -151,6 +151,92 @@ public class TaskControllerAchievementTests : IAsyncLifetime
         Assert.Empty(storedUnlocks);
     }
 
+    [Fact]
+    public async Task PostTask_HabitWithoutPolarity_DefaultsToBoth()
+    {
+        await using var db = CreateDbContext();
+        var hero = await CreateHeroAsync(db);
+        var controller = CreateController(db);
+
+        var actionResult = await controller.PostTask(new CreateTaskRequest
+        {
+            HeroId = hero.Id,
+            Title = "Habit without polarity",
+            Type = TaskType.Habit,
+            Difficulty = TaskDifficulty.Easy
+        });
+
+        var created = Assert.IsType<CreatedAtActionResult>(actionResult.Result);
+        var dto = Assert.IsType<TaskDto>(created.Value);
+        var storedTask = await db.GameTasks.SingleAsync(x => x.Id == dto.Id);
+
+        Assert.Equal(HabitPolarity.Both, dto.Polarity);
+        Assert.Equal(HabitPolarity.Both, storedTask.Polarity);
+    }
+
+    [Fact]
+    public async Task PostTask_NonHabitWithPolarity_ReturnsBadRequest()
+    {
+        await using var db = CreateDbContext();
+        var hero = await CreateHeroAsync(db);
+        var controller = CreateController(db);
+
+        var actionResult = await controller.PostTask(new CreateTaskRequest
+        {
+            HeroId = hero.Id,
+            Title = "One time with polarity",
+            Type = TaskType.OneTime,
+            Difficulty = TaskDifficulty.Easy,
+            Polarity = HabitPolarity.Positive
+        });
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(actionResult.Result);
+        Assert.Equal("Polarity is only allowed for Habit tasks", badRequest.Value);
+    }
+
+    [Fact]
+    public async Task FailTask_PositiveHabit_ReturnsBadRequest()
+    {
+        await using var db = CreateDbContext();
+        var hero = await CreateHeroAsync(db);
+        var task = await CreateTaskAsync(db, hero.Id, TaskType.Habit, HabitPolarity.Positive);
+        var controller = CreateController(db);
+
+        var actionResult = await controller.FailTask(task.Id);
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(actionResult.Result);
+        Assert.Equal("Positive habits cannot be failed", badRequest.Value);
+    }
+
+    [Fact]
+    public async Task CompleteTask_NegativeHabit_ReturnsBadRequest()
+    {
+        await using var db = CreateDbContext();
+        var hero = await CreateHeroAsync(db);
+        var task = await CreateTaskAsync(db, hero.Id, TaskType.Habit, HabitPolarity.Negative);
+        var controller = CreateController(db);
+
+        var actionResult = await controller.CompleteTask(task.Id);
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(actionResult.Result);
+        Assert.Equal("Negative habits cannot be completed", badRequest.Value);
+    }
+
+    [Fact]
+    public async Task HabitWithBothPolarity_AllowsCompleteAndFail()
+    {
+        await using var db = CreateDbContext();
+        var hero = await CreateHeroAsync(db);
+        var task = await CreateTaskAsync(db, hero.Id, TaskType.Habit, HabitPolarity.Both);
+        var controller = CreateController(db);
+
+        var completeResult = await controller.CompleteTask(task.Id);
+        var failResult = await controller.FailTask(task.Id);
+
+        Assert.IsType<OkObjectResult>(completeResult.Result);
+        Assert.IsType<OkObjectResult>(failResult.Result);
+    }
+
     private static T ReadProperty<T>(object source, string propertyName)
     {
         var property = source.GetType().GetProperty(propertyName);
@@ -158,6 +244,70 @@ public class TaskControllerAchievementTests : IAsyncLifetime
         var value = property!.GetValue(source);
         Assert.NotNull(value);
         return (T)value!;
+    }
+
+    private static TaskController CreateController(ApplicationDbContext db) =>
+        TaskController.CreateForTests(db, new GameEngineService(), new HeroTimeService());
+
+    private static async Task<Hero> CreateHeroAsync(ApplicationDbContext db)
+    {
+        var hero = new Hero
+        {
+            Name = "Alex",
+            Gold = 100,
+            Level = 1,
+            CurrentHp = 100,
+            MaxHp = 100,
+            TimeZoneId = "UTC"
+        };
+
+        db.Heroes.Add(hero);
+        await db.SaveChangesAsync();
+
+        db.EconomyBalances.Add(new EconomyBalance
+        {
+            HeroId = hero.Id,
+            TotalGoldEarned = 0,
+            LastDailyResetLocalDate = "2026-04-20"
+        });
+        await db.SaveChangesAsync();
+
+        return hero;
+    }
+
+    private static async Task<GameTask> CreateTaskAsync(ApplicationDbContext db, int heroId, TaskType type, HabitPolarity polarity)
+    {
+        var task = new GameTask
+        {
+            HeroId = heroId,
+            Title = $"{type} task",
+            Type = type,
+            Difficulty = TaskDifficulty.Easy,
+            Polarity = polarity,
+            IsCompleted = false,
+            IsActive = true,
+            CompletionCount = 0,
+            FailCount = 0
+        };
+
+        db.GameTasks.Add(task);
+        await db.SaveChangesAsync();
+
+        if (type == TaskType.Habit || type == TaskType.Daily)
+        {
+            db.Streaks.Add(new Streak
+            {
+                HeroId = heroId,
+                TaskId = task.Id,
+                CurrentDays = 0,
+                LongestDays = 0,
+                CreatedAt = DateTimeOffset.UtcNow,
+                UpdatedAt = DateTimeOffset.UtcNow
+            });
+            await db.SaveChangesAsync();
+        }
+
+        return task;
     }
 
     private ApplicationDbContext CreateDbContext() => new(_options);

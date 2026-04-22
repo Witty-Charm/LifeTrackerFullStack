@@ -10,6 +10,7 @@ import com.lifetracker.mobile.domain.model.CreateTaskParams
 import com.lifetracker.mobile.domain.model.DomainResult
 import com.lifetracker.mobile.domain.model.GameError
 import com.lifetracker.mobile.domain.model.GameTaskDomain
+import com.lifetracker.mobile.domain.model.HabitPolarity
 import com.lifetracker.mobile.domain.model.HeroDomain
 import com.lifetracker.mobile.domain.model.HeroSnapshot
 import com.lifetracker.mobile.domain.model.TaskType
@@ -204,6 +205,7 @@ class HeroViewModel(
         type: UiTaskType,
         difficulty: UiDifficulty,
         dueDate: kotlin.time.Instant?,
+        habitPolarity: HabitPolarity = HabitPolarity.Both,
     ) = launchAction(ActionKeys.TASK_CREATE) {
         val id = heroId ?: return@launchAction
         val params =
@@ -213,6 +215,7 @@ class HeroViewModel(
                 description = description,
                 type = type.toDomain(),
                 difficulty = difficulty.toDomain(),
+                habitPolarity = habitPolarity,
                 dueDate = dueDate,
             )
         executeAction { taskUseCases.createTask(params) }

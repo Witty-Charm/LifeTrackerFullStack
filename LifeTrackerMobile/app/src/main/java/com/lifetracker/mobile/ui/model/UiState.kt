@@ -1,6 +1,7 @@
 package com.lifetracker.mobile.ui.model
 
 import androidx.compose.runtime.Immutable
+import com.lifetracker.mobile.domain.model.HabitPolarity
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentListOf
@@ -62,6 +63,7 @@ data class TaskUi(
     val title: String,
     val description: String,
     val type: UiTaskType,
+    val habitPolarity: HabitPolarity = HabitPolarity.Both,
     val difficultyLabel: String,
     val difficultyColor: Long,
     val isCompleted: Boolean,
@@ -90,6 +92,18 @@ data class TaskUi(
             val minutes = (duration.inWholeMinutes % 60)
             return String.format("%02d:%02d left", hours, minutes)
         }
+
+    val showsPositiveAction: Boolean
+        get() = true
+
+    val showsNegativeAction: Boolean
+        get() = true
+
+    val positiveActionEnabled: Boolean
+        get() = type != UiTaskType.Habit || habitPolarity != HabitPolarity.Negative
+
+    val negativeActionEnabled: Boolean
+        get() = type != UiTaskType.Habit || habitPolarity != HabitPolarity.Positive
 }
 
 @Immutable

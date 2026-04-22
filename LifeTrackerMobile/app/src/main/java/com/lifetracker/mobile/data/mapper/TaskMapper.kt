@@ -23,6 +23,7 @@ fun TaskDto.toDomain(): GameTaskDomain =
         description = description,
         type = type.toDomain(),
         difficulty = difficulty.toDomain(),
+        habitPolarity = habitPolarity.toDomain(),
         isCompleted = isCompleted,
         isActive = isActive,
         dueDate = dueDate,

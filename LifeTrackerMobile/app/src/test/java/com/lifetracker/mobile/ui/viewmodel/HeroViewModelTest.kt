@@ -6,6 +6,7 @@ import com.lifetracker.mobile.domain.model.CreateTaskParams
 import com.lifetracker.mobile.domain.model.DomainResult
 import com.lifetracker.mobile.domain.model.GameError
 import com.lifetracker.mobile.domain.model.GameTaskDomain
+import com.lifetracker.mobile.domain.model.HabitPolarity
 import com.lifetracker.mobile.domain.model.HealResult
 import com.lifetracker.mobile.domain.model.HeroDomain
 import com.lifetracker.mobile.domain.model.HeroStatsDomain
@@ -183,6 +184,27 @@ class HeroViewModelTest {
             )
         }
 
+    @Test
+    fun createTask_passesHabitPolarityToUseCase() =
+        runTest {
+            val heroRepository = FakeHeroRepository()
+            val taskRepository = FakeTaskRepository()
+            val viewModel = buildViewModel(heroRepository, taskRepository)
+            advanceUntilIdle()
+
+            viewModel.createTask(
+                title = "Cold shower",
+                description = null,
+                type = com.lifetracker.mobile.ui.model.UiTaskType.Habit,
+                difficulty = com.lifetracker.mobile.ui.model.UiDifficulty.Medium,
+                dueDate = null,
+                habitPolarity = HabitPolarity.Negative,
+            )
+            advanceUntilIdle()
+
+            assertEquals(HabitPolarity.Negative, taskRepository.lastCreateTaskParams?.habitPolarity)
+        }
+
     private fun buildViewModel(
         heroRepository: FakeHeroRepository,
         taskRepository: FakeTaskRepository,
@@ -261,6 +283,7 @@ class HeroViewModelTest {
         var getTasksCalls: Int = 0
         var checkOverdueCalls: Int = 0
         var completeTaskResult: DomainResult<TaskCompletionResult> = DomainResult.Failure(GameError.Unknown("Not used in this test"))
+        var lastCreateTaskParams: CreateTaskParams? = null
         private val tasks = listOf(createTestTask())
 
         override suspend fun getTasks(heroId: Int): DomainResult<List<GameTaskDomain>> {
@@ -270,8 +293,10 @@ class HeroViewModelTest {
 
         override suspend fun getTask(id: Int): DomainResult<GameTaskDomain> = DomainResult.Success(tasks.first())
 
-        override suspend fun createTask(params: CreateTaskParams): DomainResult<GameTaskDomain> =
-            DomainResult.Failure(GameError.Unknown("Not used in this test"))
+        override suspend fun createTask(params: CreateTaskParams): DomainResult<GameTaskDomain> {
+            lastCreateTaskParams = params
+            return DomainResult.Success(createTestTask(type = params.type, habitPolarity = params.habitPolarity))
+        }
 
         override suspend fun completeTask(taskId: Int): DomainResult<TaskCompletionResult> = completeTaskResult
 
@@ -328,32 +353,35 @@ class HeroViewModelTest {
                 xpBoostTasksRemaining = 0,
             )
 
-        private fun createTestTask() =
-            GameTaskDomain(
-                id = 1,
-                heroId = 1,
-                title = "Task",
-                description = "",
-                type = TaskType.OneTime,
-                difficulty = TaskDifficulty.Easy,
-                isCompleted = false,
-                isActive = true,
-                dueDate = null,
-                repeatPattern = null,
-                checklistJson = null,
-                remindersJson = null,
-                isOverdue = false,
-                completionCount = 0,
-                failCount = 0,
-                lastCompletedAt = null,
-                overdueProcessedAt = null,
-                baseXp = 10,
-                baseGold = 5,
-                hpPenalty = 0,
-                goldPenalty = 0,
-                streak = null,
-                pendingSync = false,
-                syncError = null,
-            )
+        private fun createTestTask(
+            type: TaskType = TaskType.OneTime,
+            habitPolarity: HabitPolarity = HabitPolarity.Both,
+        ) = GameTaskDomain(
+            id = 1,
+            heroId = 1,
+            title = "Task",
+            description = "",
+            type = type,
+            difficulty = TaskDifficulty.Easy,
+            habitPolarity = habitPolarity,
+            isCompleted = false,
+            isActive = true,
+            dueDate = null,
+            repeatPattern = null,
+            checklistJson = null,
+            remindersJson = null,
+            isOverdue = false,
+            completionCount = 0,
+            failCount = 0,
+            lastCompletedAt = null,
+            overdueProcessedAt = null,
+            baseXp = 10,
+            baseGold = 5,
+            hpPenalty = 0,
+            goldPenalty = 0,
+            streak = null,
+            pendingSync = false,
+            syncError = null,
+        )
     }
 }

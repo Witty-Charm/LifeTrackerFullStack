@@ -131,16 +131,17 @@ fun HomeScreen(
         bottomBar = {
             val heroId = state.hero?.id
             val route =
-                if (selectedTab == HomeTab.Dailies && heroId != null) {
-                    Screen.CreateDaily.route(heroId)
-                } else {
-                    Screen.CreateTask.route
+                when (selectedTab) {
+                    HomeTab.Habits -> Screen.CreateTask.route(UiTaskType.Habit)
+                    HomeTab.ToDos -> Screen.CreateTask.route(UiTaskType.OneTime)
+                    HomeTab.Dailies -> heroId?.let(Screen.CreateDaily::route)
+                    HomeTab.Shop -> null
                 }
             GameBottomNavigationBar(
                 selectedTab = selectedTab,
                 onTabSelected = onTabSelected,
                 hazeState = hazeState,
-                onAddClick = { if (selectedTab != HomeTab.Shop) navController.navigate(route) },
+                onAddClick = { route?.let(navController::navigate) },
             )
         },
     ) { innerPadding ->

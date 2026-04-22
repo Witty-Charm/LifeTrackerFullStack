@@ -56,6 +56,7 @@ import com.lifetracker.mobile.ui.model.CreateDailyFormState
 import com.lifetracker.mobile.ui.model.HeroScreenState
 import com.lifetracker.mobile.ui.model.RepeatFrequency
 import com.lifetracker.mobile.ui.model.UiDifficulty
+import com.lifetracker.mobile.ui.model.UiTaskType
 import com.lifetracker.mobile.ui.theme.LifeTrackerMobileTheme
 import com.lifetracker.mobile.ui.viewmodel.CreateDailyViewModel
 import com.lifetracker.mobile.ui.viewmodel.HeroViewModel
@@ -82,9 +83,93 @@ class CreateScreensChromeTest {
 
         composeRule.onNodeWithTag("create_top_bar").assertIsDisplayed()
         composeRule.onNodeWithText("Create task").assertIsDisplayed()
+        composeRule.onNodeWithText("Task name").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("Back").assertIsDisplayed()
         composeRule.onNodeWithTag("create_primary_action_footer").assertIsDisplayed()
         composeRule.onAllNodesWithText("Save").assertCountEquals(1)
+    }
+
+    @Test
+    fun createTaskScreen_showsHabitChrome_andHidesTypeSelection_whenLockedToHabit() {
+        composeRule.setContent {
+            LifeTrackerMobileTheme {
+                CreateTaskScreen(
+                    state = HeroScreenState(),
+                    vm = rememberHeroViewModel(),
+                    navController = rememberNavController(),
+                    initialType = UiTaskType.Habit,
+                    lockTypeSelection = true,
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("create_top_bar").assertIsDisplayed()
+        composeRule.onNodeWithText("Create habit").assertIsDisplayed()
+        composeRule.onNodeWithText("Habit name").assertIsDisplayed()
+        composeRule.onAllNodesWithText("Type").assertCountEquals(0)
+        composeRule.onAllNodesWithText("One Time").assertCountEquals(0)
+        composeRule.onNodeWithTag("create_primary_action_footer").assertIsDisplayed()
+        composeRule.onAllNodesWithText("Save").assertCountEquals(1)
+    }
+
+    @Test
+    fun createTaskScreen_showsTodoChrome_andHidesTypeSelection_whenLockedToOneTime() {
+        composeRule.setContent {
+            LifeTrackerMobileTheme {
+                CreateTaskScreen(
+                    state = HeroScreenState(),
+                    vm = rememberHeroViewModel(),
+                    navController = rememberNavController(),
+                    initialType = UiTaskType.OneTime,
+                    lockTypeSelection = true,
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("create_top_bar").assertIsDisplayed()
+        composeRule.onNodeWithText("Create to do").assertIsDisplayed()
+        composeRule.onNodeWithText("To do name").assertIsDisplayed()
+        composeRule.onAllNodesWithText("Type").assertCountEquals(0)
+        composeRule.onAllNodesWithText("Habit").assertCountEquals(0)
+        composeRule.onNodeWithTag("create_primary_action_footer").assertIsDisplayed()
+        composeRule.onAllNodesWithText("Save").assertCountEquals(1)
+    }
+
+    @Test
+    fun createTaskScreen_showsHabitPolarityChips_forHabitAndHidesForTodo() {
+        composeRule.setContent {
+            LifeTrackerMobileTheme {
+                CreateTaskScreen(
+                    state = HeroScreenState(),
+                    vm = rememberHeroViewModel(),
+                    navController = rememberNavController(),
+                    initialType = UiTaskType.Habit,
+                    lockTypeSelection = true,
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Polarity").assertIsDisplayed()
+        composeRule.onNodeWithText("Positive").assertIsDisplayed()
+        composeRule.onNodeWithText("Negative").assertIsDisplayed()
+        composeRule.onNodeWithText("Both").assertIsDisplayed()
+
+        composeRule.setContent {
+            LifeTrackerMobileTheme {
+                CreateTaskScreen(
+                    state = HeroScreenState(),
+                    vm = rememberHeroViewModel(),
+                    navController = rememberNavController(),
+                    initialType = UiTaskType.OneTime,
+                    lockTypeSelection = true,
+                )
+            }
+        }
+
+        composeRule.onAllNodesWithText("Polarity").assertCountEquals(0)
+        composeRule.onAllNodesWithText("Positive").assertCountEquals(0)
+        composeRule.onAllNodesWithText("Negative").assertCountEquals(0)
+        composeRule.onAllNodesWithText("Both").assertCountEquals(0)
     }
 
     @Test
@@ -254,6 +339,7 @@ private class CreateScreenFakeTaskRepository : TaskRepository {
                 description = params.description.orEmpty(),
                 type = params.type,
                 difficulty = params.difficulty,
+                habitPolarity = params.habitPolarity,
                 isCompleted = false,
                 isActive = true,
                 dueDate = params.dueDate,

@@ -15,6 +15,7 @@ import com.lifetracker.mobile.core.theme.ThemeController
 import com.lifetracker.mobile.data.local.AppDatabase
 import com.lifetracker.mobile.data.local.MIGRATION_2_3
 import com.lifetracker.mobile.data.local.MIGRATION_3_4
+import com.lifetracker.mobile.data.local.MIGRATION_4_5
 import com.lifetracker.mobile.data.remote.NetworkModule
 import com.lifetracker.mobile.data.repository.DataStoreSettingsRepository
 import com.lifetracker.mobile.data.repository.HeroRepositoryImpl
@@ -148,7 +149,7 @@ val appModule =
         single {
             Room
                 .databaseBuilder(androidContext(), AppDatabase::class.java, "lifetracker.db")
-                .addMigrations(MIGRATION_2_3, MIGRATION_3_4)
+                .addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                 .fallbackToDestructiveMigration(dropAllTables = true)
                 .build()
         }

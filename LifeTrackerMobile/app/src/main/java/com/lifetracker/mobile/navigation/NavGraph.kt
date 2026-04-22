@@ -33,7 +33,14 @@ sealed interface Screen {
     }
 
     data object CreateTask : Screen {
-        override val route = "create_task"
+        private const val baseRoute = "create_task"
+        private const val initialTypeArg = "initialType"
+
+        override val route = "$baseRoute?$initialTypeArg={$initialTypeArg}"
+
+        fun route(initialType: UiTaskType) = "$baseRoute?$initialTypeArg=${initialType.name}"
+
+        fun defaultRoute() = baseRoute
     }
 
     data object Achievements : Screen {
@@ -86,8 +93,31 @@ fun NavGraph(
             )
         }
 
-        composable(Screen.CreateTask.route) {
-            CreateTaskScreen(state = state, vm = vm, navController = navController)
+        composable(
+            route = Screen.CreateTask.route,
+            arguments =
+                listOf(
+                    navArgument("initialType") {
+                        type = NavType.StringType
+                        nullable = true
+                    },
+                ),
+        ) { backStackEntry ->
+            val rawInitialType = backStackEntry.arguments?.getString("initialType")
+            val initialType =
+                when (rawInitialType) {
+                    UiTaskType.Habit.name -> UiTaskType.Habit
+                    UiTaskType.OneTime.name -> UiTaskType.OneTime
+                    else -> UiTaskType.OneTime
+                }
+
+            CreateTaskScreen(
+                state = state,
+                vm = vm,
+                navController = navController,
+                initialType = initialType,
+                lockTypeSelection = rawInitialType != null,
+            )
         }
 
         composable(Screen.CreateHero.route) {

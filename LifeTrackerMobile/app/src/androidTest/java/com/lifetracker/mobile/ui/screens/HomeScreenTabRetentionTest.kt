@@ -263,6 +263,7 @@ private class FakeTaskRepository : TaskRepository {
                 description = "",
                 type = TaskType.OneTime,
                 difficulty = TaskDifficulty.Easy,
+                habitPolarity = com.lifetracker.mobile.domain.model.HabitPolarity.Both,
                 isCompleted = false,
                 isActive = true,
                 dueDate = null,

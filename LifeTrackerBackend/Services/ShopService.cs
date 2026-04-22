@@ -137,7 +137,12 @@ public class ShopService : IShopService
         if (item.ItemType == 4)
         {
             var now = clientLocalDateTime ?? DateTimeOffset.UtcNow;
-            var hasActiveShield = await _db.Streaks.AnyAsync(s => s.HeroId == hero.Id && s.IsShieldActive && s.ShieldExpiresAtUtc >= now);
+            var shieldExpirations = await _db.Streaks
+                .AsNoTracking()
+                .Where(s => s.HeroId == hero.Id && s.IsShieldActive)
+                .Select(s => s.ShieldExpiresAtUtc)
+                .ToListAsync();
+            var hasActiveShield = shieldExpirations.Any(expiresAt => expiresAt.HasValue && expiresAt.Value >= now);
             if (hasActiveShield)
                 return "Shield is already active until local midnight.";
         }

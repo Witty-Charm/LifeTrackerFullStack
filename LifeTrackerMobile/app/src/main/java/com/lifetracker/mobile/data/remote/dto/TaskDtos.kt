@@ -1,5 +1,6 @@
 package com.lifetracker.mobile.data.remote.dto
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlin.time.Instant
 
@@ -11,6 +12,8 @@ data class TaskDto(
     val description: String,
     val type: TaskType,
     val difficulty: TaskDifficulty,
+    @SerialName("polarity")
+    val habitPolarity: HabitPolarity = HabitPolarity.Both,
     val isCompleted: Boolean,
     val isActive: Boolean,
     val dueDate: Instant? = null,
@@ -46,6 +49,8 @@ data class CreateTaskRequest(
     val description: String? = null,
     val type: TaskType = TaskType.OneTime,
     val difficulty: TaskDifficulty = TaskDifficulty.Easy,
+    @SerialName("polarity")
+    val habitPolarity: HabitPolarity? = null,
     val dueDate: Instant? = null,
     val repeatPattern: String? = null,
     val initialStreak: Int = 0,

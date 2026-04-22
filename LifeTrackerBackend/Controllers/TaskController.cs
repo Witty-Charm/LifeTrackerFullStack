@@ -63,6 +63,13 @@ public class TaskController : ControllerBase
         if (string.IsNullOrWhiteSpace(request.Title))
             return BadRequest("Title is required");
 
+        if (request.Type != TaskType.Habit && request.Polarity.HasValue)
+            return BadRequest("Polarity is only allowed for Habit tasks");
+
+        var polarity = request.Type == TaskType.Habit
+            ? request.Polarity ?? HabitPolarity.Both
+            : HabitPolarity.Both;
+
         int heroId = request.HeroId ?? 0;
         if (heroId == 0)
         {
@@ -78,6 +85,7 @@ public class TaskController : ControllerBase
             Description = request.Description ?? string.Empty,
             Type = request.Type,
             Difficulty = request.Difficulty,
+            Polarity = polarity,
             DueDate = request.DueDate,
             RepeatPattern = request.RepeatPattern,
             ChecklistJson = request.ChecklistJson,
@@ -123,6 +131,9 @@ public class TaskController : ControllerBase
 
         if (task.IsCompleted && task.Type == TaskType.OneTime)
             return BadRequest("Task is already completed");
+
+        if (task.Type == TaskType.Habit && task.Polarity == HabitPolarity.Negative)
+            return BadRequest("Negative habits cannot be completed");
 
         var hero = await _context.Heroes
             .Include(h => h.EconomyBalance)
@@ -245,6 +256,9 @@ public class TaskController : ControllerBase
 
         if (task == null)
             return NotFound("Task not found");
+
+        if (task.Type == TaskType.Habit && task.Polarity == HabitPolarity.Positive)
+            return BadRequest("Positive habits cannot be failed");
 
         var hero = await _context.Heroes
             .Include(h => h.EconomyBalance)
@@ -398,6 +412,7 @@ public class TaskController : ControllerBase
         Description = task.Description,
         Type = task.Type,
         Difficulty = task.Difficulty,
+        Polarity = task.Polarity,
         IsCompleted = task.IsCompleted,
         IsActive = task.IsActive,
         DueDate = task.DueDate,
@@ -494,6 +509,7 @@ public class TaskDto
     public string Description { get; set; } = string.Empty;
     public TaskType Type { get; set; }
     public TaskDifficulty Difficulty { get; set; }
+    public HabitPolarity Polarity { get; set; }
     public bool IsCompleted { get; set; }
     public bool IsActive { get; set; }
     public DateTimeOffset? DueDate { get; set; }
@@ -529,6 +545,7 @@ public class CreateTaskRequest
     public string? Description { get; set; }
     public TaskType Type { get; set; } = TaskType.OneTime;
     public TaskDifficulty Difficulty { get; set; } = TaskDifficulty.Easy;
+    public HabitPolarity? Polarity { get; set; }
     public DateTimeOffset? DueDate { get; set; }
     public string? RepeatPattern { get; set; }
     public int InitialStreak { get; set; } = 0;

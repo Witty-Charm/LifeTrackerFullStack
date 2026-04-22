@@ -7,7 +7,12 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -19,12 +24,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.material.icons.filled.CloudOff
-import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextOverflow
@@ -50,7 +49,7 @@ fun TaskItem(
     if (task.isPendingSync) {
         TaskCardContent(
             task = task,
-            canAct = true,
+            canAct = false,
             cardAlpha = 0.6f,
             onCompleteClick = onCompleteClick,
             onFailClick = onFailClick,
@@ -61,20 +60,21 @@ fun TaskItem(
         return
     }
 
-    val dismissState = rememberSwipeToDismissBoxState(
-        confirmValueChange = { value ->
-            if (value == SwipeToDismissBoxValue.EndToStart && canAct) {
-                onDeleteClick()
-            }
-            false
-        }
-    )
+    val dismissState =
+        rememberSwipeToDismissBoxState(
+            confirmValueChange = { value ->
+                if (value == SwipeToDismissBoxValue.EndToStart && canAct) {
+                    onDeleteClick()
+                }
+                false
+            },
+        )
 
     SwipeToDismissBox(
         state = dismissState,
         backgroundContent = { DismissBackground() },
         gesturesEnabled = canAct,
-        modifier = modifier
+        modifier = modifier,
     ) {
         TaskCardContent(
             task = task,
@@ -91,17 +91,18 @@ fun TaskItem(
 @Composable
 private fun DismissBackground() {
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.error)
-            .padding(end = 16.dp)
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.error)
+                .padding(end = 16.dp),
     ) {
         Icon(
             imageVector = Icons.Default.Delete,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onError,
-            modifier = Modifier.align(Alignment.CenterEnd)
+            modifier = Modifier.align(Alignment.CenterEnd),
         )
     }
 }
@@ -118,58 +119,89 @@ private fun TaskCardContent(
     modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 68.dp)
-            .height(IntrinsicSize.Min)
-            .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surface)
-            .graphicsLayer { alpha = cardAlpha }
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .heightIn(min = 68.dp)
+                .height(IntrinsicSize.Min)
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.surface)
+                .graphicsLayer { alpha = cardAlpha },
     ) {
-        Box(
-            modifier = Modifier
-                .width(48.dp)
-                .fillMaxHeight()
-                .background(
-                    color = MaterialTheme.colorScheme.secondary,
-                    shape = RoundedCornerShape(
-                        topStart = 12.dp,
-                        bottomStart = 12.dp,
-                        topEnd = 0.dp,
-                        bottomEnd = 0.dp
-                    )
+        val positiveHighlighted = positiveActionHighlighted(task, canAct)
+        val negativeHighlighted = negativeActionHighlighted(task, canAct)
+        val positiveEnabled = positiveActionClickable(task, canAct)
+        val negativeEnabled = negativeActionClickable(task, canAct)
+        val positiveContainerColor = if (positiveHighlighted) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.surfaceVariant
+        val positiveBadgeColor =
+            if (positiveHighlighted) {
+                MaterialTheme.colorScheme.onSecondary.copy(
+                    alpha = 0.2f,
                 )
-                .clickable(enabled = canAct, onClick = onCompleteClick),
-            contentAlignment = Alignment.Center
-        ) {
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.16f)
+            }
+        val positiveTextColor = if (positiveHighlighted) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant
+        val negativeContainerColor = if (negativeHighlighted) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.surfaceVariant
+        val negativeBadgeColor =
+            if (negativeHighlighted) {
+                MaterialTheme.colorScheme.onSecondary.copy(
+                    alpha = 0.2f,
+                )
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.16f)
+            }
+        val negativeTextColor = if (negativeHighlighted) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant
+
+        if (task.showsPositiveAction) {
             Box(
-                modifier = Modifier
-                    .size(28.dp)
-                    .background(
-                        color = MaterialTheme.colorScheme.onSecondary.copy(alpha = 0.2f),
-                        shape = CircleShape
-                    ),
-                contentAlignment = Alignment.Center
+                modifier =
+                    Modifier
+                        .width(48.dp)
+                        .fillMaxHeight()
+                        .background(
+                            color = positiveContainerColor,
+                            shape =
+                                RoundedCornerShape(
+                                    topStart = 12.dp,
+                                    bottomStart = 12.dp,
+                                    topEnd = 0.dp,
+                                    bottomEnd = 0.dp,
+                                ),
+                        ).clickable(enabled = positiveEnabled, onClick = onCompleteClick),
+                contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    text = "+",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
+                Box(
+                    modifier =
+                        Modifier
+                            .size(28.dp)
+                            .background(
+                                color = positiveBadgeColor,
+                                shape = CircleShape,
+                            ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = "+",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = positiveTextColor,
+                    )
+                }
             }
         }
 
         Column(
-            modifier = Modifier
-                .weight(1f)
-                .padding(horizontal = 12.dp, vertical = 10.dp)
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
         ) {
             Text(
                 text = task.title,
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 2,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
             )
 
             if (task.description.isNotBlank()) {
@@ -179,7 +211,7 @@ private fun TaskCardContent(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
 
@@ -188,14 +220,14 @@ private fun TaskCardContent(
             Text(
                 text = task.difficultyLabel,
                 style = MaterialTheme.typography.bodySmall,
-                color = Color(task.difficultyColor)
+                color = Color(task.difficultyColor),
             )
 
             if (task.streakText != null) {
                 Text(
                     text = "🔥 ${task.streakText}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
@@ -203,7 +235,7 @@ private fun TaskCardContent(
                 Text(
                     text = "🛡️ Shielded today · ${task.shieldCountdownText}",
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.primary,
                 )
             }
 
@@ -211,7 +243,7 @@ private fun TaskCardContent(
                 Text(
                     text = task.dueDateText,
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (task.isOverdue) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                    color = if (task.isOverdue) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
@@ -222,23 +254,24 @@ private fun TaskCardContent(
                         imageVector = Icons.Default.Error,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(12.dp)
+                        modifier = Modifier.size(12.dp),
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = task.syncError,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error
+                        color = MaterialTheme.colorScheme.error,
                     )
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 Row {
                     Button(
-                        onClick =  onRetrySyncClick,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary,
-                        ),
+                        onClick = onRetrySyncClick,
+                        colors =
+                            ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary,
+                            ),
                     ) {
                         Icon(imageVector = Icons.Default.Refresh, contentDescription = "Retry")
                         Spacer(modifier = Modifier.width(4.dp))
@@ -247,10 +280,11 @@ private fun TaskCardContent(
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
                         onClick = onDeleteFailedTaskClick,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.error,
-                            contentColor = MaterialTheme.colorScheme.onError,
-                        ),
+                        colors =
+                            ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.error,
+                                contentColor = MaterialTheme.colorScheme.onError,
+                            ),
                     ) {
                         Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete")
                         Spacer(modifier = Modifier.width(4.dp))
@@ -266,50 +300,73 @@ private fun TaskCardContent(
                         imageVector = Icons.Default.CloudOff,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(12.dp)
+                        modifier = Modifier.size(12.dp),
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = "Pending sync",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
         }
 
-        Box(
-            modifier = Modifier
-                .width(60.dp)
-                .fillMaxHeight()
-                .background(
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    shape = RoundedCornerShape(
-                        topStart = 0.dp,
-                        bottomStart = 0.dp,
-                        topEnd = 12.dp,
-                        bottomEnd = 12.dp
-                    )
-                )
-                .clickable(enabled = canAct, onClick = onFailClick),
-            contentAlignment = Alignment.Center
-        ) {
+        if (task.showsNegativeAction) {
             Box(
-                modifier = Modifier
-                    .size(28.dp)
-                    .border(
-                        width = 1.5.dp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        shape = CircleShape
-                    ),
-                contentAlignment = Alignment.Center
+                modifier =
+                    Modifier
+                        .width(48.dp)
+                        .fillMaxHeight()
+                        .background(
+                            color = negativeContainerColor,
+                            shape =
+                                RoundedCornerShape(
+                                    topStart = 0.dp,
+                                    bottomStart = 0.dp,
+                                    topEnd = 12.dp,
+                                    bottomEnd = 12.dp,
+                                ),
+                        ).clickable(enabled = negativeEnabled, onClick = onFailClick),
+                contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    text = "−",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Box(
+                    modifier =
+                        Modifier
+                            .size(28.dp)
+                            .background(
+                                color = negativeBadgeColor,
+                                shape = CircleShape,
+                            ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = "−",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = negativeTextColor,
+                    )
+                }
             }
         }
     }
 }
+
+internal fun positiveActionHighlighted(
+    task: TaskUi,
+    canAct: Boolean,
+): Boolean = task.positiveActionEnabled
+
+internal fun negativeActionHighlighted(
+    task: TaskUi,
+    canAct: Boolean,
+): Boolean = task.negativeActionEnabled
+
+internal fun positiveActionClickable(
+    task: TaskUi,
+    canAct: Boolean,
+): Boolean = canAct && task.positiveActionEnabled
+
+internal fun negativeActionClickable(
+    task: TaskUi,
+    canAct: Boolean,
+): Boolean = canAct && task.negativeActionEnabled

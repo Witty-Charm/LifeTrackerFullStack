@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.lifetracker.mobile.domain.model.HabitPolarity
 import com.lifetracker.mobile.ui.components.CreateScreenFloatingFooter
 import com.lifetracker.mobile.ui.components.CreateScreenTopBar
 import com.lifetracker.mobile.ui.components.GameDatePickerDialog
@@ -55,15 +56,26 @@ fun CreateTaskScreen(
     state: HeroScreenState,
     vm: HeroViewModel,
     navController: NavController,
+    initialType: UiTaskType = UiTaskType.OneTime,
+    lockTypeSelection: Boolean = false,
 ) {
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
-    var selectedType by remember { mutableStateOf(UiTaskType.OneTime) }
+    var selectedType by remember(initialType) {
+        mutableStateOf(initialType.takeIf { it == UiTaskType.Habit || it == UiTaskType.OneTime } ?: UiTaskType.OneTime)
+    }
     var selectedDifficulty by remember { mutableStateOf(UiDifficulty.Easy) }
+    var selectedHabitPolarity by remember(selectedType) { mutableStateOf(defaultHabitPolarity(selectedType)) }
     var dueDate by remember { mutableStateOf<Instant?>(null) }
     var showDatePicker by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val hazeState = remember { HazeState() }
+    val screenTitle =
+        when {
+            !lockTypeSelection -> "Create task"
+            selectedType == UiTaskType.Habit -> "Create habit"
+            else -> "Create to do"
+        }
 
     LaunchedEffect(Unit) {
         vm.clearError()
@@ -73,7 +85,7 @@ fun CreateTaskScreen(
         Scaffold(
             topBar = {
                 CreateScreenTopBar(
-                    title = "Create task",
+                    title = screenTitle,
                     onBack = { navController.popBackStack() },
                 )
             },
@@ -88,6 +100,7 @@ fun CreateTaskScreen(
                             type = selectedType,
                             difficulty = selectedDifficulty,
                             dueDate = dueDate,
+                            habitPolarity = selectedHabitPolarity,
                         )
                     },
                     isLoading = state.isAnyActionLoading,
@@ -107,7 +120,7 @@ fun CreateTaskScreen(
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text("Task name") },
+                    label = { Text(taskNameLabel(selectedType, lockTypeSelection)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -123,18 +136,47 @@ fun CreateTaskScreen(
                     maxLines = 3,
                 )
 
-                Text(text = "Type", style = MaterialTheme.typography.titleSmall)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(
-                        selected = selectedType == UiTaskType.Habit,
-                        onClick = { selectedType = UiTaskType.Habit },
-                        label = { Text("Habit") },
-                    )
-                    FilterChip(
-                        selected = selectedType == UiTaskType.OneTime,
-                        onClick = { selectedType = UiTaskType.OneTime },
-                        label = { Text("One Time") },
-                    )
+                if (!lockTypeSelection) {
+                    Text(text = "Type", style = MaterialTheme.typography.titleSmall)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(
+                            selected = selectedType == UiTaskType.Habit,
+                            onClick = {
+                                selectedType = UiTaskType.Habit
+                                selectedHabitPolarity = defaultHabitPolarity(UiTaskType.Habit)
+                            },
+                            label = { Text("Habit") },
+                        )
+                        FilterChip(
+                            selected = selectedType == UiTaskType.OneTime,
+                            onClick = {
+                                selectedType = UiTaskType.OneTime
+                                selectedHabitPolarity = defaultHabitPolarity(UiTaskType.OneTime)
+                            },
+                            label = { Text("One Time") },
+                        )
+                    }
+                }
+
+                if (shouldShowHabitPolarity(selectedType)) {
+                    Text(text = "Polarity", style = MaterialTheme.typography.titleSmall)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(
+                            selected = selectedHabitPolarity == HabitPolarity.Positive,
+                            onClick = { selectedHabitPolarity = HabitPolarity.Positive },
+                            label = { Text("Positive") },
+                        )
+                        FilterChip(
+                            selected = selectedHabitPolarity == HabitPolarity.Negative,
+                            onClick = { selectedHabitPolarity = HabitPolarity.Negative },
+                            label = { Text("Negative") },
+                        )
+                        FilterChip(
+                            selected = selectedHabitPolarity == HabitPolarity.Both,
+                            onClick = { selectedHabitPolarity = HabitPolarity.Both },
+                            label = { Text("Both") },
+                        )
+                    }
                 }
 
                 Text(text = "Difficulty", style = MaterialTheme.typography.titleSmall)
@@ -198,6 +240,21 @@ fun CreateTaskScreen(
         )
     }
 }
+
+internal fun taskNameLabel(
+    selectedType: UiTaskType,
+    lockTypeSelection: Boolean,
+): String =
+    when {
+        !lockTypeSelection -> "Task name"
+        selectedType == UiTaskType.Habit -> "Habit name"
+        else -> "To do name"
+    }
+
+internal fun shouldShowHabitPolarity(selectedType: UiTaskType): Boolean = selectedType == UiTaskType.Habit
+
+internal fun defaultHabitPolarity(selectedType: UiTaskType): HabitPolarity =
+    if (selectedType == UiTaskType.Habit) HabitPolarity.Both else HabitPolarity.Both
 
 private val DisplayDateFormat =
     LocalDate.Format {

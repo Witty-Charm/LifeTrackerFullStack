@@ -1,36 +1,56 @@
 package com.lifetracker.mobile.data.mapper
 
-import com.lifetracker.mobile.data.remote.dto.TaskDifficulty as TaskDifficultyDto
-import com.lifetracker.mobile.data.remote.dto.TaskType as TaskTypeDto
+import com.lifetracker.mobile.domain.model.HabitPolarity
 import com.lifetracker.mobile.domain.model.TaskDifficulty
 import com.lifetracker.mobile.domain.model.TaskType
+import com.lifetracker.mobile.data.remote.dto.HabitPolarity as HabitPolarityDto
+import com.lifetracker.mobile.data.remote.dto.TaskDifficulty as TaskDifficultyDto
+import com.lifetracker.mobile.data.remote.dto.TaskType as TaskTypeDto
 
-fun TaskTypeDto.toDomain(): TaskType = when (this) {
-    TaskTypeDto.Habit   -> TaskType.Habit
-    TaskTypeDto.OneTime -> TaskType.OneTime
-    TaskTypeDto.Daily   -> TaskType.Daily
-    TaskTypeDto.Unknown -> TaskType.Unknown
-}
+fun TaskTypeDto.toDomain(): TaskType =
+    when (this) {
+        TaskTypeDto.Habit -> TaskType.Habit
+        TaskTypeDto.OneTime -> TaskType.OneTime
+        TaskTypeDto.Daily -> TaskType.Daily
+        TaskTypeDto.Unknown -> TaskType.Unknown
+    }
 
-fun TaskDifficultyDto.toDomain(): TaskDifficulty = when (this) {
-    TaskDifficultyDto.Easy   -> TaskDifficulty.Easy
-    TaskDifficultyDto.Medium -> TaskDifficulty.Medium
-    TaskDifficultyDto.Hard   -> TaskDifficulty.Hard
-    TaskDifficultyDto.Epic   -> TaskDifficulty.Epic
-    TaskDifficultyDto.Unknown -> TaskDifficulty.Unknown
-}
+fun TaskDifficultyDto.toDomain(): TaskDifficulty =
+    when (this) {
+        TaskDifficultyDto.Easy -> TaskDifficulty.Easy
+        TaskDifficultyDto.Medium -> TaskDifficulty.Medium
+        TaskDifficultyDto.Hard -> TaskDifficulty.Hard
+        TaskDifficultyDto.Epic -> TaskDifficulty.Epic
+        TaskDifficultyDto.Unknown -> TaskDifficulty.Unknown
+    }
 
-fun TaskType.toDto(): TaskTypeDto = when (this) {
-    TaskType.Habit   -> TaskTypeDto.Habit
-    TaskType.OneTime -> TaskTypeDto.OneTime
-    TaskType.Daily   -> TaskTypeDto.Daily
-    TaskType.Unknown -> TaskTypeDto.Unknown
-}
+fun TaskType.toDto(): TaskTypeDto =
+    when (this) {
+        TaskType.Habit -> TaskTypeDto.Habit
+        TaskType.OneTime -> TaskTypeDto.OneTime
+        TaskType.Daily -> TaskTypeDto.Daily
+        TaskType.Unknown -> TaskTypeDto.Unknown
+    }
 
-fun TaskDifficulty.toDto(): TaskDifficultyDto = when (this) {
-    TaskDifficulty.Easy   -> TaskDifficultyDto.Easy
-    TaskDifficulty.Medium -> TaskDifficultyDto.Medium
-    TaskDifficulty.Hard   -> TaskDifficultyDto.Hard
-    TaskDifficulty.Epic   -> TaskDifficultyDto.Epic
-    TaskDifficulty.Unknown -> TaskDifficultyDto.Unknown
-}
+fun TaskDifficulty.toDto(): TaskDifficultyDto =
+    when (this) {
+        TaskDifficulty.Easy -> TaskDifficultyDto.Easy
+        TaskDifficulty.Medium -> TaskDifficultyDto.Medium
+        TaskDifficulty.Hard -> TaskDifficultyDto.Hard
+        TaskDifficulty.Epic -> TaskDifficultyDto.Epic
+        TaskDifficulty.Unknown -> TaskDifficultyDto.Unknown
+    }
+
+fun HabitPolarityDto.toDomain(): HabitPolarity =
+    when (this) {
+        HabitPolarityDto.Positive -> HabitPolarity.Positive
+        HabitPolarityDto.Negative -> HabitPolarity.Negative
+        HabitPolarityDto.Both -> HabitPolarity.Both
+    }
+
+fun HabitPolarity.toDto(): HabitPolarityDto =
+    when (this) {
+        HabitPolarity.Positive -> HabitPolarityDto.Positive
+        HabitPolarity.Negative -> HabitPolarityDto.Negative
+        HabitPolarity.Both -> HabitPolarityDto.Both
+    }

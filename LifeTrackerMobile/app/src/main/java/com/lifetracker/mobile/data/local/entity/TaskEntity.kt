@@ -3,6 +3,7 @@ package com.lifetracker.mobile.data.local.entity
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import com.lifetracker.mobile.domain.model.HabitPolarity
 import com.lifetracker.mobile.domain.model.TaskDifficulty
 import com.lifetracker.mobile.domain.model.TaskType
 
@@ -11,7 +12,7 @@ import com.lifetracker.mobile.domain.model.TaskType
     indices = [
         Index("heroId"),
         Index("pendingSync"),
-    ]
+    ],
 )
 data class TaskEntity(
     @PrimaryKey val id: Int,
@@ -20,6 +21,7 @@ data class TaskEntity(
     val description: String,
     val type: TaskType,
     val difficulty: TaskDifficulty,
+    val habitPolarity: HabitPolarity? = null,
     val isCompleted: Boolean,
     val isActive: Boolean,
     val dueDate: Long?,

@@ -127,6 +127,11 @@ namespace LifeTracker.Migrations
                     b.Property<DateTimeOffset?>("OverdueProcessedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("Polarity")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(3);
+
                     b.Property<string>("RemindersJson")
                         .HasColumnType("TEXT");
 
