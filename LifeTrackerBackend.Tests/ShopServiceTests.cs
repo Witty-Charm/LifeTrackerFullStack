@@ -69,9 +69,9 @@ public class ShopServiceTests
     }
 
     [Fact]
-    public async Task BuyItem_StreakShield_ActivatesAllStreaks()
+    public async Task BuyItem_StreakShield_ActivatesHeroShield()
     {
-        var db = CreateContext(nameof(BuyItem_StreakShield_ActivatesAllStreaks));
+        var db = CreateContext(nameof(BuyItem_StreakShield_ActivatesHeroShield));
         var hero = new Hero { Id = 1, Gold = 200 };
         var item = new ShopItem { Id = 1, Name = "Streak Shield", ItemType = 4, EffectValue = 1, Price = 80 };
         db.Heroes.Add(hero);
@@ -80,17 +80,15 @@ public class ShopServiceTests
         db.Streaks.Add(new Streak { Id = 2, HeroId = hero.Id, CurrentDays = 5 });
         await db.SaveChangesAsync();
 
-        var clientTimeZone = "UTC";
-        var clientLocalDateTime = DateTimeOffset.UtcNow;
-
         var service = CreateService(db);
-        var (result, error) = await service.BuyItemAsync(hero.Id, item.Id, clientTimeZone, clientLocalDateTime);
+        var (result, error) = await service.BuyItemAsync(hero.Id, item.Id, null, null);
 
         Assert.Null(error);
         Assert.NotNull(result);
-        var streaks = db.Streaks.ToList();
-        Assert.All(streaks, s => Assert.True(s.IsShieldActive));
-        Assert.All(streaks, s => Assert.NotNull(s.ShieldExpiresAtUtc));
+        var updatedHero = db.Heroes.Single();
+        Assert.True(updatedHero.IsShieldActive);
+        Assert.NotNull(updatedHero.ShieldActivatedAtUtc);
+        Assert.All(db.Streaks.ToList(), s => Assert.False(s.IsShieldActive));
     }
 
     [Fact]
@@ -194,85 +192,19 @@ public class ShopServiceTests
     public async Task BuyItem_StreakShield_RejectsWhenShieldIsAlreadyActive()
     {
         var db = CreateContext(nameof(BuyItem_StreakShield_RejectsWhenShieldIsAlreadyActive));
-        var hero = new Hero { Id = 1, Gold = 200 };
+        var hero = new Hero { Id = 1, Gold = 200, IsShieldActive = true, ShieldActivatedAtUtc = DateTimeOffset.UtcNow.AddMinutes(-5) };
         var item = new ShopItem { Id = 1, Name = "Streak Shield", ItemType = 4, EffectValue = 1, Price = 80 };
-        var now = DateTimeOffset.UtcNow;
         db.Heroes.Add(hero);
         db.ShopItems.Add(item);
-        db.Streaks.Add(new Streak { Id = 1, HeroId = hero.Id, CurrentDays = 5, IsShieldActive = true, ShieldExpiresAtUtc = now.AddHours(2) });
         await db.SaveChangesAsync();
 
         var service = CreateService(db);
-        var (result, error) = await service.BuyItemAsync(hero.Id, item.Id, "UTC", now);
+        var (result, error) = await service.BuyItemAsync(hero.Id, item.Id, null, null);
 
         Assert.Null(result);
-        Assert.Equal("Shield is already active until local midnight.", error);
+        Assert.Equal("Shield is already active.", error);
         Assert.Equal(200, db.Heroes.Single().Gold);
         Assert.Empty(db.Purchases);
     }
 
-    [Fact]
-    public async Task BuyShield_SetsExpiry_ToLocalMidnight()
-    {
-        var db = CreateContext(nameof(BuyShield_SetsExpiry_ToLocalMidnight));
-        var hero = new Hero { Id = 1, Gold = 200 };
-        var item = new ShopItem { Id = 1, Name = "Streak Shield", ItemType = 4, EffectValue = 1, Price = 80 };
-        db.Heroes.Add(hero);
-        db.ShopItems.Add(item);
-        db.Streaks.Add(new Streak { Id = 1, HeroId = hero.Id, CurrentDays = 3 });
-        await db.SaveChangesAsync();
-
-        var clientTimeZone = "Europe/Moscow";
-        var clientLocalDateTime = new DateTimeOffset(2026, 4, 10, 23, 50, 0, TimeSpan.FromHours(3));
-
-        var service = CreateService(db);
-        var (result, error) = await service.BuyItemAsync(hero.Id, item.Id, clientTimeZone, clientLocalDateTime);
-
-        Assert.Null(error);
-        Assert.NotNull(result);
-
-        var streak = db.Streaks.Single();
-        Assert.True(streak.IsShieldActive);
-        Assert.NotNull(streak.ShieldExpiresAtUtc);
-
-        var expectedExpiry = new DateTimeOffset(2026, 4, 10, 21, 0, 0, TimeSpan.Zero);
-        Assert.Equal(expectedExpiry, streak.ShieldExpiresAtUtc!.Value);
-    }
-
-    [Fact]
-    public async Task BuyShield_RestoresSameDayBreak()
-    {
-        var db = CreateContext(nameof(BuyShield_RestoresSameDayBreak));
-        var hero = new Hero { Id = 1, Gold = 200 };
-        var item = new ShopItem { Id = 1, Name = "Streak Shield", ItemType = 4, EffectValue = 1, Price = 80 };
-        db.Heroes.Add(hero);
-        db.ShopItems.Add(item);
-
-        var clientTimeZone = "Europe/Moscow";
-        var breakTime = new DateTimeOffset(2026, 4, 10, 10, 0, 0, TimeSpan.FromHours(3));
-        var purchaseTime = new DateTimeOffset(2026, 4, 10, 15, 0, 0, TimeSpan.FromHours(3));
-
-        var streak = new Streak
-        {
-            Id = 1,
-            HeroId = hero.Id,
-            CurrentDays = 0,
-            ShieldBackupCurrentDays = 7,
-            ShieldBackupBreakAtUtc = breakTime,
-            LastBreakLocalDate = "2026-04-10"
-        };
-        db.Streaks.Add(streak);
-        await db.SaveChangesAsync();
-
-        var service = CreateService(db);
-        var (result, error) = await service.BuyItemAsync(hero.Id, item.Id, clientTimeZone, purchaseTime);
-
-        Assert.Null(error);
-        Assert.NotNull(result);
-
-        var updatedStreak = db.Streaks.Single();
-        Assert.Equal(7, updatedStreak.CurrentDays);
-        Assert.Null(updatedStreak.ShieldBackupCurrentDays);
-        Assert.Null(updatedStreak.ShieldBackupBreakAtUtc);
-    }
 }

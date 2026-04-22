@@ -78,30 +78,16 @@ public class GameEngineService
         return (xpReward, goldReward, leveledUp, streakBonusPercent);
     }
 
-    private static bool ShieldActiveNow(Streak streak) =>
-        streak.IsShieldActive &&
-        streak.ShieldExpiresAtUtc.HasValue &&
-        DateTimeOffset.UtcNow <= streak.ShieldExpiresAtUtc.Value;
-
     public TaskFailureResult ApplyTaskFailure(
             GameTask task,
             Hero hero,
             Streak? streak,
             EconomyBalance economy,
-            DateOnly? todayLocalDate = null)
+            DateOnly? todayLocalDate = null,
+            ShieldConsumptionContext? shieldContext = null)
     {
         int hpPenalty = task.GetHpPenalty();
         int goldPenalty = task.GetGoldPenalty();
-
-        if (streak != null && streak.IsShieldActive &&
-            (!streak.ShieldExpiresAtUtc.HasValue || DateTimeOffset.UtcNow > streak.ShieldExpiresAtUtc))
-        {
-            streak.IsShieldActive = false;
-            streak.ShieldFailConsumed = false;
-            streak.ShieldExpiresAtUtc = null;
-            streak.ShieldBackupCurrentDays = null;
-            streak.ShieldBackupBreakAtUtc = null;
-        }
 
         hero.Gold = Math.Max(0, hero.Gold - goldPenalty);
         hero.TakeDamage(hpPenalty);
@@ -109,19 +95,30 @@ public class GameEngineService
         task.FailCount++;
         task.UpdatedAt = DateTime.UtcNow;
 
-        if (streak != null && ShieldActiveNow(streak) && !streak.ShieldFailConsumed)
-        {
-            streak.ShieldFailConsumed = true;
-            return new TaskFailureResult(hpPenalty, goldPenalty, hero.IsDead, false, true, null);
-        }
-
         bool streakBroken = false;
+        bool shieldAbsorbed = false;
         StreakBreakPenalty? streakPenalty = null;
 
-        if (streak != null && streak.CurrentDays > 0 && !streak.IsFrozen() && !streak.IsShieldActive)
+        var canBreakStreak = streak != null && streak.CurrentDays > 0 && !streak.IsFrozen();
+        var shouldAbsorbBreak = canBreakStreak && hero.IsShieldActive;
+
+        if (shouldAbsorbBreak)
+        {
+            shieldAbsorbed = true;
+            if (shieldContext != null)
+            {
+                shieldContext.AbsorbedAnyBreak = true;
+            }
+            else
+            {
+                hero.IsShieldActive = false;
+                hero.ShieldActivatedAtUtc = null;
+            }
+        }
+        else if (canBreakStreak)
         {
             var (xpPenalty, goldPenaltyFromStreak, cooldownHours) =
-                GameConstants.GetStreakBreakPenalty(streak.CurrentDays);
+                GameConstants.GetStreakBreakPenalty(streak!.CurrentDays);
 
             if (xpPenalty > 0)
                 hero.CurrentXp = Math.Max(0, hero.CurrentXp - xpPenalty);
@@ -136,9 +133,6 @@ public class GameEngineService
                 GoldLost = goldPenaltyFromStreak,
                 CooldownHours = cooldownHours
             };
-
-            streak.ShieldBackupCurrentDays = streak.CurrentDays;
-            streak.ShieldBackupBreakAtUtc = DateTimeOffset.UtcNow;
 
             streak.Break(todayLocalDate);
             streakBroken = true;
@@ -156,16 +150,24 @@ public class GameEngineService
             }
         }
 
-        return new TaskFailureResult(hpPenalty, goldPenalty, hero.IsDead, streakBroken, false, streakPenalty);
+        return new TaskFailureResult(hpPenalty, goldPenalty, hero.IsDead, streakBroken, shieldAbsorbed, streakPenalty);
     }
 
 
     public void CheckOverdueTasks(List<GameTask> tasks, Hero hero, List<Streak> streaks, EconomyBalance economy)
     {
+        var shieldContext = new ShieldConsumptionContext();
+
         foreach (var task in tasks.Where(t => t.IsActive && t.IsOverdue()))
         {
             var streak = streaks.FirstOrDefault(s => s.TaskId == task.Id);
-            ApplyTaskFailure(task, hero, streak, economy);
+            ApplyTaskFailure(task, hero, streak, economy, shieldContext: shieldContext);
+        }
+
+        if (shieldContext.AbsorbedAnyBreak)
+        {
+            hero.IsShieldActive = false;
+            hero.ShieldActivatedAtUtc = null;
         }
     }
 }
@@ -178,6 +180,11 @@ public sealed record TaskFailureResult(
     bool ShieldAbsorbed,
     StreakBreakPenalty? Penalty
 );
+
+public sealed class ShieldConsumptionContext
+{
+    public bool AbsorbedAnyBreak { get; set; }
+}
 
 public class StreakBreakPenalty
 {

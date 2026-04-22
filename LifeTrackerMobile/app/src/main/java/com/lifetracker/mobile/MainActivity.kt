@@ -116,6 +116,10 @@ class MainActivity : ComponentActivity() {
                             is UiEvent.HeroRecoveryUpdated -> {
                                 Unit
                             }
+
+                            UiEvent.RefreshTasks -> {
+                                Unit
+                            }
                         }
                     }
                 }

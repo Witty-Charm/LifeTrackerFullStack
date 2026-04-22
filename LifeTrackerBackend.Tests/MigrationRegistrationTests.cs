@@ -18,4 +18,17 @@ public class MigrationRegistrationTests
 
         Assert.Contains("20260422110000_AddHabitPolarity", migrations);
     }
+
+    [Fact]
+    public void ApplicationDbContext_Registers_UpdateShieldPriceMigration()
+    {
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite("Data Source=:memory:")
+            .Options;
+
+        using var db = new ApplicationDbContext(options);
+        var migrations = db.Database.GetMigrations().ToList();
+
+        Assert.Contains("20260422170000_UpdateShieldPrice", migrations);
+    }
 }

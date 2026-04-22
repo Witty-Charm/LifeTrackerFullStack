@@ -11,6 +11,7 @@ import com.lifetracker.mobile.ui.model.HeroUi
 import com.lifetracker.mobile.ui.model.ShopScreenState
 import com.lifetracker.mobile.ui.model.UiEvent
 import kotlinx.collections.immutable.toPersistentList
+import kotlinx.collections.immutable.toPersistentSet
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -32,6 +33,7 @@ class ShopViewModel(
     private var loadedItemsHeroId: Int = -1
     private var loadedInventoryHeroId: Int = -1
     private var currentHeroGold: Int = 0
+    private val inFlightActionKeys = mutableSetOf<String>()
 
     private object ActionKeys {
         fun buy(itemId: Int) = "buy_$itemId"
@@ -70,53 +72,51 @@ class ShopViewModel(
         itemId: Int,
         hero: HeroUi,
         hasActiveShield: Boolean,
-    ) {
-        val key = ActionKeys.buy(itemId)
-        viewModelScope.launch {
-            _state.update { it.copy(actionError = null) }
+    ) = launchAction(ActionKeys.buy(itemId)) {
+        val item =
+            _state.value.items
+                .firstOrNull { it.id == itemId }
+                ?: return@launchAction
 
-            val item =
-                _state.value.items
-                    .firstOrNull { it.id == itemId }
-                    ?: return@launch
-
-            val guardMessage = getPurchaseGuardMessage(item.itemType, hero, hasActiveShield)
-            if (guardMessage != null) {
-                _events.send(UiEvent.ShowSnackbar(guardMessage))
-                return@launch
-            }
-
-            val cost = item.cost
-            val previousGold = if (currentHeroGold > 0) currentHeroGold else hero.gold
-            val optimisticGold = (previousGold - cost).coerceAtLeast(0)
-            currentHeroGold = optimisticGold
-            _state.update { state ->
-                state.copy(
-                    items = state.items.map { it.copy(canAfford = optimisticGold >= it.cost) }.toPersistentList(),
-                )
-            }
-            _events.send(UiEvent.HeroGoldUpdated(optimisticGold))
-
-            shopUseCases
-                .buyItem(heroId, itemId)
-                .onSuccess { result ->
-                    currentHeroGold = result.newGold
-                    val updatedItems =
-                        _state.value.items
-                            .map { it.copy(canAfford = result.newGold >= it.cost) }
-                            .toPersistentList()
-                    _state.update { it.copy(items = updatedItems) }
-                    _events.send(UiEvent.HeroGoldUpdated(result.newGold))
-                    _events.send(UiEvent.HeroHpUpdated(result.newHp, result.maxHp))
-                    _events.send(UiEvent.HeroXpBoostUpdated(result.xpBoostPercent, result.xpBoostTasksRemaining))
-                    _events.send(UiEvent.HeroRecoveryUpdated(result.recoveryDebuffActive, result.recoveryMultiplier))
-                    _events.send(UiEvent.ShowSnackbar(result.message))
-                    viewModelScope.launch { loadInventory(currentHeroId) }
-                }.onFailure { error ->
-                    _events.send(UiEvent.HeroGoldUpdated(previousGold))
-                    _state.update { it.copy(actionError = error.toUiError()) }
-                }
+        val guardMessage = getPurchaseGuardMessage(item.itemType, hero, hasActiveShield)
+        if (guardMessage != null) {
+            _events.send(UiEvent.ShowSnackbar(guardMessage))
+            return@launchAction
         }
+
+        val cost = item.cost
+        val previousGold = if (currentHeroGold > 0) currentHeroGold else hero.gold
+        val optimisticGold = (previousGold - cost).coerceAtLeast(0)
+        currentHeroGold = optimisticGold
+        _state.update { state ->
+            state.copy(
+                items = state.items.map { it.copy(canAfford = optimisticGold >= it.cost) }.toPersistentList(),
+            )
+        }
+        _events.send(UiEvent.HeroGoldUpdated(optimisticGold))
+
+        shopUseCases
+            .buyItem(heroId, itemId)
+            .onSuccess { result ->
+                currentHeroGold = result.newGold
+                val updatedItems =
+                    _state.value.items
+                        .map { it.copy(canAfford = result.newGold >= it.cost) }
+                        .toPersistentList()
+                _state.update { it.copy(items = updatedItems) }
+                _events.send(UiEvent.HeroGoldUpdated(result.newGold))
+                _events.send(UiEvent.HeroHpUpdated(result.newHp, result.maxHp))
+                _events.send(UiEvent.HeroXpBoostUpdated(result.xpBoostPercent, result.xpBoostTasksRemaining))
+                _events.send(UiEvent.HeroRecoveryUpdated(result.recoveryDebuffActive, result.recoveryMultiplier))
+                if (item.itemType == 4) {
+                    _events.send(UiEvent.RefreshTasks)
+                }
+                _events.send(UiEvent.ShowSnackbar(result.message))
+                viewModelScope.launch { loadInventory(currentHeroId) }
+            }.onFailure { error ->
+                _events.send(UiEvent.HeroGoldUpdated(previousGold))
+                _state.update { it.copy(actionError = error.toUiError()) }
+            }
     }
 
     fun refreshWithGold(heroGold: Int) {
@@ -135,6 +135,22 @@ class ShopViewModel(
     }
 
     fun dismissError() = _state.update { it.copy(actionError = null) }
+
+    private fun launchAction(
+        key: String,
+        block: suspend () -> Unit,
+    ) {
+        if (!inFlightActionKeys.add(key)) return
+        viewModelScope.launch {
+            _state.update { it.copy(loadingActions = (it.loadingActions + key).toPersistentSet(), actionError = null) }
+            try {
+                block()
+            } finally {
+                inFlightActionKeys.remove(key)
+                _state.update { it.copy(loadingActions = (it.loadingActions - key).toPersistentSet()) }
+            }
+        }
+    }
 
     private fun getPurchaseGuardMessage(
         itemType: Int,

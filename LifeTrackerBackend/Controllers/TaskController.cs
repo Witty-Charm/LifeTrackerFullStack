@@ -34,6 +34,7 @@ public class TaskController : ControllerBase
     {
         var query = _context.GameTasks
             .Include(t => t.Streak)
+            .Include(t => t.Hero)
             .Where(t => t.IsActive);
 
         if (heroId.HasValue)
@@ -49,6 +50,7 @@ public class TaskController : ControllerBase
     {
         var task = await _context.GameTasks
             .Include(t => t.Streak)
+            .Include(t => t.Hero)
             .FirstOrDefaultAsync(t => t.Id == id);
 
         if (task == null)
@@ -252,6 +254,7 @@ public class TaskController : ControllerBase
     {
         var task = await _context.GameTasks
             .Include(t => t.Streak)
+            .Include(t => t.Hero)
             .FirstOrDefaultAsync(t => t.Id == id);
 
         if (task == null)
@@ -352,6 +355,7 @@ public class TaskController : ControllerBase
             });
 
         var penalties = new List<OverdueTaskPenalty>();
+        var shieldContexts = new Dictionary<int, ShieldConsumptionContext>();
 
         foreach (var task in overdueTasks)
         {
@@ -363,7 +367,13 @@ public class TaskController : ControllerBase
             var effectiveTimeZone = _heroTimeService.ResolveEffectiveTimeZone(hero, utcNow);
             var todayLocalDate = _heroTimeService.GetLocalDate(utcNow, effectiveTimeZone);
 
-            var failureResult = _gameEngine.ApplyTaskFailure(task, hero, streak, economy, todayLocalDate);
+            if (!shieldContexts.TryGetValue(hero.Id, out var shieldContext))
+            {
+                shieldContext = new ShieldConsumptionContext();
+                shieldContexts[hero.Id] = shieldContext;
+            }
+
+            var failureResult = _gameEngine.ApplyTaskFailure(task, hero, streak, economy, todayLocalDate, shieldContext);
 
             task.OverdueProcessedAt = DateTimeOffset.UtcNow;
 
@@ -377,6 +387,15 @@ public class TaskController : ControllerBase
                 HeroDied = failureResult.HeroDied,
                 StreakBroken = failureResult.StreakBroken
             });
+        }
+
+        foreach (var heroWithShieldUse in overdueTasks
+                     .Select(t => t.Hero!)
+                     .Where(h => shieldContexts.TryGetValue(h.Id, out var context) && context.AbsorbedAnyBreak)
+                     .DistinctBy(h => h.Id))
+        {
+            heroWithShieldUse.IsShieldActive = false;
+            heroWithShieldUse.ShieldActivatedAtUtc = null;
         }
 
         if (!await SaveChangesWithSingleRetryAsync())
@@ -435,8 +454,8 @@ public class TaskController : ControllerBase
                 BonusXpPercent = task.Streak.GetBonusXpPercent(),
                 Multiplier = task.Streak.GetStreakMultiplier(),
                 IsFrozen = task.Streak.IsFrozen(),
-                IsShieldActive = task.Streak.IsShieldActive,
-                ShieldExpiresAtUtc = task.Streak.ShieldExpiresAtUtc
+                IsShieldActive = task.Hero?.IsShieldActive ?? false,
+                ShieldExpiresAtUtc = null
             }
             : null
     };
@@ -450,6 +469,9 @@ public class TaskController : ControllerBase
         }
         catch (DbUpdateConcurrencyException ex)
         {
+            if (ex.Entries.Any(entry => entry.Entity is Hero))
+                return false;
+
             foreach (var entry in ex.Entries)
             {
                 var dbValues = await entry.GetDatabaseValuesAsync();

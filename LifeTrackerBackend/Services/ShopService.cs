@@ -8,12 +8,10 @@ namespace LifeTracker.Services;
 public class ShopService : IShopService
 {
     private readonly ApplicationDbContext _db;
-    private readonly IHeroTimeService _heroTimeService;
 
     public ShopService(ApplicationDbContext db, IHeroTimeService heroTimeService)
     {
         _db = db;
-        _heroTimeService = heroTimeService;
     }
 
     public async Task<IEnumerable<ShopItemDto>> GetItemsAsync()
@@ -34,10 +32,6 @@ public class ShopService : IShopService
         var item = await _db.ShopItems.FindAsync(itemId);
         if (item is null)
             return (null, "Item not found");
-
-
-        if (item.ItemType == 4 && !string.IsNullOrWhiteSpace(clientTimeZone) && !_heroTimeService.IsValidIana(clientTimeZone))
-            return (null, "Invalid IANA timezone id");
 
         var purchaseValidationError = await GetPurchaseValidationErrorAsync(hero, item, clientLocalDateTime);
         if (purchaseValidationError is not null)
@@ -88,7 +82,14 @@ public class ShopService : IShopService
         };
         _db.Purchases.Add(purchase);
 
-        await _db.SaveChangesAsync();
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return (null, "Shield state changed concurrently. Please retry.");
+        }
 
         var result = new BuyResultDto(
             NewGold: hero.Gold,
@@ -126,31 +127,21 @@ public class ShopService : IShopService
     private static ShopItemDto MapItemToDto(ShopItem item) =>
         new(item.Id, item.Name, item.Description, item.Price, item.ItemType, item.EffectValue);
 
-    private async Task<string?> GetPurchaseValidationErrorAsync(Hero hero, ShopItem item, DateTimeOffset? clientLocalDateTime)
+    private Task<string?> GetPurchaseValidationErrorAsync(Hero hero, ShopItem item, DateTimeOffset? clientLocalDateTime)
     {
         if (item.ItemType is 1 or 2 && hero.CurrentHp >= hero.MaxHp)
-            return "HP is already full.";
+            return Task.FromResult<string?>("HP is already full.");
 
         if (item.ItemType == 3 && hero.XpBoostPercent > 0 && hero.XpBoostTasksRemaining > 0)
-            return "XP Boost is already active.";
+            return Task.FromResult<string?>("XP Boost is already active.");
 
-        if (item.ItemType == 4)
-        {
-            var now = clientLocalDateTime ?? DateTimeOffset.UtcNow;
-            var shieldExpirations = await _db.Streaks
-                .AsNoTracking()
-                .Where(s => s.HeroId == hero.Id && s.IsShieldActive)
-                .Select(s => s.ShieldExpiresAtUtc)
-                .ToListAsync();
-            var hasActiveShield = shieldExpirations.Any(expiresAt => expiresAt.HasValue && expiresAt.Value >= now);
-            if (hasActiveShield)
-                return "Shield is already active until local midnight.";
-        }
+        if (item.ItemType == 4 && hero.IsShieldActive)
+            return Task.FromResult<string?>("Shield is already active.");
 
         if (item.ItemType == 5 && !hero.IsInRecovery())
-            return "Revival Token is not needed right now.";
+            return Task.FromResult<string?>("Revival Token is not needed right now.");
 
-        return null;
+        return Task.FromResult<string?>(null);
     }
 
     private static string ApplyHeal(Hero hero, int healAmount)
@@ -166,46 +157,15 @@ public class ShopService : IShopService
         return $"+{percent}% XP boost for next 5 tasks";
     }
 
-    private async Task<string> ApplyStreakShield(Hero hero, string? clientTimeZone, DateTimeOffset? clientLocalDateTime)
+    private Task<string> ApplyStreakShield(Hero hero, string? clientTimeZone, DateTimeOffset? clientLocalDateTime)
     {
-        var now = clientLocalDateTime ?? DateTimeOffset.UtcNow;
-        var heroTimeZone = !string.IsNullOrWhiteSpace(clientTimeZone)
-            ? clientTimeZone
-            : _heroTimeService.ResolveEffectiveTimeZone(hero, now);
-        var todayLocalDate = _heroTimeService.GetLocalDate(now, heroTimeZone);
+        if (hero.IsShieldActive)
+            throw new InvalidOperationException("Shield is already active.");
 
-        var streaks = await _db.Streaks.Where(s => s.HeroId == hero.Id).ToListAsync();
+        hero.IsShieldActive = true;
+        hero.ShieldActivatedAtUtc = DateTimeOffset.UtcNow;
 
-        var activeShield = streaks.FirstOrDefault(s => s.IsShieldActive && s.ShieldExpiresAtUtc >= now);
-        if (activeShield is not null)
-            throw new InvalidOperationException("Shield already active until local midnight");
-
-        var expiresUtc = _heroTimeService.GetNextLocalMidnightUtc(now, heroTimeZone);
-
-        foreach (var streak in streaks)
-        {
-            streak.IsShieldActive = true;
-            streak.ShieldExpiresAtUtc = expiresUtc;
-            streak.ShieldFailConsumed = false;
-            streak.UpdatedAt = now;
-
-            if (streak.ShieldBackupBreakAtUtc.HasValue)
-            {
-                var breakLocalDate = _heroTimeService.GetLocalDate(streak.ShieldBackupBreakAtUtc.Value, heroTimeZone);
-                if (breakLocalDate == todayLocalDate &&
-                    streak.ShieldBackupCurrentDays.HasValue &&
-                    streak.LastBreakLocalDate == _heroTimeService.FormatLocalDate(todayLocalDate))
-                {
-                    streak.CurrentDays = streak.ShieldBackupCurrentDays.Value;
-                    streak.LastBreakLocalDate = null;
-                }
-            }
-
-            streak.ShieldBackupCurrentDays = null;
-            streak.ShieldBackupBreakAtUtc = null;
-        }
-
-        return streaks.Count == 0 ? "" : $"Streak shield active until local midnight ({heroTimeZone})";
+        return Task.FromResult("Hero shield activated");
     }
 
     private static string ApplyRecoveryReset(Hero hero)

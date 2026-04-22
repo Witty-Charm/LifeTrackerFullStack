@@ -13,7 +13,6 @@ import com.lifetracker.mobile.domain.model.StreakDomain
 import com.lifetracker.mobile.domain.model.StreakPenaltyInfo
 import com.lifetracker.mobile.domain.model.TaskCompletionResult
 import com.lifetracker.mobile.domain.model.TaskFailureResult
-import kotlin.time.Instant
 
 fun TaskDto.toDomain(): GameTaskDomain =
     GameTaskDomain(
@@ -49,7 +48,6 @@ fun StreakInfoDto.toDomain(): StreakDomain =
         multiplier = multiplier,
         isFrozen = isFrozen,
         isShieldActive = isShieldActive,
-        shieldExpiresAtUtc = shieldExpiresAtUtc?.let { Instant.parse(it) },
     )
 
 fun CompleteTaskResponse.toDomain(): TaskCompletionResult =

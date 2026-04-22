@@ -13,6 +13,8 @@ import com.lifetracker.mobile.domain.usecase.shop.ShopUseCases
 import com.lifetracker.mobile.ui.model.HeroStatusBadge
 import com.lifetracker.mobile.ui.model.HeroUi
 import com.lifetracker.mobile.ui.model.UiEvent
+import com.lifetracker.mobile.ui.model.isBuyLoading
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
@@ -232,6 +234,108 @@ class ShopViewModelTest {
         }
 
     @Test
+    fun buyItem_deduplicatesTwoBackToBackRequests_forSameItem_beforeCoroutineStarts() =
+        runTest {
+            val shieldItem =
+                testShopItem(
+                    id = 4,
+                    name = "Streak Shield",
+                    description = "Protects streak from breaking once",
+                    price = 80,
+                    itemType = 4,
+                    effectValue = 1,
+                )
+            val repository =
+                FakeShopRepository().apply {
+                    shopItemsResults += DomainResult.Success(listOf(shieldItem))
+                    buyItemGate = CompletableDeferred()
+                    buyItemResults +=
+                        DomainResult.Success(
+                            BuyResult(
+                                newGold = 120,
+                                newHp = 50,
+                                maxHp = 50,
+                                purchasedItem = shieldItem,
+                                message = "Purchased Streak Shield for 80 gold!",
+                                effect = "Shield activated",
+                                xpBoostPercent = 0,
+                                xpBoostTasksRemaining = 0,
+                                recoveryDebuffActive = false,
+                                recoveryMultiplier = 1.0,
+                            ),
+                        )
+                }
+            val viewModel = buildViewModel(repository)
+
+            viewModel.loadForHero(heroId = 1)
+            advanceUntilIdle()
+
+            viewModel.buyItem(heroId = 1, itemId = 4, hero = testHero(gold = 200), hasActiveShield = false)
+            viewModel.buyItem(heroId = 1, itemId = 4, hero = testHero(gold = 200), hasActiveShield = false)
+            advanceUntilIdle()
+
+            assertEquals(1, repository.buyItemCalls)
+            assertEquals(true, viewModel.state.value.isBuyLoading(4))
+
+            repository.buyItemGate?.complete(Unit)
+            advanceUntilIdle()
+
+            assertEquals(false, viewModel.state.value.isBuyLoading(4))
+        }
+
+    @Test
+    fun buyItem_emitsTaskRefreshEvent_afterSuccessfulShieldPurchase() =
+        runTest {
+            val shieldItem =
+                testShopItem(
+                    id = 4,
+                    name = "Streak Shield",
+                    description = "Protects streak from breaking once",
+                    price = 80,
+                    itemType = 4,
+                    effectValue = 1,
+                )
+            val repository =
+                FakeShopRepository().apply {
+                    shopItemsResults += DomainResult.Success(listOf(shieldItem))
+                    buyItemResults +=
+                        DomainResult.Success(
+                            BuyResult(
+                                newGold = 120,
+                                newHp = 50,
+                                maxHp = 50,
+                                purchasedItem = shieldItem,
+                                message = "Purchased Streak Shield for 80 gold!",
+                                effect = "Shield activated",
+                                xpBoostPercent = 0,
+                                xpBoostTasksRemaining = 0,
+                                recoveryDebuffActive = false,
+                                recoveryMultiplier = 1.0,
+                            ),
+                        )
+                }
+            val viewModel = buildViewModel(repository)
+
+            viewModel.loadForHero(heroId = 1)
+            advanceUntilIdle()
+
+            val eventsDeferred = async { viewModel.events.take(7).toList() }
+
+            viewModel.buyItem(heroId = 1, itemId = 4, hero = testHero(gold = 200), hasActiveShield = false)
+            advanceUntilIdle()
+
+            val events = eventsDeferred.await()
+
+            assertEquals(UiEvent.HeroGoldUpdated(120), events[0])
+            assertEquals(UiEvent.HeroGoldUpdated(120), events[1])
+            assertEquals(UiEvent.HeroHpUpdated(50, 50), events[2])
+            assertEquals(UiEvent.HeroXpBoostUpdated(0, 0), events[3])
+            assertEquals(UiEvent.HeroRecoveryUpdated(false, 1.0), events[4])
+            assertEquals(UiEvent.RefreshTasks, events[5])
+            assertEquals(UiEvent.ShowSnackbar("Purchased Streak Shield for 80 gold!"), events[6])
+        }
+
+    @Test
     fun buyItem_emitsRecoveryUpdateEvent_afterSuccessfulRevivalTokenPurchase() =
         runTest {
             val repository =
@@ -307,6 +411,7 @@ class ShopViewModelTest {
         var getShopItemsCalls: Int = 0
         var getInventoryCalls: Int = 0
         var buyItemCalls: Int = 0
+        var buyItemGate: CompletableDeferred<Unit>? = null
         val shopItemsResults = ArrayDeque<DomainResult<List<ShopItemDomain>>>()
         val buyItemResults = ArrayDeque<DomainResult<BuyResult>>()
 
@@ -324,6 +429,7 @@ class ShopViewModelTest {
             itemId: Int,
         ): DomainResult<BuyResult> {
             buyItemCalls++
+            buyItemGate?.await()
             return if (buyItemResults.isNotEmpty()) {
                 buyItemResults.removeFirst()
             } else {

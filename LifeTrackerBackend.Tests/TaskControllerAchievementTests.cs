@@ -237,6 +237,60 @@ public class TaskControllerAchievementTests : IAsyncLifetime
         Assert.IsType<OkObjectResult>(failResult.Result);
     }
 
+    [Fact]
+    public async Task GetTask_ReturnsHeroShieldStateInStreakInfoAndNullShieldExpiry()
+    {
+        await using var db = CreateDbContext();
+        var hero = await CreateHeroAsync(db);
+        hero.IsShieldActive = true;
+        hero.ShieldActivatedAtUtc = DateTimeOffset.UtcNow;
+        await db.SaveChangesAsync();
+
+        var task = await CreateTaskAsync(db, hero.Id, TaskType.Daily, HabitPolarity.Both);
+        var controller = CreateController(db);
+
+        var actionResult = await controller.GetTask(task.Id);
+
+        var ok = Assert.IsType<OkObjectResult>(actionResult.Result);
+        var dto = Assert.IsType<TaskDto>(ok.Value);
+        Assert.NotNull(dto.StreakInfo);
+        Assert.True(dto.StreakInfo!.IsShieldActive);
+        Assert.Null(dto.StreakInfo.ShieldExpiresAtUtc);
+    }
+
+    [Fact]
+    public async Task CheckOverdueTasks_WithMultipleBreakCandidates_UsesSingleHeroShieldAcrossBatchAndConsumesIt()
+    {
+        await using var db = CreateDbContext();
+        var hero = await CreateHeroAsync(db);
+        hero.IsShieldActive = true;
+        hero.ShieldActivatedAtUtc = DateTimeOffset.UtcNow;
+        await db.SaveChangesAsync();
+
+        var overdueOne = await CreateOverdueDailyTaskAsync(db, hero.Id, "Overdue 1", 4);
+        var overdueTwo = await CreateOverdueDailyTaskAsync(db, hero.Id, "Overdue 2", 6);
+        var controller = CreateController(db);
+
+        var actionResult = await controller.CheckOverdueTasks(hero.Id);
+
+        var ok = Assert.IsType<OkObjectResult>(actionResult.Result);
+        var response = Assert.IsType<OverdueCheckResponse>(ok.Value);
+        Assert.Equal(2, response.OverdueCount);
+
+        var updatedHero = await db.Heroes.SingleAsync(x => x.Id == hero.Id);
+        var updatedStreaks = await db.Streaks.Where(x => x.HeroId == hero.Id).OrderBy(x => x.TaskId).ToListAsync();
+        Assert.False(updatedHero.IsShieldActive);
+        Assert.Null(updatedHero.ShieldActivatedAtUtc);
+        Assert.Equal(4, updatedStreaks[0].CurrentDays);
+        Assert.Equal(6, updatedStreaks[1].CurrentDays);
+        Assert.All(response.Penalties!, penalty => Assert.False(penalty.StreakBroken));
+
+        var manualFailResult = await controller.FailTask(overdueOne.Id);
+        var manualOk = Assert.IsType<OkObjectResult>(manualFailResult.Result);
+        var manualResponse = Assert.IsType<FailTaskResponse>(manualOk.Value);
+        Assert.True(manualResponse.StreakBroken);
+    }
+
     private static T ReadProperty<T>(object source, string propertyName)
     {
         var property = source.GetType().GetProperty(propertyName);
@@ -306,6 +360,39 @@ public class TaskControllerAchievementTests : IAsyncLifetime
             });
             await db.SaveChangesAsync();
         }
+
+        return task;
+    }
+
+    private static async Task<GameTask> CreateOverdueDailyTaskAsync(ApplicationDbContext db, int heroId, string title, int streakDays)
+    {
+        var task = new GameTask
+        {
+            HeroId = heroId,
+            Title = title,
+            Type = TaskType.Daily,
+            Difficulty = TaskDifficulty.Easy,
+            Polarity = HabitPolarity.Both,
+            IsCompleted = false,
+            IsActive = true,
+            DueDate = DateTimeOffset.UtcNow.AddDays(-1),
+            CompletionCount = 0,
+            FailCount = 0
+        };
+
+        db.GameTasks.Add(task);
+        await db.SaveChangesAsync();
+
+        db.Streaks.Add(new Streak
+        {
+            HeroId = heroId,
+            TaskId = task.Id,
+            CurrentDays = streakDays,
+            LongestDays = streakDays,
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
+        });
+        await db.SaveChangesAsync();
 
         return task;
     }

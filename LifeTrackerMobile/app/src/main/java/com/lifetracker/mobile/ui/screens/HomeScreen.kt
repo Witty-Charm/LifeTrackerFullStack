@@ -61,7 +61,7 @@ fun HomeScreen(
     vm: HeroViewModel,
     navController: NavController,
 ) {
-    val selectedTabState = rememberSaveable { mutableStateOf(HomeTab.ToDos) }
+    val selectedTabState = rememberSaveable { mutableStateOf(HomeTab.Habits) }
     val selectedTab by selectedTabState
     val onTabSelected: (HomeTab) -> Unit = remember { { selectedTabState.value = it } }
     val hazeState = rememberHazeState()
@@ -91,6 +91,7 @@ fun HomeScreen(
                 is UiEvent.HeroHpUpdated -> vm.updateHeroHp(event.newHp, event.maxHp)
                 is UiEvent.HeroXpBoostUpdated -> vm.updateHeroXpBoost(event.percent, event.tasksRemaining)
                 is UiEvent.HeroRecoveryUpdated -> vm.updateHeroRecovery(event.isInRecovery, event.recoveryMultiplier)
+                UiEvent.RefreshTasks -> vm.refreshTasks()
                 is UiEvent.ShowSnackbar -> launch { shopSnackbar.showSnackbar(event.message) }
                 else -> Unit
             }
@@ -102,7 +103,7 @@ fun HomeScreen(
         snackbarHost = {
             SnackbarHost(
                 hostState = shopSnackbar,
-                modifier = Modifier.padding(bottom = 104.dp),
+                modifier = Modifier.padding(bottom = 24.dp),
             )
         },
         topBar = {

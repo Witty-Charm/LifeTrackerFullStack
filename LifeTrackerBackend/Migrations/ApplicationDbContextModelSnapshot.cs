@@ -182,6 +182,11 @@ namespace LifeTracker.Migrations
                     b.Property<bool>("IsDead")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("IsShieldActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(false);
+
                     b.Property<DateTimeOffset?>("LastTimeZoneChangedAt")
                         .HasColumnType("TEXT");
 
@@ -199,6 +204,14 @@ namespace LifeTracker.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<DateTimeOffset?>("RecoveryEndsAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasColumnType("BLOB");
+
+                    b.Property<DateTimeOffset?>("ShieldActivatedAtUtc")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("TimeZoneId")

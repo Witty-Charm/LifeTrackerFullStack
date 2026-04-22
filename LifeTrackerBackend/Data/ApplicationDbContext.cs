@@ -71,6 +71,14 @@ public class ApplicationDbContext : DbContext
             .Property(h => h.TimeZoneId)
             .HasDefaultValue("UTC");
 
+        modelBuilder.Entity<Hero>()
+            .Property(h => h.IsShieldActive)
+            .HasDefaultValue(false);
+
+        modelBuilder.Entity<Hero>()
+            .Property(h => h.RowVersion)
+            .IsConcurrencyToken();
+
         modelBuilder.Entity<Purchase>()
             .HasOne(p => p.Hero)
             .WithMany()
@@ -107,6 +115,12 @@ public class ApplicationDbContext : DbContext
 
     private void StampConcurrencyTokens()
     {
+        foreach (var entry in ChangeTracker.Entries<Hero>()
+                     .Where(e => e.State is EntityState.Added or EntityState.Modified))
+        {
+            entry.Entity.RowVersion = Guid.NewGuid().ToByteArray();
+        }
+
         foreach (var entry in ChangeTracker.Entries<Streak>()
                      .Where(e => e.State is EntityState.Added or EntityState.Modified))
         {

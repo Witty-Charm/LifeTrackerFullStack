@@ -76,23 +76,8 @@ data class TaskUi(
     val streakText: String?,
     val isPendingSync: Boolean,
     val syncError: String? = null,
-    val shieldExpiresAtUtc: Instant? = null,
     val isShieldActive: Boolean = false,
 ) {
-    val shieldCountdownText: String?
-        get() {
-            val expiry = shieldExpiresAtUtc ?: return null
-            if (!isShieldActive) return null
-
-            val now = Clock.System.now()
-            if (expiry <= now) return null
-
-            val duration = expiry - now
-            val hours = duration.inWholeHours
-            val minutes = (duration.inWholeMinutes % 60)
-            return String.format("%02d:%02d left", hours, minutes)
-        }
-
     val showsPositiveAction: Boolean
         get() = true
 
@@ -172,6 +157,8 @@ sealed interface UiEvent {
     data class ShowSnackbar(
         val message: String,
     ) : UiEvent
+
+    data object RefreshTasks : UiEvent
 
     data class TaskCreated(
         val type: UiTaskType,

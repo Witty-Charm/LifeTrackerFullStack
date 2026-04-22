@@ -17,6 +17,9 @@ public class Hero
     public int XpBoostPercent { get; set; } = 0;
     public int XpBoostTasksRemaining { get; set; } = 0;
 
+    public bool IsShieldActive { get; set; } = false;
+    public DateTimeOffset? ShieldActivatedAtUtc { get; set; }
+
     public bool IsDead { get; set; } = false;
     public DateTimeOffset? DeathTime { get; set; }
     public int DeathCount { get; set; } = 0;
@@ -30,6 +33,7 @@ public class Hero
 
     public DateTimeOffset CreatedDate { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public byte[] RowVersion { get; set; } = Array.Empty<byte>();
 
     public ICollection<GameTask> Tasks { get; set; } = new List<GameTask>();
     public ICollection<Streak> Streaks { get; set; } = new List<Streak>();

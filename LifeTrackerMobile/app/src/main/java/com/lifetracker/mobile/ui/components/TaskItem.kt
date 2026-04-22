@@ -231,9 +231,9 @@ private fun TaskCardContent(
                 )
             }
 
-            if (task.isShieldActive && task.shieldCountdownText != null) {
+            if (task.isShieldActive) {
                 Text(
-                    text = "🛡️ Shielded today · ${task.shieldCountdownText}",
+                    text = "🛡️ Shield active",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
                 )
