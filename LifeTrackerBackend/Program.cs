@@ -32,6 +32,18 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     db.Database.Migrate();
+
+    if (!db.ShopItems.Any())
+    {
+        db.ShopItems.AddRange(
+            new LifeTracker.Models.ShopItem { Name = "Health Potion",  Description = "Restores 15 HP",                     Price = 60,  ItemType = 1, EffectValue = 15 },
+            new LifeTracker.Models.ShopItem { Name = "Elixir of Life", Description = "Restores 50 HP",                     Price = 200, ItemType = 2, EffectValue = 50 },
+            new LifeTracker.Models.ShopItem { Name = "XP Boost",       Description = "+25% XP for next 5 tasks",           Price = 60,  ItemType = 3, EffectValue = 25 },
+            new LifeTracker.Models.ShopItem { Name = "Streak Shield",  Description = "Protects streak from breaking once", Price = 250, ItemType = 4, EffectValue = 1  },
+            new LifeTracker.Models.ShopItem { Name = "Revival Token",  Description = "Removes recovery debuff instantly",  Price = 100, ItemType = 5, EffectValue = 1  }
+        );
+        db.SaveChanges();
+    }
 }
 app.UseSwagger();
 app.UseSwaggerUI();
