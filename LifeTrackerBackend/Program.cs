@@ -18,7 +18,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddSingleton<GameEngineService>();
 builder.Services.AddScoped<LifeTracker.Services.Achievements.AchievementService>();
@@ -27,6 +27,12 @@ builder.Services.AddScoped<LifeTracker.Services.Time.IHeroTimeService, LifeTrack
 builder.Services.AddProblemDetails();
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    db.Database.Migrate();
+}
 app.UseSwagger();
 app.UseSwaggerUI();
 
