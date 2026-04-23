@@ -3,6 +3,7 @@ package com.lifetracker.mobile
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
@@ -48,6 +49,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         setContent {
             val themeController: ThemeController = get()
             val themeMode by themeController.themeMode.collectAsState()
@@ -128,8 +130,7 @@ class MainActivity : ComponentActivity() {
                     modifier =
                         Modifier
                             .fillMaxSize()
-                            .background(MaterialTheme.colorScheme.background)
-                            .windowInsetsPadding(WindowInsets.systemBars),
+                            .background(MaterialTheme.colorScheme.background),
                 ) {
                     NavGraph(navController = navController, vm = vm, state = state)
                     SnackbarHost(

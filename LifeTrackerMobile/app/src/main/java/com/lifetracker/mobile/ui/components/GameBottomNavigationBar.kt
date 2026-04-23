@@ -9,6 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -107,6 +108,7 @@ fun GameBottomNavigationBar(
     Box(
         modifier = modifier
             .fillMaxWidth()
+            .navigationBarsPadding()
             .padding(vertical = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
