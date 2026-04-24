@@ -57,6 +57,8 @@ enum class UiTaskType { Habit, OneTime, Daily, Unknown }
 
 enum class UiDifficulty { Easy, Medium, Hard, Epic }
 
+enum class TaskPendingAction { Complete, Fail, Delete }
+
 @Immutable
 data class TaskUi(
     val id: Int,
@@ -76,6 +78,8 @@ data class TaskUi(
     val streakText: String?,
     val isPendingSync: Boolean,
     val syncError: String? = null,
+    val pendingAction: TaskPendingAction? = null,
+    val actionError: String? = null,
     val isShieldActive: Boolean = false,
 ) {
     val showsPositiveAction: Boolean

@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.lifetracker.mobile.ui.model.TaskPendingAction
 import com.lifetracker.mobile.ui.model.TaskUi
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -43,13 +44,16 @@ fun TaskItem(
     onDeleteFailedTaskClick: () -> Unit,
 ) {
     val isCompleted = task.isCompleted
-    val canAct = !isCompleted && !isActionLoading && !task.isPendingSync
+    val hasPendingAction = task.pendingAction != null
+    val isLocalOnly = task.id < 0 || task.isPendingSync || task.syncError != null
+    val completeFailEnabled = !isCompleted && !hasPendingAction && !isLocalOnly && !isActionLoading
+    val deleteEnabled = !hasPendingAction && !isActionLoading
     val cardAlpha = if (isCompleted) 0.5f else 1f
 
     if (task.isPendingSync) {
         TaskCardContent(
             task = task,
-            canAct = false,
+            completeFailEnabled = false,
             cardAlpha = 0.6f,
             onCompleteClick = onCompleteClick,
             onFailClick = onFailClick,
@@ -63,7 +67,7 @@ fun TaskItem(
     val dismissState =
         rememberSwipeToDismissBoxState(
             confirmValueChange = { value ->
-                if (value == SwipeToDismissBoxValue.EndToStart && canAct) {
+                if (value == SwipeToDismissBoxValue.EndToStart && deleteEnabled) {
                     onDeleteClick()
                 }
                 false
@@ -73,12 +77,12 @@ fun TaskItem(
     SwipeToDismissBox(
         state = dismissState,
         backgroundContent = { DismissBackground() },
-        gesturesEnabled = canAct,
+        gesturesEnabled = deleteEnabled,
         modifier = modifier,
     ) {
         TaskCardContent(
             task = task,
-            canAct = canAct,
+            completeFailEnabled = completeFailEnabled,
             cardAlpha = cardAlpha,
             onCompleteClick = onCompleteClick,
             onFailClick = onFailClick,
@@ -110,7 +114,7 @@ private fun DismissBackground() {
 @Composable
 private fun TaskCardContent(
     task: TaskUi,
-    canAct: Boolean,
+    completeFailEnabled: Boolean,
     cardAlpha: Float,
     onCompleteClick: () -> Unit,
     onFailClick: () -> Unit,
@@ -128,10 +132,10 @@ private fun TaskCardContent(
                 .background(MaterialTheme.colorScheme.surface)
                 .graphicsLayer { alpha = cardAlpha },
     ) {
-        val positiveHighlighted = positiveActionHighlighted(task, canAct)
-        val negativeHighlighted = negativeActionHighlighted(task, canAct)
-        val positiveEnabled = positiveActionClickable(task, canAct)
-        val negativeEnabled = negativeActionClickable(task, canAct)
+        val positiveHighlighted = positiveActionHighlighted(task, completeFailEnabled)
+        val negativeHighlighted = negativeActionHighlighted(task, completeFailEnabled)
+        val positiveEnabled = positiveActionClickable(task, completeFailEnabled)
+        val negativeEnabled = negativeActionClickable(task, completeFailEnabled)
         val positiveContainerColor = if (positiveHighlighted) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.surfaceVariant
         val positiveBadgeColor =
             if (positiveHighlighted) {
@@ -245,6 +249,37 @@ private fun TaskCardContent(
                     style = MaterialTheme.typography.bodySmall,
                     color = if (task.isOverdue) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+
+            task.pendingAction?.let { pendingAction ->
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = when (pendingAction) {
+                        TaskPendingAction.Complete -> "Completing…"
+                        TaskPendingAction.Fail -> "Failing…"
+                        TaskPendingAction.Delete -> "Deleting…"
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            if (task.actionError != null) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Error,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(12.dp),
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = task.actionError,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
             }
 
             if (task.syncError != null) {
