@@ -184,11 +184,11 @@ public class TaskController : DeviceScopedControllerBase
         if (!economy.CanCompleteTask(todayLocalDate))
             return BadRequest(new
             {
-                errorCode = "DAILY_LIMIT_REACHED",
-                error = "Daily limit reached",
-                message = $"You have completed {economy.DailyTaskCompletions}/{economy.MaxDailyCompletions} tasks today. Try again tomorrow!",
-                dailyCompletions = economy.DailyTaskCompletions,
-                maxDailyCompletions = economy.MaxDailyCompletions,
+                errorCode = "COMPLETION_LIMIT_REACHED",
+                error = "Completion limit reached",
+                message = $"You have completed {economy.TaskCompletions}/{economy.MaxCompletions} tasks today. Try again tomorrow!",
+                completions = economy.TaskCompletions,
+                maxCompletions = economy.MaxCompletions,
                 resetTime = _heroTimeService.GetNextLocalMidnightUtc(utcNow, effectiveTimeZone),
             });
 
@@ -250,8 +250,8 @@ public class TaskController : DeviceScopedControllerBase
             StreakBonus = streakBonus,
             CurrentStreak = streak?.CurrentDays ?? 0,
             StreakMultiplier = streak?.GetStreakMultiplier() ?? 1.0,
-            DailyCompletions = economy.DailyTaskCompletions,
-            MaxDailyCompletions = economy.MaxDailyCompletions,
+            Completions = economy.TaskCompletions,
+            MaxCompletions = economy.MaxCompletions,
             Message = leveledUp
                 ? $"LEVEL UP! You're now level {hero.Level}! +{xpReward} XP, +{goldReward} Gold"
                 : $"Task completed! +{xpReward} XP, +{goldReward} Gold",
@@ -312,8 +312,8 @@ public class TaskController : DeviceScopedControllerBase
             HeroDied = failureResult.HeroDied,
             DeathCount = hero.DeathCount,
             XpForNextLevel = hero.GetXpRequiredForNextLevel(),
-            DailyCompletions = economy.DailyTaskCompletions,
-            MaxDailyCompletions = economy.MaxDailyCompletions,
+            Completions = economy.TaskCompletions,
+            MaxCompletions = economy.MaxCompletions,
             XpBoostPercent = hero.XpBoostPercent,
             XpBoostTasksRemaining = hero.XpBoostTasksRemaining,
             StreakBroken = failureResult.StreakBroken,
@@ -625,8 +625,8 @@ public class CompleteTaskResponse
     public int DeathCount { get; set; }
     public int CurrentStreak { get; set; }
     public double StreakMultiplier { get; set; }
-    public int DailyCompletions { get; set; }
-    public int MaxDailyCompletions { get; set; }
+    public int Completions { get; set; }
+    public int MaxCompletions { get; set; }
     public int XpBoostPercent { get; set; }
     public int XpBoostTasksRemaining { get; set; }
     public List<AchievementUnlock> UnlockedAchievements { get; set; } = new();
@@ -645,8 +645,8 @@ public class FailTaskResponse
     public int MaxHp { get; set; }
     public int NewGold { get; set; }
     public long XpForNextLevel { get; set; }
-    public int DailyCompletions { get; set; }
-    public int MaxDailyCompletions { get; set; }
+    public int Completions { get; set; }
+    public int MaxCompletions { get; set; }
     public int CurrentLevel { get; set; }
     public long CurrentXp { get; set; }
     public bool HeroDied { get; set; }

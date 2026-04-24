@@ -56,7 +56,7 @@ public class TaskControllerAchievementTests : IAsyncLifetime
             HeroId = hero.Id,
             TotalGoldEarned = 0,
             LastDailyResetLocalDate = "2026-04-20",
-            MaxDailyCompletions = GameConstants.DailyTaskCap
+            MaxCompletions = GameConstants.DailyTaskCap
         });
 
         var task = new GameTask
@@ -124,7 +124,7 @@ public class TaskControllerAchievementTests : IAsyncLifetime
             HeroId = hero.Id,
             TotalGoldEarned = 0,
             LastDailyResetLocalDate = "2026-04-20",
-            MaxDailyCompletions = GameConstants.DailyTaskCap
+            MaxCompletions = GameConstants.DailyTaskCap
         });
 
         var task = new GameTask
@@ -343,7 +343,7 @@ public class TaskControllerAchievementTests : IAsyncLifetime
             HeroId = hero.Id,
             TotalGoldEarned = 0,
             LastDailyResetLocalDate = "2026-04-20",
-            MaxDailyCompletions = GameConstants.DailyTaskCap
+            MaxCompletions = GameConstants.DailyTaskCap
         });
         await db.SaveChangesAsync();
 

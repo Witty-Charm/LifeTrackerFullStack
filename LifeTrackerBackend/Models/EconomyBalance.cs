@@ -1,4 +1,6 @@
-﻿namespace LifeTracker.Models;
+﻿using System.ComponentModel.DataAnnotations.Schema;
+
+namespace LifeTracker.Models;
 
 public class EconomyBalance
 {
@@ -9,8 +11,10 @@ public class EconomyBalance
     public long TotalGoldSpent { get; set; } = 0;
     public long TotalXpEarned { get; set; } = 0;
 
-    public int DailyTaskCompletions { get; set; } = 0;
-    public int MaxDailyCompletions { get; set; } = Constants.GameConstants.DailyTaskCap;
+    [Column("DailyTaskCompletions")]
+    public int TaskCompletions { get; set; } = 0;
+    [Column("MaxDailyCompletions")]
+    public int MaxCompletions { get; set; } = Constants.GameConstants.DailyTaskCap;
     public DateTimeOffset DailyResetAt { get; set; } = DateTimeOffset.UtcNow.Date;
     public string? LastDailyResetLocalDate { get; set; }
 
@@ -42,7 +46,7 @@ public class EconomyBalance
         if (todayLocalDate > last)
         {
             DailyResetAt = DateTimeOffset.UtcNow.Date;
-            DailyTaskCompletions = 0;
+            TaskCompletions = 0;
             LastDailyResetLocalDate = todayLocalDateStr;
         }
     }
@@ -50,13 +54,13 @@ public class EconomyBalance
     public bool CanCompleteTask(DateOnly todayLocalDate)
     {
         CheckDailyReset(todayLocalDate);
-        return DailyTaskCompletions < MaxDailyCompletions;
+        return TaskCompletions < MaxCompletions;
     }
 
-    public void IncrementDailyCompletion(DateOnly todayLocalDate)
+    public void IncrementCompletion(DateOnly todayLocalDate)
     {
         CheckDailyReset(todayLocalDate);
-        DailyTaskCompletions++;
+        TaskCompletions++;
     }
 
     public decimal GetFinalXpMultiplier()

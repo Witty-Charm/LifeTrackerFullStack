@@ -57,8 +57,15 @@ public class Streak
 
         if (string.IsNullOrWhiteSpace(LastCheckInLocalDate))
         {
-            StartDate = now;
-            CurrentDays = 1;
+            if (CurrentDays > 0)
+            {
+                CurrentDays++;
+            }
+            else
+            {
+                StartDate = now;
+                CurrentDays = 1;
+            }
         }
         else
         {

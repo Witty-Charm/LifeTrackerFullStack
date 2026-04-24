@@ -104,7 +104,7 @@ public class HeroController : DeviceScopedControllerBase
         {
             HeroId = hero.Id,
             TotalGoldEarned = hero.Gold,
-            MaxDailyCompletions = GameConstants.DailyTaskCap,
+            MaxCompletions = GameConstants.DailyTaskCap,
             DailyResetAt = DateTimeOffset.UtcNow.Date,
             LastDailyResetLocalDate = _heroTimeService.FormatLocalDate(todayLocalDate),
             CreatedAt = DateTimeOffset.UtcNow,
@@ -184,9 +184,9 @@ public class HeroController : DeviceScopedControllerBase
             Gold = hero.Gold,
             TotalGoldEarned = economy.TotalGoldEarned,
             TotalGoldSpent = economy.TotalGoldSpent,
-            DailyCompletions = economy.DailyTaskCompletions,
-            DailyCompletionsMax = economy.MaxDailyCompletions,
-            DailyProgress = (double)economy.DailyTaskCompletions / economy.MaxDailyCompletions,
+            DailyCompletions = economy.TaskCompletions,
+            DailyCompletionsMax = economy.MaxCompletions,
+            DailyProgress = (double)economy.TaskCompletions / economy.MaxCompletions,
             DailyResetTime = _heroTimeService.GetNextLocalMidnightUtc(utcNow, effectiveTimeZone),
             XpMultiplier = (double)economy.GetFinalXpMultiplier(),
             GoldMultiplier = (double)economy.GoldMultiplier,
@@ -372,8 +372,8 @@ public class HeroController : DeviceScopedControllerBase
             RecoveryMultiplier = hero.GetRecoveryMultiplier(),
             XpBoostPercent = hero.XpBoostPercent,
             XpBoostTasksRemaining = hero.XpBoostTasksRemaining,
-            DailyCompletions = economy.DailyTaskCompletions,
-            DailyCompletionsMax = economy.MaxDailyCompletions,
+            DailyCompletions = economy.TaskCompletions,
+            DailyCompletionsMax = economy.MaxCompletions,
         };
     }
 }

@@ -10,7 +10,7 @@ data class ApiError(
     val title: String? = null,
     val status: Int? = null,
     val errors: Map<String, List<String>>? = null,
-    val dailyCompletions: Int? = null,
-    val maxDailyCompletions: Int? = null,
+    val completions: Int? = null,
+    val maxCompletions: Int? = null,
     val resetTime: String? = null,
 )

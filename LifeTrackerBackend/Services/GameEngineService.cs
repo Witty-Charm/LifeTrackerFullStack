@@ -65,7 +65,7 @@ public class GameEngineService
 
         economy.TotalXpEarned += xpReward;
         economy.TotalGoldEarned += goldReward;
-        economy.IncrementDailyCompletion(todayLocalDate);
+        economy.IncrementCompletion(todayLocalDate);
         economy.UpdatedAt = DateTime.UtcNow;
 
         task.IsCompleted = task.Type == TaskType.OneTime;

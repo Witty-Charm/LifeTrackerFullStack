@@ -197,7 +197,7 @@ fun CreateDailyScreen(
                 onExpandedChange = { expandedFrequency = it },
             )
 
-            Text("Adjust Streak", style = MaterialTheme.typography.titleSmall)
+            Text("Initial Streak", style = MaterialTheme.typography.titleSmall)
             OutlinedTextField(
                 value = state.initialStreak.toString(),
                 onValueChange = { vm.onInitialStreakChange(it.toIntOrNull() ?: 0) },
@@ -365,7 +365,7 @@ private fun SchedulingSection(
                 expanded = expanded,
                 onDismissRequest = { onExpandedChange(false) },
             ) {
-                RepeatFrequency.entries.forEach { option ->
+                listOf(RepeatFrequency.DAILY).forEach { option ->
                     androidx.compose.material3.DropdownMenuItem(
                         text = { Text(option.label) },
                         onClick = {
