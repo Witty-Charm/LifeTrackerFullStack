@@ -257,7 +257,7 @@ private fun ErrorView(onRetry: () -> Unit) {
 
 @Composable
 private fun EmptyTasksPlaceholder() {
-    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+    Box(modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp), contentAlignment = Alignment.Center) {
         Text("No tasks here yet", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

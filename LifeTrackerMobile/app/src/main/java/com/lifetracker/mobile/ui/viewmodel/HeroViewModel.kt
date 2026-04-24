@@ -400,7 +400,7 @@ class HeroViewModel(
         )
 
     private suspend fun fetchHero(): HeroDomain? {
-        val result = safeCall { heroUseCases.getFirstHero() }
+        val result = safeCall { heroUseCases.getCurrentHero() }
         return result.fold(
             onSuccess = { hero ->
                 if (hero != null) {

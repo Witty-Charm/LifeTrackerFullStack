@@ -1,5 +1,6 @@
 package com.lifetracker.mobile.data.repository
 
+import com.lifetracker.mobile.core.network.NetworkResult
 import com.lifetracker.mobile.core.network.SafeApiCaller
 import com.lifetracker.mobile.core.network.map
 import com.lifetracker.mobile.data.local.dao.HeroDao
@@ -72,17 +73,25 @@ class HeroRepositoryImpl(
             caller
                 .safeApiCall { api.getCurrentHero() }
                 .map { it.toDomain() }
-                .toDomainResult()
 
         return when (remote) {
-            is DomainResult.Success -> {
+            is NetworkResult.Success -> {
                 heroDao.upsert(remote.data.toEntity())
                 DomainResult.Success(remote.data)
             }
 
-            is DomainResult.Failure -> {
+            is NetworkResult.Error -> {
+                if (remote.code == 404) {
+                    DomainResult.Success(null)
+                } else {
+                    val local = heroDao.getFirst()?.toDomain()
+                    if (local != null) DomainResult.Success(local) else remote.toDomainResult()
+                }
+            }
+
+            is NetworkResult.Exception -> {
                 val local = heroDao.getFirst()?.toDomain()
-                if (local != null) DomainResult.Success(local) else remote
+                if (local != null) DomainResult.Success(local) else remote.toDomainResult()
             }
         }
     }
