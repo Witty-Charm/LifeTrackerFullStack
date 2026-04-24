@@ -147,9 +147,7 @@ private fun String.toRepeatText(): String {
     val n = parts.getOrNull(1)?.toIntOrNull() ?: 1
     return when (freq) {
         "DAILY" -> if (n == 1) "Every day" else "Every $n days"
-        "WEEKLY" -> if (n == 1) "Every week" else "Every $n weeks"
-        "MONTHLY" -> if (n == 1) "Every month" else "Every $n months"
-        "YEARLY" -> if (n == 1) "Every year" else "Every $n years"
+        "WEEKLY", "MONTHLY", "YEARLY" -> "Legacy schedule"
         else -> freq
     }
 }

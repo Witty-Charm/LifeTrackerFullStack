@@ -42,6 +42,7 @@ import com.lifetracker.mobile.domain.usecase.task.TaskUseCases
 import com.lifetracker.mobile.ui.model.UiEvent
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
@@ -210,6 +211,69 @@ class HeroViewModelTest {
             assertEquals(HabitPolarity.Negative, taskRepository.lastCreateTaskParams?.habitPolarity)
         }
 
+    @Test
+    fun completeTask_doesNotCallRepository_forLocalOnlyTask() =
+        runTest {
+            val heroRepository = FakeHeroRepository()
+            val taskRepository =
+                FakeTaskRepository().apply {
+                    tasks = listOf(createTestTask(id = -3, syncError = "Server rejected"))
+                }
+            val viewModel = buildViewModel(heroRepository, taskRepository)
+            advanceUntilIdle()
+
+            viewModel.completeTask(-3)
+            advanceUntilIdle()
+
+            assertEquals(emptyList<Int>(), taskRepository.completeTaskCalls)
+        }
+
+    @Test
+    fun deleteTask_doesNotStart_whenSameTaskAlreadyHasPendingMutation() =
+        runTest {
+            val heroRepository = FakeHeroRepository()
+            val gate = CompletableDeferred<Unit>()
+            val taskRepository =
+                FakeTaskRepository().apply {
+                    completeTaskGates[1] = gate
+                    completeTaskResults[1] = DomainResult.Success(createCompletionResult(taskId = 1))
+                }
+            val viewModel = buildViewModel(heroRepository, taskRepository)
+            advanceUntilIdle()
+
+            viewModel.completeTask(1)
+            advanceUntilIdle()
+            viewModel.deleteTask(1)
+            advanceUntilIdle()
+
+            assertEquals(listOf(1), taskRepository.completeTaskCalls)
+            assertEquals(emptyList<Int>(), taskRepository.deleteTaskCalls)
+
+            gate.complete(Unit)
+            advanceUntilIdle()
+        }
+
+    @Test
+    fun completeTask_coalescesTaskRefresh_afterConsecutiveSuccesses() =
+        runTest {
+            val heroRepository = FakeHeroRepository()
+            val taskRepository =
+                FakeTaskRepository().apply {
+                    tasks = listOf(createTestTask(id = 1), createTestTask(id = 2))
+                    completeTaskResults[1] = DomainResult.Success(createCompletionResult(taskId = 1))
+                    completeTaskResults[2] = DomainResult.Success(createCompletionResult(taskId = 2))
+                }
+            val viewModel = buildViewModel(heroRepository, taskRepository)
+            advanceUntilIdle()
+
+            viewModel.completeTask(1)
+            viewModel.completeTask(2)
+            advanceUntilIdle()
+
+            assertEquals(listOf(1, 2), taskRepository.completeTaskCalls)
+            assertEquals(2, taskRepository.getTasksCalls)
+        }
+
     private fun buildViewModel(
         heroRepository: FakeHeroRepository,
         taskRepository: FakeTaskRepository,
@@ -296,21 +360,29 @@ class HeroViewModelTest {
         var checkOverdueCalls: Int = 0
         var completeTaskResult: DomainResult<TaskCompletionResult> = DomainResult.Failure(GameError.Unknown("Not used in this test"))
         var lastCreateTaskParams: CreateTaskParams? = null
-        private val tasks = listOf(createTestTask())
+        var tasks: List<GameTaskDomain> = listOf(createTestTask())
+        val completeTaskCalls = mutableListOf<Int>()
+        val deleteTaskCalls = mutableListOf<Int>()
+        val completeTaskResults = mutableMapOf<Int, DomainResult<TaskCompletionResult>>()
+        val completeTaskGates = mutableMapOf<Int, CompletableDeferred<Unit>>()
 
         override suspend fun getTasks(heroId: Int): DomainResult<List<GameTaskDomain>> {
             getTasksCalls++
             return DomainResult.Success(tasks)
         }
 
-        override suspend fun getTask(id: Int): DomainResult<GameTaskDomain> = DomainResult.Success(tasks.first())
+        override suspend fun getTask(id: Int): DomainResult<GameTaskDomain> = DomainResult.Success(tasks.first { it.id == id })
 
         override suspend fun createTask(params: CreateTaskParams): DomainResult<GameTaskDomain> {
             lastCreateTaskParams = params
             return DomainResult.Success(createTestTask(type = params.type, habitPolarity = params.habitPolarity))
         }
 
-        override suspend fun completeTask(taskId: Int): DomainResult<TaskCompletionResult> = completeTaskResult
+        override suspend fun completeTask(taskId: Int): DomainResult<TaskCompletionResult> {
+            completeTaskCalls += taskId
+            completeTaskGates[taskId]?.await()
+            return completeTaskResults[taskId] ?: completeTaskResult
+        }
 
         override suspend fun failTask(taskId: Int): DomainResult<TaskFailureResult> =
             DomainResult.Failure(GameError.Unknown("Not used in this test"))
@@ -320,7 +392,10 @@ class HeroViewModelTest {
             return DomainResult.Success(OverdueResult(overdueCount = 0, penalties = emptyList(), message = ""))
         }
 
-        override suspend fun deleteTask(taskId: Int): DomainResult<Unit> = DomainResult.Success(Unit)
+        override suspend fun deleteTask(taskId: Int): DomainResult<Unit> {
+            deleteTaskCalls += taskId
+            return DomainResult.Success(Unit)
+        }
 
         override suspend fun retryTaskSync(taskId: Int): DomainResult<Unit> = DomainResult.Success(Unit)
 
@@ -365,11 +440,29 @@ class HeroViewModelTest {
                 xpBoostTasksRemaining = 0,
             )
 
+        private fun createCompletionResult(taskId: Int) =
+            TaskCompletionResult(
+                taskId = taskId,
+                taskTitle = "Task $taskId",
+                xpGained = 10,
+                goldGained = 5,
+                leveledUp = false,
+                newLevel = 3,
+                streakBonus = 0,
+                currentStreak = 0,
+                message = "Completed",
+                heroSnapshot = createHeroSnapshot(gold = 55),
+                unlockedAchievements = emptyList(),
+            )
+
         private fun createTestTask(
+            id: Int = 1,
             type: TaskType = TaskType.OneTime,
             habitPolarity: HabitPolarity = HabitPolarity.Both,
+            pendingSync: Boolean = false,
+            syncError: String? = null,
         ) = GameTaskDomain(
-            id = 1,
+            id = id,
             heroId = 1,
             title = "Task",
             description = "",
@@ -392,8 +485,8 @@ class HeroViewModelTest {
             hpPenalty = 0,
             goldPenalty = 0,
             streak = null,
-            pendingSync = false,
-            syncError = null,
+            pendingSync = pendingSync,
+            syncError = syncError,
         )
     }
 }

@@ -202,6 +202,8 @@ private fun testTask(
         penaltyText = "",
         streakText = null,
         isPendingSync = false,
+        pendingAction = null,
+        actionError = null,
     )
 
 private class FakeHeroRepository : HeroRepository {

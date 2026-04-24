@@ -170,7 +170,7 @@ class CreateScreensChromeTest {
     }
 
     @Test
-    fun createDailyScreen_showsBackAndBottomSave() {
+    fun createDailyScreen_showsBackBottomSave_andImportedStreakCopy() {
         composeRule.setContent {
             LifeTrackerMobileTheme {
                 CreateDailyScreen(
@@ -185,7 +185,26 @@ class CreateScreensChromeTest {
         composeRule.onNodeWithText("Create daily").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("Back").assertIsDisplayed()
         composeRule.onNodeWithTag("create_primary_action_footer").assertIsDisplayed()
+        composeRule.onNodeWithText("Imported streak").assertIsDisplayed()
         composeRule.onAllNodesWithText("Save").assertCountEquals(1)
+    }
+
+    @Test
+    fun createDailyScreen_onlyOffersDailyCadence() {
+        composeRule.setContent {
+            LifeTrackerMobileTheme {
+                CreateDailyScreen(
+                    state = CreateDailyFormState(title = "Daily", frequency = RepeatFrequency.DAILY, interval = 1),
+                    vm = rememberCreateDailyViewModel(),
+                    navController = rememberNavController(),
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Repeats DAILY every 1 Days").assertIsDisplayed()
+        composeRule.onAllNodesWithText("Weekly").assertCountEquals(0)
+        composeRule.onAllNodesWithText("Monthly").assertCountEquals(0)
+        composeRule.onAllNodesWithText("Yearly").assertCountEquals(0)
     }
 
     @Test

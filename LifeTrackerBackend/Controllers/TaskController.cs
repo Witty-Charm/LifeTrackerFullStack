@@ -6,6 +6,8 @@ using LifeTracker.Services.Achievements;
 using LifeTracker.Services.Time;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace LifeTracker.Controllers;
 
@@ -17,12 +19,14 @@ public class TaskController : DeviceScopedControllerBase
     private readonly GameEngineService _gameEngine;
     private readonly AchievementService _achievementService;
     private readonly IHeroTimeService _heroTimeService;
+    private readonly ILogger<TaskController> _logger;
 
     public TaskController(
         ApplicationDbContext context,
         GameEngineService gameEngine,
         AchievementService achievementService,
         IHeroTimeService heroTimeService,
+        ILogger<TaskController> logger,
         ICurrentHeroService currentHeroService)
         : base(currentHeroService)
     {
@@ -30,10 +34,11 @@ public class TaskController : DeviceScopedControllerBase
         _gameEngine = gameEngine;
         _achievementService = achievementService;
         _heroTimeService = heroTimeService;
+        _logger = logger;
     }
 
     internal static TaskController CreateForTests(ApplicationDbContext context, GameEngineService gameEngine, IHeroTimeService heroTimeService) =>
-        new(context, gameEngine, new AchievementService(context), heroTimeService, new CurrentHeroService(context));
+        new(context, gameEngine, new AchievementService(context), heroTimeService, NullLogger<TaskController>.Instance, new CurrentHeroService(context));
 
     [HttpGet]
     public async Task<ActionResult<IEnumerable<TaskDto>>> GetTasks([FromQuery] int? heroId = null)
@@ -122,15 +127,23 @@ public class TaskController : DeviceScopedControllerBase
 
         if (task.Type == TaskType.Habit || task.Type == TaskType.Daily)
         {
+            var streakCreatedAt = DateTimeOffset.UtcNow;
             var streak = new Streak
             {
                 HeroId = task.HeroId,
                 TaskId = task.Id,
                 CurrentDays = request.InitialStreak,
                 LongestDays = request.InitialStreak,
-                CreatedAt = DateTimeOffset.UtcNow,
-                UpdatedAt = DateTimeOffset.UtcNow,
+                CreatedAt = streakCreatedAt,
+                UpdatedAt = streakCreatedAt,
             };
+
+            if (request.InitialStreak > 0)
+            {
+                streak.StartDate = streakCreatedAt;
+                streak.LastCheckInLocalDate = FormatSeedAnchorLocalDate(hero, streakCreatedAt);
+            }
+
             _context.Streaks.Add(streak);
             await _context.SaveChangesAsync();
         }
@@ -177,6 +190,18 @@ public class TaskController : DeviceScopedControllerBase
         }
 
         var utcNow = DateTimeOffset.UtcNow;
+
+        Streak? streak = null;
+        string? legacySeedAnchorLocalDate = null;
+        if (task.Type == TaskType.Habit || task.Type == TaskType.Daily)
+        {
+            streak = task.Streak ?? await _context.Streaks.FirstOrDefaultAsync(s => s.HeroId == hero.Id && s.TaskId == task.Id);
+            if (streak != null && streak.CurrentDays > 0 && string.IsNullOrWhiteSpace(streak.LastCheckInLocalDate))
+            {
+                legacySeedAnchorLocalDate = FormatSeedAnchorLocalDate(hero, streak.CreatedAt);
+            }
+        }
+
         var effectiveTimeZone = _heroTimeService.ResolveEffectiveTimeZone(hero, utcNow);
         var todayLocalDate = _heroTimeService.GetLocalDate(utcNow, effectiveTimeZone);
 
@@ -192,11 +217,8 @@ public class TaskController : DeviceScopedControllerBase
                 resetTime = _heroTimeService.GetNextLocalMidnightUtc(utcNow, effectiveTimeZone),
             });
 
-        Streak? streak = null;
         if (task.Type == TaskType.Habit || task.Type == TaskType.Daily)
         {
-            streak = task.Streak ?? await _context.Streaks.FirstOrDefaultAsync(s => s.HeroId == hero.Id && s.TaskId == task.Id);
-
             if (streak == null)
             {
                 streak = new Streak
@@ -207,6 +229,18 @@ public class TaskController : DeviceScopedControllerBase
                     LongestDays = 0,
                 };
                 _context.Streaks.Add(streak);
+            }
+
+            if (legacySeedAnchorLocalDate != null)
+            {
+                streak.LastCheckInLocalDate = legacySeedAnchorLocalDate;
+                streak.StartDate ??= streak.CreatedAt;
+                _logger.LogInformation(
+                    "streak.seeded_legacy_backfill taskId={TaskId} heroId={HeroId} currentDays={CurrentDays} anchorLocalDate={AnchorLocalDate}",
+                    task.Id,
+                    hero.Id,
+                    streak.CurrentDays,
+                    streak.LastCheckInLocalDate);
             }
 
             streak.RegisterSuccess(todayLocalDate, utcNow);
@@ -452,6 +486,13 @@ public class TaskController : DeviceScopedControllerBase
 
     private Task<Hero?> LoadOwnedHeroForTaskAsync(int heroId) =>
         CurrentHeroService.GetOwnedHeroAsync(HttpContext, heroId, query => query.Include(h => h.EconomyBalance));
+
+    private string FormatSeedAnchorLocalDate(Hero hero, DateTimeOffset streakCreatedAt)
+    {
+        var creationTimeZone = _heroTimeService.NormalizeOrDefault(hero.TimeZoneId, "UTC");
+        var createdLocalDate = _heroTimeService.GetLocalDate(streakCreatedAt, creationTimeZone);
+        return createdLocalDate.AddDays(-1).ToString("yyyy-MM-dd");
+    }
 
     private static TaskDto MapToDto(GameTask task) => new()
     {

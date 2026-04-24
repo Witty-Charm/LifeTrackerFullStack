@@ -1,6 +1,7 @@
 package com.lifetracker.mobile.ui.components
 
 import com.lifetracker.mobile.domain.model.HabitPolarity
+import com.lifetracker.mobile.ui.model.TaskPendingAction
 import com.lifetracker.mobile.ui.model.TaskUi
 import com.lifetracker.mobile.ui.model.UiTaskType
 import org.junit.Assert.assertFalse
@@ -38,6 +39,14 @@ class TaskItemActionVisualStateTest {
         assertFalse(negativeActionClickable(task, canAct = false))
     }
 
+    @Test
+    fun pendingAction_blocksActionButtons() {
+        val task = testTask(UiTaskType.OneTime, HabitPolarity.Both).copy(pendingAction = TaskPendingAction.Complete)
+
+        assertFalse(positiveActionClickable(task, canAct = false))
+        assertFalse(negativeActionClickable(task, canAct = false))
+    }
+
     private fun testTask(
         type: UiTaskType,
         habitPolarity: HabitPolarity,
@@ -56,5 +65,7 @@ class TaskItemActionVisualStateTest {
         penaltyText = "-0 HP -0 Gold",
         streakText = null,
         isPendingSync = false,
+        pendingAction = null,
+        actionError = null,
     )
 }

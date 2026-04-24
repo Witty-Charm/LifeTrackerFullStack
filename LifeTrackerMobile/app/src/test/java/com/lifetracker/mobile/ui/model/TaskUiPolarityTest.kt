@@ -64,5 +64,7 @@ class TaskUiPolarityTest {
         penaltyText = "-0 HP -0 Gold",
         streakText = null,
         isPendingSync = false,
+        pendingAction = null,
+        actionError = null,
     )
 }

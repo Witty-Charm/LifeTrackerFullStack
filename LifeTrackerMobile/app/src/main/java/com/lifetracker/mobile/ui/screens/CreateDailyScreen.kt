@@ -74,7 +74,6 @@ fun CreateDailyScreen(
 ) {
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
-    var expandedFrequency by remember { mutableStateOf(false) }
     var newReminderHour by remember { mutableIntStateOf(9) }
     var newReminderMinute by remember { mutableIntStateOf(0) }
     val snackbarHostState = remember { SnackbarHostState() }
@@ -188,20 +187,16 @@ fun CreateDailyScreen(
 
             SchedulingSection(
                 startDate = state.startDate,
-                frequency = state.frequency,
                 interval = state.interval,
                 onDateClick = { showDatePicker = true },
-                onFrequencyChange = vm::onFrequencyChange,
                 onIntervalChange = vm::onIntervalChange,
-                expanded = expandedFrequency,
-                onExpandedChange = { expandedFrequency = it },
             )
 
-            Text("Adjust Streak", style = MaterialTheme.typography.titleSmall)
+            Text("Imported streak", style = MaterialTheme.typography.titleSmall)
             OutlinedTextField(
                 value = state.initialStreak.toString(),
                 onValueChange = { vm.onInitialStreakChange(it.toIntOrNull() ?: 0) },
-                label = { Text("Streak") },
+                label = { Text("Initial streak") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -326,17 +321,12 @@ private fun ChecklistSection(
     TextButton(onClick = onAdd) { Text("+ New checklist entry") }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SchedulingSection(
     startDate: Instant?,
-    frequency: RepeatFrequency,
     interval: Int,
     onDateClick: () -> Unit,
-    onFrequencyChange: (RepeatFrequency) -> Unit,
     onIntervalChange: (Int) -> Unit,
-    expanded: Boolean,
-    onExpandedChange: (Boolean) -> Unit,
 ) {
     Text("Scheduling", style = MaterialTheme.typography.titleSmall)
     Text("Start Date")
@@ -348,43 +338,22 @@ private fun SchedulingSection(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        ExposedDropdownMenuBox(
-            expanded = expanded,
-            onExpandedChange = onExpandedChange,
+        OutlinedTextField(
+            value = RepeatFrequency.DAILY.label,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Repeats") },
             modifier = Modifier.weight(1.5f),
-        ) {
-            OutlinedTextField(
-                value = frequency.label,
-                onValueChange = {},
-                readOnly = true,
-                label = { Text("Repeats") },
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                modifier = Modifier.menuAnchor(androidx.compose.material3.ExposedDropdownMenuAnchorType.PrimaryNotEditable).fillMaxWidth(),
-            )
-            ExposedDropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { onExpandedChange(false) },
-            ) {
-                RepeatFrequency.entries.forEach { option ->
-                    androidx.compose.material3.DropdownMenuItem(
-                        text = { Text(option.label) },
-                        onClick = {
-                            onFrequencyChange(option)
-                            onExpandedChange(false)
-                        },
-                    )
-                }
-            }
-        }
+        )
         OutlinedTextField(
             value = interval.toString(),
             onValueChange = { value -> onIntervalChange(value.toIntOrNull() ?: 1) },
-            label = { Text("Every (${frequency.unitLabel})") },
+            label = { Text("Every (${RepeatFrequency.DAILY.unitLabel})") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.weight(1f),
         )
     }
-    Text("Repeats ${frequency.label.uppercase(Locale.getDefault())} every $interval ${frequency.unitLabel}")
+    Text("Repeats DAILY every $interval ${RepeatFrequency.DAILY.unitLabel}")
 }
 
 @Composable

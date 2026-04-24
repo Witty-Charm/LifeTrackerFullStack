@@ -57,8 +57,8 @@ class CreateDailyViewModel(
     fun onStartDateChange(value: Instant?) =
         _state.update { it.copy(startDate = value) }
 
-    fun onFrequencyChange(value: RepeatFrequency) =
-        _state.update { it.copy(frequency = value) }
+    fun onFrequencyChange() =
+        _state.update { it.copy(frequency = RepeatFrequency.DAILY) }
 
     fun onIntervalChange(value: Int) =
         _state.update { it.copy(interval = value, intervalError = value < 1) }
@@ -141,7 +141,11 @@ class CreateDailyViewModel(
             .fold(
                 onSuccess = { task ->
                     if (!remindersJson.isNullOrBlank()) {
-                        reminderScheduler.schedule(task.id, task.title, remindersJson, repeatPattern)
+                        runCatching {
+                            reminderScheduler.schedule(task.id, task.title, remindersJson, repeatPattern)
+                        }.onFailure { error ->
+                            Timber.e(error, "Failed to schedule reminders for daily task %s", task.id)
+                        }
                     }
                     _events.send(CreateDailyUiEvent.Success(TaskType.Daily))
                 },

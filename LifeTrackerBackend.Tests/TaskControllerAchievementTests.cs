@@ -140,7 +140,7 @@ public class TaskControllerAchievementTests : IAsyncLifetime
         db.GameTasks.Add(task);
         await db.SaveChangesAsync();
 
-        var controller = new TaskController(db, new GameEngineService(), new ThrowingAchievementService(db), new HeroTimeService(), new CurrentHeroService(db));
+        var controller = new TaskController(db, new GameEngineService(), new ThrowingAchievementService(db), new HeroTimeService(), Microsoft.Extensions.Logging.Abstractions.NullLogger<TaskController>.Instance, new CurrentHeroService(db));
         controller.ControllerContext = new ControllerContext
         {
             HttpContext = new DefaultHttpContext()
@@ -302,6 +302,187 @@ public class TaskControllerAchievementTests : IAsyncLifetime
         Assert.True(manualResponse.StreakBroken);
     }
 
+    [Fact]
+    public async Task PostTask_DailyWithInitialStreak_PersistsSeededAnchorMetadataForNewRecord()
+    {
+        await using var db = CreateDbContext();
+        var hero = await CreateHeroAsync(db);
+        var utcNow = new DateTimeOffset(2026, 04, 24, 12, 00, 00, TimeSpan.Zero);
+        var timeService = new FixedHeroTimeService(utcNow);
+        var createdLocalDate = timeService.GetLocalDate(utcNow, timeService.ResolveEffectiveTimeZone(hero, utcNow));
+        var controller = CreateController(db, timeService);
+
+        var actionResult = await controller.PostTask(new CreateTaskRequest
+        {
+            HeroId = hero.Id,
+            Title = "Seeded daily",
+            Type = TaskType.Daily,
+            Difficulty = TaskDifficulty.Easy,
+            InitialStreak = 30
+        });
+
+        var created = Assert.IsType<CreatedAtActionResult>(actionResult.Result);
+        var dto = Assert.IsType<TaskDto>(created.Value);
+        var streak = await db.Streaks.SingleAsync(x => x.TaskId == dto.Id);
+
+        Assert.Equal(30, streak.CurrentDays);
+        Assert.Equal(30, streak.LongestDays);
+        Assert.Equal(createdLocalDate.AddDays(-1).ToString("yyyy-MM-dd"), streak.LastCheckInLocalDate);
+    }
+
+    [Fact]
+    public async Task PostTask_DailyWithoutInitialStreak_DoesNotPersistSeededAnchorMetadata()
+    {
+        await using var db = CreateDbContext();
+        var hero = await CreateHeroAsync(db);
+        var utcNow = new DateTimeOffset(2026, 04, 24, 12, 00, 00, TimeSpan.Zero);
+        var timeService = new FixedHeroTimeService(utcNow);
+        var controller = CreateController(db, timeService);
+
+        var actionResult = await controller.PostTask(new CreateTaskRequest
+        {
+            HeroId = hero.Id,
+            Title = "Fresh daily",
+            Type = TaskType.Daily,
+            Difficulty = TaskDifficulty.Easy,
+            InitialStreak = 0
+        });
+
+        var created = Assert.IsType<CreatedAtActionResult>(actionResult.Result);
+        var dto = Assert.IsType<TaskDto>(created.Value);
+        var streak = await db.Streaks.SingleAsync(x => x.TaskId == dto.Id);
+
+        Assert.Equal(0, streak.CurrentDays);
+        Assert.Equal(0, streak.LongestDays);
+        Assert.True(string.IsNullOrWhiteSpace(streak.LastCheckInLocalDate));
+    }
+
+    [Fact]
+    public async Task CompleteTask_LegacySeededDailyWithMissingLastCheckInBackfillsAnchorBeforeRegisteringSuccess()
+    {
+        await using var db = CreateDbContext();
+        var utcNow = new DateTimeOffset(2026, 04, 24, 12, 00, 00, TimeSpan.Zero);
+        var hero = await CreateHeroAsync(db, timeZoneId: "UTC", createdAt: utcNow);
+        var task = await CreateTaskAsync(db, hero.Id, TaskType.Daily, HabitPolarity.Both, createdAt: utcNow);
+        var completionLocalDate = DateOnly.FromDateTime(utcNow.UtcDateTime);
+
+        db.Streaks.Add(new Streak
+        {
+            HeroId = hero.Id,
+            TaskId = task.Id,
+            CurrentDays = 30,
+            LongestDays = 30,
+            CreatedAt = task.CreatedAt,
+            UpdatedAt = task.CreatedAt,
+            LastCheckInLocalDate = null
+        });
+        await db.SaveChangesAsync();
+
+        var controller = CreateController(db, new FixedHeroTimeService(utcNow));
+
+        var actionResult = await controller.CompleteTask(task.Id);
+
+        var ok = Assert.IsType<OkObjectResult>(actionResult.Result);
+        var response = Assert.IsType<CompleteTaskResponse>(ok.Value);
+        var streak = await db.Streaks.SingleAsync(x => x.TaskId == task.Id);
+
+        Assert.Equal(31, response.CurrentStreak);
+        Assert.Equal(31, streak.CurrentDays);
+        Assert.Equal(31, streak.LongestDays);
+        Assert.Equal(completionLocalDate.ToString("yyyy-MM-dd"), streak.LastCheckInLocalDate);
+    }
+
+    [Fact]
+    public async Task CheckOverdueTasks_SeededDailyWithoutSameDayCompletion_BreaksStreakOnNextLocalDay()
+    {
+        await using var db = CreateDbContext();
+        var createdUtc = new DateTimeOffset(2026, 04, 24, 00, 00, 00, TimeSpan.Zero);
+        var overdueUtc = createdUtc.AddDays(1).AddHours(12);
+        var hero = await CreateHeroAsync(db, timeZoneId: "UTC", createdAt: createdUtc);
+        var task = new GameTask
+        {
+            HeroId = hero.Id,
+            Title = "Seeded overdue daily",
+            Type = TaskType.Daily,
+            Difficulty = TaskDifficulty.Easy,
+            Polarity = HabitPolarity.Both,
+            IsCompleted = false,
+            IsActive = true,
+            DueDate = createdUtc.AddHours(-1),
+            CompletionCount = 0,
+            FailCount = 0,
+            CreatedAt = createdUtc,
+            UpdatedAt = createdUtc
+        };
+        db.GameTasks.Add(task);
+        await db.SaveChangesAsync();
+
+        var createdLocalDate = DateOnly.FromDateTime(createdUtc.UtcDateTime);
+        db.Streaks.Add(new Streak
+        {
+            HeroId = hero.Id,
+            TaskId = task.Id,
+            CurrentDays = 30,
+            LongestDays = 30,
+            CreatedAt = createdUtc,
+            UpdatedAt = createdUtc,
+            LastCheckInLocalDate = createdLocalDate.AddDays(-1).ToString("yyyy-MM-dd")
+        });
+        await db.SaveChangesAsync();
+
+        var controller = CreateController(db, new FixedHeroTimeService(overdueUtc));
+
+        var actionResult = await controller.CheckOverdueTasks(hero.Id);
+
+        var ok = Assert.IsType<OkObjectResult>(actionResult.Result);
+        var response = Assert.IsType<OverdueCheckResponse>(ok.Value);
+        var streak = await db.Streaks.SingleAsync(x => x.TaskId == task.Id);
+
+        Assert.Equal(1, response.OverdueCount);
+        Assert.Single(response.Penalties!);
+        Assert.True(response.Penalties![0].StreakBroken);
+        Assert.Equal(0, streak.CurrentDays);
+        Assert.Equal(overdueUtc.Date.ToString("yyyy-MM-dd"), streak.LastBreakLocalDate);
+    }
+
+    [Fact]
+    public async Task CompleteTask_LegacySeededDaily_BackfillsAnchorUsingCreationTimezoneInsteadOfCurrentTimezone()
+    {
+        await using var db = CreateDbContext();
+        var createdUtc = new DateTimeOffset(2026, 04, 24, 10, 30, 00, TimeSpan.Zero);
+        var completionUtc = new DateTimeOffset(2026, 04, 25, 12, 00, 00, TimeSpan.Zero);
+        var hero = await CreateHeroAsync(db, timeZoneId: "America/New_York", createdAt: createdUtc);
+        hero.PendingTimeZoneId = "Asia/Tokyo";
+        hero.TimeZoneSwitchAfterLocalDate = "2026-04-24";
+        await db.SaveChangesAsync();
+
+        var task = await CreateTaskAsync(db, hero.Id, TaskType.Daily, HabitPolarity.Both, createdAt: createdUtc);
+        db.Streaks.Add(new Streak
+        {
+            HeroId = hero.Id,
+            TaskId = task.Id,
+            CurrentDays = 30,
+            LongestDays = 30,
+            CreatedAt = createdUtc,
+            UpdatedAt = createdUtc,
+            LastCheckInLocalDate = null
+        });
+        await db.SaveChangesAsync();
+
+        var controller = CreateController(db, new FixedHeroTimeService(completionUtc));
+
+        var actionResult = await controller.CompleteTask(task.Id);
+
+        var ok = Assert.IsType<OkObjectResult>(actionResult.Result);
+        var response = Assert.IsType<CompleteTaskResponse>(ok.Value);
+        var streak = await db.Streaks.SingleAsync(x => x.TaskId == task.Id);
+
+        Assert.Equal(1, response.CurrentStreak);
+        Assert.Equal(1, streak.CurrentDays);
+        Assert.Equal(30, streak.LongestDays);
+        Assert.Equal("2026-04-25", streak.LastCheckInLocalDate);
+    }
+
     private static T ReadProperty<T>(object source, string propertyName)
     {
         var property = source.GetType().GetProperty(propertyName);
@@ -311,9 +492,9 @@ public class TaskControllerAchievementTests : IAsyncLifetime
         return (T)value!;
     }
 
-    private static TaskController CreateController(ApplicationDbContext db)
+    private static TaskController CreateController(ApplicationDbContext db, IHeroTimeService? timeService = null)
     {
-        var controller = TaskController.CreateForTests(db, new GameEngineService(), new HeroTimeService());
+        var controller = TaskController.CreateForTests(db, new GameEngineService(), timeService ?? new HeroTimeService());
         controller.ControllerContext = new ControllerContext
         {
             HttpContext = new DefaultHttpContext()
@@ -322,8 +503,9 @@ public class TaskControllerAchievementTests : IAsyncLifetime
         return controller;
     }
 
-    private static async Task<Hero> CreateHeroAsync(ApplicationDbContext db)
+    private static async Task<Hero> CreateHeroAsync(ApplicationDbContext db, string timeZoneId = "UTC", DateTimeOffset? createdAt = null)
     {
+        var heroCreatedAt = createdAt ?? DateTimeOffset.UtcNow;
         var hero = new Hero
         {
             Name = "Alex",
@@ -331,8 +513,10 @@ public class TaskControllerAchievementTests : IAsyncLifetime
             Level = 1,
             CurrentHp = 100,
             MaxHp = 100,
-            TimeZoneId = "UTC",
+            TimeZoneId = timeZoneId,
             OwnerDeviceId = TestDeviceId,
+            CreatedDate = heroCreatedAt,
+            UpdatedAt = heroCreatedAt,
         };
 
         db.Heroes.Add(hero);
@@ -343,15 +527,23 @@ public class TaskControllerAchievementTests : IAsyncLifetime
             HeroId = hero.Id,
             TotalGoldEarned = 0,
             LastDailyResetLocalDate = "2026-04-20",
-            MaxDailyCompletions = GameConstants.DailyTaskCap
+            MaxDailyCompletions = GameConstants.DailyTaskCap,
+            CreatedAt = heroCreatedAt,
+            UpdatedAt = heroCreatedAt,
         });
         await db.SaveChangesAsync();
 
         return hero;
     }
 
-    private static async Task<GameTask> CreateTaskAsync(ApplicationDbContext db, int heroId, TaskType type, HabitPolarity polarity)
+    private static async Task<GameTask> CreateTaskAsync(
+        ApplicationDbContext db,
+        int heroId,
+        TaskType type,
+        HabitPolarity polarity,
+        DateTimeOffset? createdAt = null)
     {
+        var taskCreatedAt = createdAt ?? DateTimeOffset.UtcNow;
         var task = new GameTask
         {
             HeroId = heroId,
@@ -362,7 +554,9 @@ public class TaskControllerAchievementTests : IAsyncLifetime
             IsCompleted = false,
             IsActive = true,
             CompletionCount = 0,
-            FailCount = 0
+            FailCount = 0,
+            CreatedAt = taskCreatedAt,
+            UpdatedAt = taskCreatedAt,
         };
 
         db.GameTasks.Add(task);
@@ -376,8 +570,8 @@ public class TaskControllerAchievementTests : IAsyncLifetime
                 TaskId = task.Id,
                 CurrentDays = 0,
                 LongestDays = 0,
-                CreatedAt = DateTimeOffset.UtcNow,
-                UpdatedAt = DateTimeOffset.UtcNow,
+                CreatedAt = taskCreatedAt,
+                UpdatedAt = taskCreatedAt,
             });
             await db.SaveChangesAsync();
         }
@@ -419,6 +613,35 @@ public class TaskControllerAchievementTests : IAsyncLifetime
     }
 
     private ApplicationDbContext CreateDbContext() => new(_options);
+
+    private sealed class FixedHeroTimeService(DateTimeOffset utcNow) : IHeroTimeService
+    {
+        private readonly HeroTimeService _inner = new();
+
+        public string NormalizeOrDefault(string? candidateTimeZoneId, string fallback = "UTC") =>
+            _inner.NormalizeOrDefault(candidateTimeZoneId, fallback);
+
+        public bool IsValidIana(string timeZoneId) => _inner.IsValidIana(timeZoneId);
+
+        public DateOnly GetLocalDate(DateTimeOffset utcNowValue, string timeZoneId) =>
+            _inner.GetLocalDate(ShouldUseFixedNow(utcNowValue) ? utcNow : utcNowValue, timeZoneId);
+
+        public DateTimeOffset GetNextLocalMidnightUtc(DateTimeOffset utcNowValue, string timeZoneId) =>
+            _inner.GetNextLocalMidnightUtc(ShouldUseFixedNow(utcNowValue) ? utcNow : utcNowValue, timeZoneId);
+
+        public string FormatLocalDate(DateOnly localDate) => _inner.FormatLocalDate(localDate);
+
+        public DateOnly ParseLocalDate(string value) => _inner.ParseLocalDate(value);
+
+        public string ResolveEffectiveTimeZone(Hero hero, DateTimeOffset utcNowValue) =>
+            _inner.ResolveEffectiveTimeZone(hero, ShouldUseFixedNow(utcNowValue) ? utcNow : utcNowValue);
+
+        public bool CanSwitchTimeZone(Hero hero, DateTimeOffset utcNowValue) =>
+            _inner.CanSwitchTimeZone(hero, ShouldUseFixedNow(utcNowValue) ? utcNow : utcNowValue);
+
+        private static bool ShouldUseFixedNow(DateTimeOffset utcNowValue) =>
+            Math.Abs((utcNowValue - DateTimeOffset.UtcNow).TotalMinutes) < 5;
+    }
 
     private sealed class ThrowingAchievementService(ApplicationDbContext db) : LifeTracker.Services.Achievements.AchievementService(db)
     {
