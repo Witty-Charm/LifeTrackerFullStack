@@ -35,6 +35,7 @@ import com.lifetracker.mobile.domain.model.TaskType
 import com.lifetracker.mobile.domain.repository.HeroRepository
 import com.lifetracker.mobile.domain.repository.TaskRepository
 import com.lifetracker.mobile.domain.usecase.hero.CreateHeroUseCase
+import com.lifetracker.mobile.domain.usecase.hero.GetCurrentHeroUseCase
 import com.lifetracker.mobile.domain.usecase.hero.GetFirstHeroUseCase
 import com.lifetracker.mobile.domain.usecase.hero.GetHeroAchievementsUseCase
 import com.lifetracker.mobile.domain.usecase.hero.GetHeroStatsUseCase
@@ -146,6 +147,7 @@ private fun rememberHeroViewModel(): HeroViewModel {
                 HeroUseCases(
                     getHeroes = GetHeroesUseCase(heroRepository),
                     getHero = GetHeroUseCase(heroRepository),
+                    getCurrentHero = GetCurrentHeroUseCase(heroRepository),
                     getFirstHero = GetFirstHeroUseCase(heroRepository),
                     createHero = CreateHeroUseCase(heroRepository),
                     getHeroStats = GetHeroStatsUseCase(heroRepository),
@@ -226,6 +228,8 @@ private class FakeHeroRepository : HeroRepository {
     override suspend fun getHeroes(): DomainResult<List<HeroDomain>> = DomainResult.Success(listOf(hero))
 
     override suspend fun getHero(id: Int): DomainResult<HeroDomain> = DomainResult.Success(hero)
+
+    override suspend fun getCurrentHero(): DomainResult<HeroDomain?> = DomainResult.Success(hero)
 
     override suspend fun getFirstHero(): DomainResult<HeroDomain?> = DomainResult.Success(hero)
 

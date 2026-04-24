@@ -14,7 +14,7 @@ import kotlinx.datetime.TimeZone
 import timber.log.Timber
 
 class HeroTimeZoneSyncManager(
-    private val getFirstHero: suspend () -> DomainResult<HeroDomain?>,
+    private val getCurrentHero: suspend () -> DomainResult<HeroDomain?>,
     private val updateHeroTimeZone: suspend (heroId: Int, timeZoneId: String) -> DomainResult<Unit>,
     private val timeZoneProvider: () -> String = { TimeZone.currentSystemDefault().id },
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
@@ -36,7 +36,7 @@ class HeroTimeZoneSyncManager(
             val timeZoneId = currentTimeZoneId()
 
             mutex.withLock {
-                val heroResult = getFirstHero()
+                val heroResult = getCurrentHero()
                 val hero = when (heroResult) {
                     is DomainResult.Success -> heroResult.data
                     is DomainResult.Failure -> {

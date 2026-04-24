@@ -27,8 +27,8 @@ import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface LifeTrackerApi {
-    @GET("api/Hero")
-    suspend fun getHeroes(): Response<List<HeroDto>>
+    @GET("api/Hero/me")
+    suspend fun getCurrentHero(): Response<HeroDto>
 
     @GET("api/Hero/{id}")
     suspend fun getHero(

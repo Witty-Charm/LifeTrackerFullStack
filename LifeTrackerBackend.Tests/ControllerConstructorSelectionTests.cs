@@ -20,4 +20,12 @@ public class ControllerConstructorSelectionTests
 
         Assert.Null(exception);
     }
+
+    [Fact]
+    public void ShopController_DiFactory_CanBeCreatedWithoutConstructorAmbiguity()
+    {
+        var exception = Record.Exception(() => ActivatorUtilities.CreateFactory(typeof(ShopController), Type.EmptyTypes));
+
+        Assert.Null(exception);
+    }
 }

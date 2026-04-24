@@ -4,6 +4,7 @@ using LifeTracker.Data;
 using LifeTracker.Models;
 using LifeTracker.Services;
 using LifeTracker.Services.Time;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -12,6 +13,7 @@ namespace LifeTrackerBackend.Tests;
 
 public class TaskControllerAchievementTests : IAsyncLifetime
 {
+    private const string TestDeviceId = "11111111-1111-1111-1111-111111111111";
     private readonly SqliteConnection _connection = new("Data Source=:memory:");
     private DbContextOptions<ApplicationDbContext> _options = null!;
 
@@ -43,7 +45,8 @@ public class TaskControllerAchievementTests : IAsyncLifetime
             Level = 1,
             CurrentHp = 100,
             MaxHp = 100,
-            TimeZoneId = "UTC"
+            TimeZoneId = "UTC",
+            OwnerDeviceId = TestDeviceId,
         };
         db.Heroes.Add(hero);
         await db.SaveChangesAsync();
@@ -52,7 +55,8 @@ public class TaskControllerAchievementTests : IAsyncLifetime
         {
             HeroId = hero.Id,
             TotalGoldEarned = 0,
-            LastDailyResetLocalDate = "2026-04-20"
+            LastDailyResetLocalDate = "2026-04-20",
+            MaxDailyCompletions = GameConstants.DailyTaskCap
         });
 
         var task = new GameTask
@@ -69,7 +73,7 @@ public class TaskControllerAchievementTests : IAsyncLifetime
         await db.SaveChangesAsync();
 
         var expectedBaseGold = task.GetGoldReward();
-        var controller = TaskController.CreateForTests(db, new GameEngineService(), new HeroTimeService());
+        var controller = CreateController(db);
 
         var actionResult = await controller.CompleteTask(task.Id);
 
@@ -109,7 +113,8 @@ public class TaskControllerAchievementTests : IAsyncLifetime
             Level = 1,
             CurrentHp = 100,
             MaxHp = 100,
-            TimeZoneId = "UTC"
+            TimeZoneId = "UTC",
+            OwnerDeviceId = TestDeviceId,
         };
         db.Heroes.Add(hero);
         await db.SaveChangesAsync();
@@ -118,7 +123,8 @@ public class TaskControllerAchievementTests : IAsyncLifetime
         {
             HeroId = hero.Id,
             TotalGoldEarned = 0,
-            LastDailyResetLocalDate = "2026-04-20"
+            LastDailyResetLocalDate = "2026-04-20",
+            MaxDailyCompletions = GameConstants.DailyTaskCap
         });
 
         var task = new GameTask
@@ -134,7 +140,12 @@ public class TaskControllerAchievementTests : IAsyncLifetime
         db.GameTasks.Add(task);
         await db.SaveChangesAsync();
 
-        var controller = new TaskController(db, new GameEngineService(), new ThrowingAchievementService(db), new HeroTimeService());
+        var controller = new TaskController(db, new GameEngineService(), new ThrowingAchievementService(db), new HeroTimeService(), new CurrentHeroService(db));
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext()
+        };
+        controller.ControllerContext.HttpContext.Request.Headers["X-Device-Id"] = TestDeviceId;
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => controller.CompleteTask(task.Id));
 
@@ -300,8 +311,16 @@ public class TaskControllerAchievementTests : IAsyncLifetime
         return (T)value!;
     }
 
-    private static TaskController CreateController(ApplicationDbContext db) =>
-        TaskController.CreateForTests(db, new GameEngineService(), new HeroTimeService());
+    private static TaskController CreateController(ApplicationDbContext db)
+    {
+        var controller = TaskController.CreateForTests(db, new GameEngineService(), new HeroTimeService());
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext()
+        };
+        controller.ControllerContext.HttpContext.Request.Headers["X-Device-Id"] = TestDeviceId;
+        return controller;
+    }
 
     private static async Task<Hero> CreateHeroAsync(ApplicationDbContext db)
     {
@@ -312,7 +331,8 @@ public class TaskControllerAchievementTests : IAsyncLifetime
             Level = 1,
             CurrentHp = 100,
             MaxHp = 100,
-            TimeZoneId = "UTC"
+            TimeZoneId = "UTC",
+            OwnerDeviceId = TestDeviceId,
         };
 
         db.Heroes.Add(hero);
@@ -322,7 +342,8 @@ public class TaskControllerAchievementTests : IAsyncLifetime
         {
             HeroId = hero.Id,
             TotalGoldEarned = 0,
-            LastDailyResetLocalDate = "2026-04-20"
+            LastDailyResetLocalDate = "2026-04-20",
+            MaxDailyCompletions = GameConstants.DailyTaskCap
         });
         await db.SaveChangesAsync();
 
@@ -356,7 +377,7 @@ public class TaskControllerAchievementTests : IAsyncLifetime
                 CurrentDays = 0,
                 LongestDays = 0,
                 CreatedAt = DateTimeOffset.UtcNow,
-                UpdatedAt = DateTimeOffset.UtcNow
+                UpdatedAt = DateTimeOffset.UtcNow,
             });
             await db.SaveChangesAsync();
         }
@@ -390,7 +411,7 @@ public class TaskControllerAchievementTests : IAsyncLifetime
             CurrentDays = streakDays,
             LongestDays = streakDays,
             CreatedAt = DateTimeOffset.UtcNow,
-            UpdatedAt = DateTimeOffset.UtcNow
+            UpdatedAt = DateTimeOffset.UtcNow,
         });
         await db.SaveChangesAsync();
 

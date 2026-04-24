@@ -26,6 +26,7 @@ import com.lifetracker.mobile.domain.repository.SettingsRepository
 import com.lifetracker.mobile.domain.repository.ShopRepository
 import com.lifetracker.mobile.domain.repository.TaskRepository
 import com.lifetracker.mobile.domain.usecase.hero.CreateHeroUseCase
+import com.lifetracker.mobile.domain.usecase.hero.GetCurrentHeroUseCase
 import com.lifetracker.mobile.domain.usecase.hero.GetFirstHeroUseCase
 import com.lifetracker.mobile.domain.usecase.hero.GetHeroAchievementsUseCase
 import com.lifetracker.mobile.domain.usecase.hero.GetHeroStatsUseCase
@@ -56,6 +57,7 @@ import com.lifetracker.mobile.ui.viewmodel.AchievementsViewModel
 import com.lifetracker.mobile.ui.viewmodel.CreateDailyViewModel
 import com.lifetracker.mobile.ui.viewmodel.HeroViewModel
 import com.lifetracker.mobile.ui.viewmodel.ShopViewModel
+import com.lifetracker.mobile.ui.viewmodel.StatsViewModel
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.module.dsl.viewModelOf
@@ -65,13 +67,22 @@ val appModule =
     module {
         single { JsonDefaults }
         single { SafeApiCaller(json = get()) }
-        single { NetworkModule.provideOkHttpClient(isDebug = BuildConfig.DEBUG) }
+
+        single {
+            val settingsRepository: SettingsRepository = get()
+            NetworkModule.provideOkHttpClient(
+                deviceIdProvider = settingsRepository::getOrCreateDeviceIdBlocking,
+                isDebug = BuildConfig.DEBUG,
+            )
+        }
+
         single { NetworkModule.provideApi(baseUrl = BuildConfig.BASE_URL, client = get(), json = get()) }
         single { SyncScheduler(workManager = get()) }
         single { ReminderScheduler(workManager = get(), json = get()) }
 
         single<HeroRepository> { HeroRepositoryImpl(api = get(), caller = get(), heroDao = get()) }
-        single<TaskRepository> { TaskRepositoryImpl(api = get(), caller = get(), taskDao = get(), syncScheduler = get()) }
+        single<TaskRepository> { TaskRepositoryImpl(api = get(), caller = get(), taskDao = get(), syncScheduler =
+            get()) }
         single<ShopRepository> { ShopRepositoryImpl(api = get(), caller = get()) }
 
         single<DataStore<Preferences>> {
@@ -79,13 +90,16 @@ val appModule =
                 androidContext().preferencesDataStoreFile("settings")
             }
         }
+
         single<SettingsRepository> { DataStoreSettingsRepository(dataStore = get()) }
+
         single {
             ThemeSettingsUseCases(
                 observeThemeMode = ObserveThemeModeUseCase(get()),
                 setThemeMode = SetThemeModeUseCase(get()),
             )
         }
+
         single { ThemeController(themeSettingsUseCases = get()) }
 
         single {
@@ -93,6 +107,7 @@ val appModule =
             HeroUseCases(
                 getHeroes = GetHeroesUseCase(heroRepo),
                 getHero = GetHeroUseCase(heroRepo),
+                getCurrentHero = GetCurrentHeroUseCase(heroRepo),
                 getFirstHero = GetFirstHeroUseCase(heroRepo),
                 createHero = CreateHeroUseCase(heroRepo),
                 getHeroStats = GetHeroStatsUseCase(heroRepo),
@@ -106,12 +121,13 @@ val appModule =
         single {
             val heroUseCases: HeroUseCases = get()
             HeroTimeZoneSyncManager(
-                getFirstHero = { heroUseCases.getFirstHero() },
+                getCurrentHero = { heroUseCases.getCurrentHero() },
                 updateHeroTimeZone = { heroId, timeZoneId ->
                     heroUseCases.updateHeroTimeZone(heroId, timeZoneId)
                 },
             )
         }
+
         single {
             val taskRepo: TaskRepository = get()
             TaskUseCases(
@@ -126,6 +142,7 @@ val appModule =
                 deleteLocalTask = DeleteLocalTaskUseCase(taskRepo),
             )
         }
+
         single {
             val shopRepo: ShopRepository = get()
             ShopUseCases(
@@ -142,9 +159,11 @@ val appModule =
                 reminderScheduler = get(),
             )
         }
+
         viewModelOf(::HeroViewModel)
         viewModelOf(::ShopViewModel)
         viewModelOf(::AchievementsViewModel)
+        viewModelOf(::StatsViewModel)
 
         single {
             Room
@@ -153,6 +172,7 @@ val appModule =
                 .fallbackToDestructiveMigration(dropAllTables = true)
                 .build()
         }
+
         single { get<AppDatabase>().heroDao() }
         single { get<AppDatabase>().taskDao() }
     }

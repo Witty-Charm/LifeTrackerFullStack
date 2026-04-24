@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Button
@@ -44,7 +45,6 @@ import com.lifetracker.mobile.ui.components.TaskItem
 import com.lifetracker.mobile.ui.model.HeroScreenState
 import com.lifetracker.mobile.ui.model.UiEvent
 import com.lifetracker.mobile.ui.model.UiTaskType
-import com.lifetracker.mobile.ui.model.isHealLoading
 import com.lifetracker.mobile.ui.model.isRespawnLoading
 import com.lifetracker.mobile.ui.model.isTaskLoading
 import com.lifetracker.mobile.ui.viewmodel.HeroViewModel
@@ -117,6 +117,14 @@ fun HomeScreen(
                         Icon(Icons.Filled.MoreVert, contentDescription = "More")
                     }
                     DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                        DropdownMenuItem(
+                            text = { Text("Stats") },
+                            onClick = {
+                                showMenu = false
+                                state.hero?.id?.let { navController.navigate(Screen.Stats.route(it)) }
+                            },
+                            leadingIcon = { Icon(Icons.Filled.BarChart, contentDescription = null) },
+                        )
                         DropdownMenuItem(
                             text = { Text("Rewards") },
                             onClick = {

@@ -5,6 +5,7 @@ import com.lifetracker.mobile.domain.model.ChecklistItem
 import com.lifetracker.mobile.domain.model.GameTaskDomain
 import com.lifetracker.mobile.domain.model.HabitPolarity
 import com.lifetracker.mobile.domain.model.HeroDomain
+import com.lifetracker.mobile.domain.model.HeroStatsDomain
 import com.lifetracker.mobile.domain.model.InventoryItemDomain
 import com.lifetracker.mobile.domain.model.ShopItemDomain
 import com.lifetracker.mobile.domain.model.TaskDifficulty
@@ -14,6 +15,7 @@ import com.lifetracker.mobile.ui.model.HeroStatusBadge
 import com.lifetracker.mobile.ui.model.HeroUi
 import com.lifetracker.mobile.ui.model.InventoryItemUi
 import com.lifetracker.mobile.ui.model.ShopItemUi
+import com.lifetracker.mobile.ui.model.StatsScreenState
 import com.lifetracker.mobile.ui.model.TaskUi
 import com.lifetracker.mobile.ui.model.UiDifficulty
 import com.lifetracker.mobile.ui.model.UiTaskType
@@ -128,6 +130,10 @@ private val shortDateFormatter: DateTimeFormatter by lazy {
     DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT).withLocale(Locale.getDefault())
 }
 
+private val mediumDateFormatter: DateTimeFormatter by lazy {
+    DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(Locale.getDefault())
+}
+
 private fun Instant.toDisplayDate(): String {
     val javaDate = this.toLocalDateTime(TimeZone.currentSystemDefault()).date.toJavaLocalDate()
     return shortDateFormatter.format(javaDate)
@@ -156,6 +162,28 @@ private fun parseChecklist(checklistJson: String?): ImmutableList<ChecklistItemU
         .toImmutableList()
 }
 
+fun HeroStatsDomain.toStatsUiState(tasks: List<GameTaskDomain>): StatsScreenState =
+    StatsScreenState(
+        heroName = name,
+        level = level,
+        xpText = "%,d / %,d XP".format(currentXp, xpForNextLevel),
+        hpText = "$currentHp / $maxHp HP",
+        goldText = "%,d Gold".format(gold),
+        totalXpEarnedText = "%,d".format(totalXpEarned),
+        totalGoldEarnedText = "%,d".format(totalGoldEarned),
+        totalGoldSpentText = "%,d".format(totalGoldSpent),
+        deathCount = deathCount,
+        activeStreaks = activeStreaks,
+        longestStreak = longestStreak,
+        dailyProgressText = "$dailyCompletions / $dailyCompletionsMax tasks today",
+        completedCount = tasks.sumOf { it.completionCount },
+        failedCount = tasks.sumOf { it.failCount },
+        overdueCount = tasks.count { it.isOverdue },
+        dailyCount = tasks.count { it.type == TaskType.Daily },
+        oneTimeCount = tasks.count { it.type == TaskType.OneTime },
+        habitCount = tasks.count { it.type == TaskType.Habit },
+    )
+
 fun ShopItemDomain.toUi(heroGold: Int): ShopItemUi =
     ShopItemUi(
         id = id,
@@ -176,5 +204,5 @@ fun InventoryItemDomain.toUi(heroGold: Int): InventoryItemUi =
                 .toLocalDateTime(TimeZone.currentSystemDefault())
                 .date
                 .toJavaLocalDate()
-                .format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(Locale.getDefault())),
+                .format(mediumDateFormatter)
     )

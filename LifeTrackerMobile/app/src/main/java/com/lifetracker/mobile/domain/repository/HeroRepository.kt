@@ -12,6 +12,8 @@ interface HeroRepository {
 
     suspend fun getHero(id: Int): DomainResult<HeroDomain>
 
+    suspend fun getCurrentHero(): DomainResult<HeroDomain?>
+
     suspend fun getFirstHero(): DomainResult<HeroDomain?>
 
     suspend fun createHero(

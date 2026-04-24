@@ -65,7 +65,7 @@ fun AchievementsScreen(
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            RewardsTopBar(onBack = onBack)
+            SectionTopBar(title = "Rewards", onBack = onBack)
         },
     ) { padding ->
         when {
@@ -101,7 +101,10 @@ fun AchievementsScreen(
 }
 
 @Composable
-private fun RewardsTopBar(onBack: () -> Unit) {
+internal fun SectionTopBar(
+    title: String,
+    onBack: () -> Unit,
+) {
     val colors = MaterialTheme.colorScheme
 
     Box(
@@ -158,7 +161,7 @@ private fun RewardsTopBar(onBack: () -> Unit) {
                 }
 
                 Text(
-                    text = "Rewards",
+                    text = title,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.SemiBold,
                     color = colors.onSurface,

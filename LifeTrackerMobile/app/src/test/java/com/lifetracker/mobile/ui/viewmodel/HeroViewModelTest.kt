@@ -19,6 +19,7 @@ import com.lifetracker.mobile.domain.model.TaskType
 import com.lifetracker.mobile.domain.repository.HeroRepository
 import com.lifetracker.mobile.domain.repository.TaskRepository
 import com.lifetracker.mobile.domain.usecase.hero.CreateHeroUseCase
+import com.lifetracker.mobile.domain.usecase.hero.GetCurrentHeroUseCase
 import com.lifetracker.mobile.domain.usecase.hero.GetFirstHeroUseCase
 import com.lifetracker.mobile.domain.usecase.hero.GetHeroAchievementsUseCase
 import com.lifetracker.mobile.domain.usecase.hero.GetHeroStatsUseCase
@@ -56,7 +57,6 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
-import java.util.UUID
 import kotlin.time.Instant
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -81,14 +81,16 @@ class HeroViewModelTest {
             val viewModel = buildViewModel(heroRepository, taskRepository)
 
             advanceUntilIdle()
-            assertEquals(1, heroRepository.getFirstHeroCalls)
+            assertEquals(1, heroRepository.getCurrentHeroCalls)
+            assertEquals(0, heroRepository.getFirstHeroCalls)
             assertEquals(1, taskRepository.getTasksCalls)
             assertEquals(1, taskRepository.checkOverdueCalls)
 
             viewModel.refreshOnForeground(nowMillis = 31_000L)
             advanceUntilIdle()
 
-            assertEquals(2, heroRepository.getFirstHeroCalls)
+            assertEquals(2, heroRepository.getCurrentHeroCalls)
+            assertEquals(0, heroRepository.getFirstHeroCalls)
             assertEquals(2, taskRepository.getTasksCalls)
             assertEquals(2, taskRepository.checkOverdueCalls)
         }
@@ -107,13 +109,15 @@ class HeroViewModelTest {
             viewModel.refreshOnForeground(nowMillis = 40_000L)
             advanceUntilIdle()
 
-            assertEquals(2, heroRepository.getFirstHeroCalls)
+            assertEquals(2, heroRepository.getCurrentHeroCalls)
+            assertEquals(0, heroRepository.getFirstHeroCalls)
             assertEquals(2, taskRepository.getTasksCalls)
 
             viewModel.refreshOnForeground(nowMillis = 62_000L)
             advanceUntilIdle()
 
-            assertEquals(3, heroRepository.getFirstHeroCalls)
+            assertEquals(3, heroRepository.getCurrentHeroCalls)
+            assertEquals(0, heroRepository.getFirstHeroCalls)
             assertEquals(3, taskRepository.getTasksCalls)
         }
 
@@ -127,7 +131,8 @@ class HeroViewModelTest {
             viewModel.refreshOnForeground(nowMillis = 31_000L)
             advanceUntilIdle()
 
-            assertEquals(1, heroRepository.getFirstHeroCalls)
+            assertEquals(1, heroRepository.getCurrentHeroCalls)
+            assertEquals(0, heroRepository.getFirstHeroCalls)
             assertEquals(1, taskRepository.getTasksCalls)
             assertEquals(1, taskRepository.checkOverdueCalls)
         }
@@ -217,6 +222,7 @@ class HeroViewModelTest {
                 HeroUseCases(
                     getHeroes = GetHeroesUseCase(heroRepository),
                     getHero = GetHeroUseCase(heroRepository),
+                    getCurrentHero = GetCurrentHeroUseCase(heroRepository),
                     getFirstHero = GetFirstHeroUseCase(heroRepository),
                     createHero = CreateHeroUseCase(heroRepository),
                     getHeroStats = GetHeroStatsUseCase(heroRepository),
@@ -243,12 +249,18 @@ class HeroViewModelTest {
 
     private class FakeHeroRepository : HeroRepository {
         var achievementsResult: DomainResult<List<AchievementDomain>> = DomainResult.Success(emptyList())
+        var getCurrentHeroCalls: Int = 0
         var getFirstHeroCalls: Int = 0
         private val hero = createTestHero()
 
         override suspend fun getHeroes(): DomainResult<List<HeroDomain>> = DomainResult.Success(listOf(hero))
 
         override suspend fun getHero(id: Int): DomainResult<HeroDomain> = DomainResult.Success(hero)
+
+        override suspend fun getCurrentHero(): DomainResult<HeroDomain?> {
+            getCurrentHeroCalls++
+            return DomainResult.Success(hero)
+        }
 
         override suspend fun getFirstHero(): DomainResult<HeroDomain?> {
             getFirstHeroCalls++

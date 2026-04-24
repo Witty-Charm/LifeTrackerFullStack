@@ -26,6 +26,8 @@ public class Hero
 
     public DateTimeOffset? RecoveryEndsAt { get; set; }
 
+    public string OwnerDeviceId { get; set; } = string.Empty;
+
     public string TimeZoneId { get; set; } = "UTC";
     public string? PendingTimeZoneId { get; set; }
     public string? TimeZoneSwitchAfterLocalDate { get; set; }

@@ -1,6 +1,5 @@
 package com.lifetracker.mobile.ui.screens
 
-import android.content.Context
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
@@ -27,12 +26,11 @@ import com.lifetracker.mobile.domain.model.HeroStatsDomain
 import com.lifetracker.mobile.domain.model.OverdueResult
 import com.lifetracker.mobile.domain.model.RespawnResult
 import com.lifetracker.mobile.domain.model.TaskCompletionResult
-import com.lifetracker.mobile.domain.model.TaskDifficulty
 import com.lifetracker.mobile.domain.model.TaskFailureResult
-import com.lifetracker.mobile.domain.model.TaskType
 import com.lifetracker.mobile.domain.repository.HeroRepository
 import com.lifetracker.mobile.domain.repository.TaskRepository
 import com.lifetracker.mobile.domain.usecase.hero.CreateHeroUseCase
+import com.lifetracker.mobile.domain.usecase.hero.GetCurrentHeroUseCase
 import com.lifetracker.mobile.domain.usecase.hero.GetFirstHeroUseCase
 import com.lifetracker.mobile.domain.usecase.hero.GetHeroAchievementsUseCase
 import com.lifetracker.mobile.domain.usecase.hero.GetHeroStatsUseCase
@@ -55,7 +53,6 @@ import com.lifetracker.mobile.domain.usecase.task.TaskUseCases
 import com.lifetracker.mobile.ui.model.CreateDailyFormState
 import com.lifetracker.mobile.ui.model.HeroScreenState
 import com.lifetracker.mobile.ui.model.RepeatFrequency
-import com.lifetracker.mobile.ui.model.UiDifficulty
 import com.lifetracker.mobile.ui.model.UiTaskType
 import com.lifetracker.mobile.ui.theme.LifeTrackerMobileTheme
 import com.lifetracker.mobile.ui.viewmodel.CreateDailyViewModel
@@ -224,6 +221,7 @@ private fun rememberHeroViewModel(): HeroViewModel {
                 HeroUseCases(
                     getHeroes = GetHeroesUseCase(heroRepository),
                     getHero = GetHeroUseCase(heroRepository),
+                    getCurrentHero = GetCurrentHeroUseCase(heroRepository),
                     getFirstHero = GetFirstHeroUseCase(heroRepository),
                     createHero = CreateHeroUseCase(heroRepository),
                     getHeroStats = GetHeroStatsUseCase(heroRepository),
@@ -298,6 +296,8 @@ private class CreateScreenFakeHeroRepository : HeroRepository {
     override suspend fun getHeroes(): DomainResult<List<HeroDomain>> = DomainResult.Success(listOf(hero))
 
     override suspend fun getHero(id: Int): DomainResult<HeroDomain> = DomainResult.Success(hero)
+
+    override suspend fun getCurrentHero(): DomainResult<HeroDomain?> = DomainResult.Success(hero)
 
     override suspend fun getFirstHero(): DomainResult<HeroDomain?> = DomainResult.Success(hero)
 

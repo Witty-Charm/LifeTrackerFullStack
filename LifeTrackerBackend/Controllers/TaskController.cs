@@ -1,24 +1,30 @@
 using LifeTracker.Constants;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using LifeTracker.Data;
 using LifeTracker.Models;
 using LifeTracker.Services;
 using LifeTracker.Services.Achievements;
 using LifeTracker.Services.Time;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace LifeTracker.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class TaskController : ControllerBase
+public class TaskController : DeviceScopedControllerBase
 {
     private readonly ApplicationDbContext _context;
     private readonly GameEngineService _gameEngine;
     private readonly AchievementService _achievementService;
     private readonly IHeroTimeService _heroTimeService;
 
-    public TaskController(ApplicationDbContext context, GameEngineService gameEngine, AchievementService achievementService, IHeroTimeService heroTimeService)
+    public TaskController(
+        ApplicationDbContext context,
+        GameEngineService gameEngine,
+        AchievementService achievementService,
+        IHeroTimeService heroTimeService,
+        ICurrentHeroService currentHeroService)
+        : base(currentHeroService)
     {
         _context = context;
         _gameEngine = gameEngine;
@@ -27,20 +33,28 @@ public class TaskController : ControllerBase
     }
 
     internal static TaskController CreateForTests(ApplicationDbContext context, GameEngineService gameEngine, IHeroTimeService heroTimeService) =>
-        new(context, gameEngine, new AchievementService(context), heroTimeService);
+        new(context, gameEngine, new AchievementService(context), heroTimeService, new CurrentHeroService(context));
 
     [HttpGet]
     public async Task<ActionResult<IEnumerable<TaskDto>>> GetTasks([FromQuery] int? heroId = null)
     {
-        var query = _context.GameTasks
+        _ = RequireCurrentDevice(out var errorResult);
+        if (errorResult is not null)
+            return errorResult;
+
+        var currentHero = await CurrentHeroService.GetCurrentHeroAsync(HttpContext);
+        if (currentHero == null)
+            return Ok(new List<TaskDto>());
+
+        var effectiveHeroId = heroId ?? currentHero.Id;
+        if (effectiveHeroId != currentHero.Id)
+            return NotFound();
+
+        var tasks = await _context.GameTasks
             .Include(t => t.Streak)
             .Include(t => t.Hero)
-            .Where(t => t.IsActive);
-
-        if (heroId.HasValue)
-            query = query.Where(t => t.HeroId == heroId.Value);
-
-        var tasks = await query.ToListAsync();
+            .Where(t => t.IsActive && t.HeroId == effectiveHeroId)
+            .ToListAsync();
 
         return Ok(tasks.Select(MapToDto).ToList());
     }
@@ -48,11 +62,11 @@ public class TaskController : ControllerBase
     [HttpGet("{id}")]
     public async Task<ActionResult<TaskDto>> GetTask(int id)
     {
-        var task = await _context.GameTasks
-            .Include(t => t.Streak)
-            .Include(t => t.Hero)
-            .FirstOrDefaultAsync(t => t.Id == id);
+        _ = RequireCurrentDevice(out var errorResult);
+        if (errorResult is not null)
+            return errorResult;
 
+        var task = await LoadOwnedTaskAsync(id);
         if (task == null)
             return NotFound();
 
@@ -62,6 +76,10 @@ public class TaskController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<TaskDto>> PostTask([FromBody] CreateTaskRequest request)
     {
+        _ = RequireCurrentDevice(out var errorResult);
+        if (errorResult is not null)
+            return errorResult;
+
         if (string.IsNullOrWhiteSpace(request.Title))
             return BadRequest("Title is required");
 
@@ -72,17 +90,16 @@ public class TaskController : ControllerBase
             ? request.Polarity ?? HabitPolarity.Both
             : HabitPolarity.Both;
 
-        int heroId = request.HeroId ?? 0;
-        if (heroId == 0)
-        {
-            var hero = await _context.Heroes.FirstOrDefaultAsync();
-            if (hero == null) return BadRequest("Hero not found");
-            heroId = hero.Id;
-        }
+        var hero = request.HeroId.HasValue && request.HeroId.Value > 0
+            ? await CurrentHeroService.GetOwnedHeroAsync(HttpContext, request.HeroId.Value)
+            : await CurrentHeroService.GetCurrentHeroAsync(HttpContext);
+
+        if (hero == null)
+            return BadRequest("Hero not found");
 
         var task = new GameTask
         {
-            HeroId = heroId,
+            HeroId = hero.Id,
             Title = request.Title,
             Description = request.Description ?? string.Empty,
             Type = request.Type,
@@ -97,7 +114,7 @@ public class TaskController : ControllerBase
             CompletionCount = 0,
             FailCount = 0,
             CreatedAt = DateTimeOffset.UtcNow,
-            UpdatedAt = DateTimeOffset.UtcNow
+            UpdatedAt = DateTimeOffset.UtcNow,
         };
 
         _context.GameTasks.Add(task);
@@ -112,22 +129,24 @@ public class TaskController : ControllerBase
                 CurrentDays = request.InitialStreak,
                 LongestDays = request.InitialStreak,
                 CreatedAt = DateTimeOffset.UtcNow,
-                UpdatedAt = DateTimeOffset.UtcNow
+                UpdatedAt = DateTimeOffset.UtcNow,
             };
             _context.Streaks.Add(streak);
             await _context.SaveChangesAsync();
         }
 
-        return CreatedAtAction(nameof(GetTask), new { id = task.Id }, MapToDto(task));
+        var createdTask = await LoadOwnedTaskAsync(task.Id) ?? task;
+        return CreatedAtAction(nameof(GetTask), new { id = task.Id }, MapToDto(createdTask));
     }
 
     [HttpPut("{id}/complete")]
     public async Task<ActionResult<CompleteTaskResponse>> CompleteTask(int id)
     {
-        var task = await _context.GameTasks
-            .Include(t => t.Streak)
-            .FirstOrDefaultAsync(t => t.Id == id);
+        _ = RequireCurrentDevice(out var errorResult);
+        if (errorResult is not null)
+            return errorResult;
 
+        var task = await LoadOwnedTaskAsync(id);
         if (task == null)
             return NotFound("Task not found");
 
@@ -137,19 +156,16 @@ public class TaskController : ControllerBase
         if (task.Type == TaskType.Habit && task.Polarity == HabitPolarity.Negative)
             return BadRequest("Negative habits cannot be completed");
 
-        var hero = await _context.Heroes
-            .Include(h => h.EconomyBalance)
-            .FirstOrDefaultAsync(h => h.Id == task.HeroId);
-
+        var hero = await LoadOwnedHeroForTaskAsync(task.HeroId);
         if (hero == null)
-            return BadRequest("Hero not found");
+            return NotFound("Hero not found");
 
         if (hero.IsDead)
             return BadRequest(new
             {
                 errorCode = "HERO_DEAD",
                 error = "Hero is dead",
-                message = "Use /api/Hero/{id}/respawn to continue playing"
+                message = "Use /api/Hero/{id}/respawn to continue playing",
             });
 
         var economy = hero.EconomyBalance;
@@ -170,18 +186,16 @@ public class TaskController : ControllerBase
             {
                 errorCode = "DAILY_LIMIT_REACHED",
                 error = "Daily limit reached",
-                message =
-                    $"You have completed {economy.DailyTaskCompletions}/{economy.MaxDailyCompletions} tasks today. Try again tomorrow!",
+                message = $"You have completed {economy.DailyTaskCompletions}/{economy.MaxDailyCompletions} tasks today. Try again tomorrow!",
                 dailyCompletions = economy.DailyTaskCompletions,
                 maxDailyCompletions = economy.MaxDailyCompletions,
-                resetTime = _heroTimeService.GetNextLocalMidnightUtc(utcNow, effectiveTimeZone)
+                resetTime = _heroTimeService.GetNextLocalMidnightUtc(utcNow, effectiveTimeZone),
             });
 
         Streak? streak = null;
         if (task.Type == TaskType.Habit || task.Type == TaskType.Daily)
         {
-            streak = task.Streak ?? await _context.Streaks
-                .FirstOrDefaultAsync(s => s.HeroId == hero.Id && s.TaskId == task.Id);
+            streak = task.Streak ?? await _context.Streaks.FirstOrDefaultAsync(s => s.HeroId == hero.Id && s.TaskId == task.Id);
 
             if (streak == null)
             {
@@ -190,7 +204,7 @@ public class TaskController : ControllerBase
                     HeroId = hero.Id,
                     TaskId = task.Id,
                     CurrentDays = 0,
-                    LongestDays = 0
+                    LongestDays = 0,
                 };
                 _context.Streaks.Add(streak);
             }
@@ -218,10 +232,8 @@ public class TaskController : ControllerBase
             Success = true,
             TaskId = task.Id,
             TaskTitle = task.Title,
-
             XpGained = xpReward,
             GoldGained = goldReward,
-
             HeroId = hero.Id,
             NewLevel = hero.Level,
             LeveledUp = leveledUp,
@@ -235,47 +247,41 @@ public class TaskController : ControllerBase
             XpBoostPercent = hero.XpBoostPercent,
             XpBoostTasksRemaining = hero.XpBoostTasksRemaining,
             UnlockedAchievements = unlockedAchievements.ToList(),
-
             StreakBonus = streakBonus,
             CurrentStreak = streak?.CurrentDays ?? 0,
             StreakMultiplier = streak?.GetStreakMultiplier() ?? 1.0,
-
             DailyCompletions = economy.DailyTaskCompletions,
             MaxDailyCompletions = economy.MaxDailyCompletions,
-
             Message = leveledUp
                 ? $"LEVEL UP! You're now level {hero.Level}! +{xpReward} XP, +{goldReward} Gold"
-                : $"Task completed! +{xpReward} XP, +{goldReward} Gold"
+                : $"Task completed! +{xpReward} XP, +{goldReward} Gold",
         });
     }
 
     [HttpPut("{id}/fail")]
     public async Task<ActionResult<FailTaskResponse>> FailTask(int id)
     {
-        var task = await _context.GameTasks
-            .Include(t => t.Streak)
-            .Include(t => t.Hero)
-            .FirstOrDefaultAsync(t => t.Id == id);
+        _ = RequireCurrentDevice(out var errorResult);
+        if (errorResult is not null)
+            return errorResult;
 
+        var task = await LoadOwnedTaskAsync(id);
         if (task == null)
             return NotFound("Task not found");
 
         if (task.Type == TaskType.Habit && task.Polarity == HabitPolarity.Positive)
             return BadRequest("Positive habits cannot be failed");
 
-        var hero = await _context.Heroes
-            .Include(h => h.EconomyBalance)
-            .FirstOrDefaultAsync(h => h.Id == task.HeroId);
-
+        var hero = await LoadOwnedHeroForTaskAsync(task.HeroId);
         if (hero == null)
-            return BadRequest("Hero not found");
+            return NotFound("Hero not found");
 
         if (hero.IsDead)
             return BadRequest(new
             {
                 errorCode = "HERO_ALREADY_DEAD",
                 error = "Hero is already dead",
-                message = "Use /api/Hero/{id}/respawn to continue playing"
+                message = "Use /api/Hero/{id}/respawn to continue playing",
             });
 
         var economy = hero.EconomyBalance ?? new EconomyBalance { HeroId = hero.Id };
@@ -295,17 +301,14 @@ public class TaskController : ControllerBase
             Success = true,
             TaskId = task.Id,
             TaskTitle = task.Title,
-
             DamageDealt = failureResult.HpLost,
             GoldLost = failureResult.GoldLost,
-
             HeroId = hero.Id,
             NewHp = hero.CurrentHp,
             MaxHp = hero.MaxHp,
             NewGold = hero.Gold,
             CurrentLevel = hero.Level,
             CurrentXp = hero.CurrentXp,
-
             HeroDied = failureResult.HeroDied,
             DeathCount = hero.DeathCount,
             XpForNextLevel = hero.GetXpRequiredForNextLevel(),
@@ -313,7 +316,6 @@ public class TaskController : ControllerBase
             MaxDailyCompletions = economy.MaxDailyCompletions,
             XpBoostPercent = hero.XpBoostPercent,
             XpBoostTasksRemaining = hero.XpBoostTasksRemaining,
-
             StreakBroken = failureResult.StreakBroken,
             ShieldAbsorbed = failureResult.ShieldAbsorbed,
             StreakPenalty = failureResult.Penalty != null
@@ -322,11 +324,10 @@ public class TaskController : ControllerBase
                     StreakDays = failureResult.Penalty.StreakDays,
                     XpLost = failureResult.Penalty.XpLost,
                     GoldLost = failureResult.Penalty.GoldLost,
-                    CooldownHours = failureResult.Penalty.CooldownHours
+                    CooldownHours = failureResult.Penalty.CooldownHours,
                 }
                 : null,
-
-            Message = GetFailureMessage(failureResult.HeroDied, failureResult.HpLost, failureResult.GoldLost, failureResult.StreakBroken, failureResult.Penalty)
+            Message = GetFailureMessage(failureResult.HeroDied, failureResult.HpLost, failureResult.GoldLost, failureResult.StreakBroken, failureResult.Penalty),
         };
 
         return Ok(response);
@@ -335,23 +336,35 @@ public class TaskController : ControllerBase
     [HttpPost("check-overdue")]
     public async Task<ActionResult<OverdueCheckResponse>> CheckOverdueTasks([FromQuery] int? heroId = null)
     {
-        var query = _context.GameTasks
+        _ = RequireCurrentDevice(out var errorResult);
+        if (errorResult is not null)
+            return errorResult;
+
+        var currentHero = await CurrentHeroService.GetCurrentHeroAsync(HttpContext);
+        if (currentHero == null)
+            return Ok(new OverdueCheckResponse
+            {
+                OverdueCount = 0,
+                Message = "No overdue tasks found",
+            });
+
+        var effectiveHeroId = heroId ?? currentHero.Id;
+        if (effectiveHeroId != currentHero.Id)
+            return NotFound();
+
+        var tasks = await _context.GameTasks
             .Include(t => t.Streak)
             .Include(t => t.Hero)
             .ThenInclude(h => h!.EconomyBalance)
-            .Where(t => t.IsActive && !t.IsCompleted && t.OverdueProcessedAt == null);
+            .Where(t => t.IsActive && !t.IsCompleted && t.OverdueProcessedAt == null && t.HeroId == effectiveHeroId)
+            .ToListAsync();
 
-        if (heroId.HasValue)
-            query = query.Where(t => t.HeroId == heroId.Value);
-
-        var tasks = await query.ToListAsync();
         var overdueTasks = tasks.Where(t => t.IsOverdue()).ToList();
-
         if (!overdueTasks.Any())
             return Ok(new OverdueCheckResponse
             {
                 OverdueCount = 0,
-                Message = "No overdue tasks found"
+                Message = "No overdue tasks found",
             });
 
         var penalties = new List<OverdueTaskPenalty>();
@@ -374,7 +387,6 @@ public class TaskController : ControllerBase
             }
 
             var failureResult = _gameEngine.ApplyTaskFailure(task, hero, streak, economy, todayLocalDate, shieldContext);
-
             task.OverdueProcessedAt = DateTimeOffset.UtcNow;
 
             penalties.Add(new OverdueTaskPenalty
@@ -385,7 +397,7 @@ public class TaskController : ControllerBase
                 HpLost = failureResult.HpLost,
                 GoldLost = failureResult.GoldLost,
                 HeroDied = failureResult.HeroDied,
-                StreakBroken = failureResult.StreakBroken
+                StreakBroken = failureResult.StreakBroken,
             });
         }
 
@@ -405,14 +417,18 @@ public class TaskController : ControllerBase
         {
             OverdueCount = overdueTasks.Count,
             Penalties = penalties,
-            Message = $"Applied penalties for {overdueTasks.Count} overdue task(s)"
+            Message = $"Applied penalties for {overdueTasks.Count} overdue task(s)",
         });
     }
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteTask(int id)
     {
-        var task = await _context.GameTasks.FindAsync(id);
+        _ = RequireCurrentDevice(out var errorResult);
+        if (errorResult is not null)
+            return errorResult;
+
+        var task = await LoadOwnedTaskAsync(id);
         if (task == null)
             return NotFound();
 
@@ -423,7 +439,21 @@ public class TaskController : ControllerBase
         return NoContent();
     }
 
-    private static TaskDto MapToDto(GameTask task) => new TaskDto
+    private Task<GameTask?> LoadOwnedTaskAsync(int taskId)
+    {
+        var deviceId = HttpContext.Items[LifeTracker.Infrastructure.DeviceRequestContext.ItemKey]?.ToString();
+
+        return _context.GameTasks
+            .Include(t => t.Streak)
+            .Include(t => t.Hero)
+            .ThenInclude(h => h!.EconomyBalance)
+            .FirstOrDefaultAsync(t => t.Id == taskId && t.Hero != null && t.Hero.OwnerDeviceId == deviceId);
+    }
+
+    private Task<Hero?> LoadOwnedHeroForTaskAsync(int heroId) =>
+        CurrentHeroService.GetOwnedHeroAsync(HttpContext, heroId, query => query.Include(h => h.EconomyBalance));
+
+    private static TaskDto MapToDto(GameTask task) => new()
     {
         Id = task.Id,
         HeroId = task.HeroId,
@@ -455,9 +485,9 @@ public class TaskController : ControllerBase
                 Multiplier = task.Streak.GetStreakMultiplier(),
                 IsFrozen = task.Streak.IsFrozen(),
                 IsShieldActive = task.Hero?.IsShieldActive ?? false,
-                ShieldExpiresAtUtc = null
+                ShieldExpiresAtUtc = null,
             }
-            : null
+            : null,
     };
 
     private async Task<bool> SaveChangesWithSingleRetryAsync()
@@ -510,7 +540,7 @@ public class TaskController : ControllerBase
 
         if (streakBroken)
         {
-            messages.Add($"⚠️ Streak broken!");
+            messages.Add("⚠️ Streak broken!");
             if (penalty != null && penalty.XpLost > 0)
             {
                 messages.Add($"Penalty: -{penalty.XpLost} XP, -{penalty.GoldLost} Gold");

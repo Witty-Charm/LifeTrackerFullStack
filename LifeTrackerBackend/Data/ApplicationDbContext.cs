@@ -68,6 +68,13 @@ public class ApplicationDbContext : DbContext
             .HasDefaultValue(HabitPolarity.Both);
 
         modelBuilder.Entity<Hero>()
+            .Property(h => h.OwnerDeviceId)
+            .IsRequired();
+
+        modelBuilder.Entity<Hero>()
+            .HasIndex(h => h.OwnerDeviceId);
+
+        modelBuilder.Entity<Hero>()
             .Property(h => h.TimeZoneId)
             .HasDefaultValue("UTC");
 

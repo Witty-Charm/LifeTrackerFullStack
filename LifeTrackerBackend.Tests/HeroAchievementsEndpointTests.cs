@@ -3,6 +3,7 @@ using LifeTracker.Data;
 using LifeTracker.Models;
 using LifeTracker.Services.Achievements;
 using LifeTracker.Services.Time;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -11,6 +12,7 @@ namespace LifeTrackerBackend.Tests;
 
 public class HeroAchievementsEndpointTests : IAsyncLifetime
 {
+    private const string TestDeviceId = "11111111-1111-1111-1111-111111111111";
     private readonly SqliteConnection _connection = new("Data Source=:memory:");
     private DbContextOptions<ApplicationDbContext> _options = null!;
 
@@ -37,6 +39,7 @@ public class HeroAchievementsEndpointTests : IAsyncLifetime
 
         var hero = new Hero
         {
+            OwnerDeviceId = TestDeviceId,
             Name = "Alex",
             Gold = 0,
             Level = 1,
@@ -48,6 +51,11 @@ public class HeroAchievementsEndpointTests : IAsyncLifetime
         await db.SaveChangesAsync();
 
         var controller = HeroController.CreateForTests(db, new HeroTimeService());
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext()
+        };
+        controller.ControllerContext.HttpContext.Request.Headers["X-Device-Id"] = TestDeviceId;
 
         var actionResult = await controller.GetAchievements(hero.Id);
 

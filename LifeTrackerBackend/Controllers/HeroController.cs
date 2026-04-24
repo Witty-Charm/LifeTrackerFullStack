@@ -1,22 +1,28 @@
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using LifeTracker.Constants;
 using LifeTracker.Data;
 using LifeTracker.Models;
-using LifeTracker.Constants;
+using LifeTracker.Services;
 using LifeTracker.Services.Achievements;
 using LifeTracker.Services.Time;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace LifeTracker.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class HeroController : ControllerBase
+public class HeroController : DeviceScopedControllerBase
 {
     private readonly ApplicationDbContext _context;
     private readonly AchievementService _achievementService;
     private readonly IHeroTimeService _heroTimeService;
 
-    public HeroController(ApplicationDbContext context, AchievementService achievementService, IHeroTimeService heroTimeService)
+    public HeroController(
+        ApplicationDbContext context,
+        AchievementService achievementService,
+        IHeroTimeService heroTimeService,
+        ICurrentHeroService currentHeroService)
+        : base(currentHeroService)
     {
         _context = context;
         _achievementService = achievementService;
@@ -24,59 +30,58 @@ public class HeroController : ControllerBase
     }
 
     internal static HeroController CreateForTests(ApplicationDbContext context, IHeroTimeService heroTimeService) =>
-        new(context, new AchievementService(context), heroTimeService);
+        new(context, new AchievementService(context), heroTimeService, new CurrentHeroService(context));
 
-    [HttpGet]
-    public async Task<ActionResult<IEnumerable<HeroDto>>> GetHeroes()
+    [HttpGet("me")]
+    public async Task<ActionResult<HeroDto>> GetCurrentHero()
     {
-        var heroes = await _context.Heroes
-            .Include(h => h.EconomyBalance)
-            .Include(h => h.Streaks)
-            .ToListAsync();
+        _ = RequireCurrentDevice(out var errorResult);
+        if (errorResult is not null)
+            return errorResult;
 
-        var utcNow = DateTimeOffset.UtcNow;
+        var hero = await CurrentHeroService.GetCurrentHeroAsync(
+            HttpContext,
+            query => query.Include(h => h.EconomyBalance).Include(h => h.Streaks));
 
-        heroes.ForEach(h =>
-        {
-            var effectiveTimeZone = _heroTimeService.ResolveEffectiveTimeZone(h, utcNow);
-            var todayLocalDate = _heroTimeService.GetLocalDate(utcNow, effectiveTimeZone);
-            h.EconomyBalance?.CheckDailyReset(todayLocalDate);
-        });
+        if (hero == null)
+            return NotFound();
 
-        await _context.SaveChangesAsync();
-
-        return Ok(heroes.Select(h => MapToDto(h)));
+        await ApplyDailyResetAsync(hero);
+        return Ok(MapToDto(hero));
     }
 
     [HttpGet("{id}")]
     public async Task<ActionResult<HeroDto>> GetHero(int id)
     {
-        var hero = await _context.Heroes
-            .Include(h => h.EconomyBalance)
-            .Include(h => h.Streaks)
-            .FirstOrDefaultAsync(h => h.Id == id);
+        _ = RequireCurrentDevice(out var errorResult);
+        if (errorResult is not null)
+            return errorResult;
+
+        var hero = await CurrentHeroService.GetOwnedHeroAsync(
+            HttpContext,
+            id,
+            query => query.Include(h => h.EconomyBalance).Include(h => h.Streaks));
 
         if (hero == null)
             return NotFound();
 
-        var utcNow = DateTimeOffset.UtcNow;
-        var effectiveTimeZone = _heroTimeService.ResolveEffectiveTimeZone(hero, utcNow);
-        var todayLocalDate = _heroTimeService.GetLocalDate(utcNow, effectiveTimeZone);
-
-        hero.EconomyBalance?.CheckDailyReset(todayLocalDate);
-        await _context.SaveChangesAsync();
-
+        await ApplyDailyResetAsync(hero);
         return Ok(MapToDto(hero));
     }
 
     [HttpPost]
     public async Task<ActionResult<HeroDto>> PostHero([FromBody] CreateHeroRequest request)
     {
+        var deviceId = RequireCurrentDevice(out var errorResult);
+        if (errorResult is not null)
+            return errorResult;
+
         if (string.IsNullOrWhiteSpace(request.Name))
             return BadRequest("Hero name is required");
 
         var hero = new Hero
         {
+            OwnerDeviceId = deviceId!,
             Name = request.Name,
             Level = 1,
             MaxHp = GameConstants.CalculateMaxHp(1),
@@ -85,7 +90,7 @@ public class HeroController : ControllerBase
             TotalXpEarned = 0,
             Gold = request.StartingGold ?? 100,
             CreatedDate = DateTimeOffset.UtcNow,
-            UpdatedAt = DateTimeOffset.UtcNow
+            UpdatedAt = DateTimeOffset.UtcNow,
         };
 
         _context.Heroes.Add(hero);
@@ -103,7 +108,7 @@ public class HeroController : ControllerBase
             DailyResetAt = DateTimeOffset.UtcNow.Date,
             LastDailyResetLocalDate = _heroTimeService.FormatLocalDate(todayLocalDate),
             CreatedAt = DateTimeOffset.UtcNow,
-            UpdatedAt = DateTimeOffset.UtcNow
+            UpdatedAt = DateTimeOffset.UtcNow,
         };
 
         _context.EconomyBalances.Add(economy);
@@ -117,8 +122,12 @@ public class HeroController : ControllerBase
     [HttpGet("{id}/achievements")]
     public async Task<ActionResult<HeroAchievementsResponse>> GetAchievements(int id)
     {
-        var heroExists = await _context.Heroes.AnyAsync(h => h.Id == id);
-        if (!heroExists)
+        _ = RequireCurrentDevice(out var errorResult);
+        if (errorResult is not null)
+            return errorResult;
+
+        var hero = await CurrentHeroService.GetOwnedHeroAsync(HttpContext, id);
+        if (hero == null)
             return NotFound();
 
         var achievements = await _achievementService.GetAchievementsAsync(id);
@@ -127,17 +136,21 @@ public class HeroController : ControllerBase
             HeroId = id,
             TotalCount = achievements.Count,
             UnlockedCount = achievements.Count(x => x.Unlocked),
-            Achievements = achievements.ToList()
+            Achievements = achievements.ToList(),
         });
     }
 
     [HttpGet("{id}/stats")]
     public async Task<ActionResult<HeroStatsDto>> GetHeroStats(int id)
     {
-        var hero = await _context.Heroes
-            .Include(h => h.EconomyBalance)
-            .Include(h => h.Streaks.Where(s => s.CurrentDays > 0))
-            .FirstOrDefaultAsync(h => h.Id == id);
+        _ = RequireCurrentDevice(out var errorResult);
+        if (errorResult is not null)
+            return errorResult;
+
+        var hero = await CurrentHeroService.GetOwnedHeroAsync(
+            HttpContext,
+            id,
+            query => query.Include(h => h.EconomyBalance).Include(h => h.Streaks.Where(s => s.CurrentDays > 0)));
 
         if (hero == null)
             return NotFound();
@@ -157,53 +170,49 @@ public class HeroController : ControllerBase
         {
             Id = hero.Id,
             Name = hero.Name,
-
             Level = hero.Level,
             CurrentXp = hero.CurrentXp,
             XpForNextLevel = xpForNextLevel,
             XpProgress = xpProgress,
             TotalXpEarned = hero.TotalXpEarned,
-
             CurrentHp = hero.CurrentHp,
             MaxHp = hero.MaxHp,
             HpPercent = (double)hero.CurrentHp / hero.MaxHp,
             IsDead = hero.IsDead,
             DeathCount = hero.DeathCount,
             DeathTime = hero.DeathTime,
-
             Gold = hero.Gold,
             TotalGoldEarned = economy.TotalGoldEarned,
             TotalGoldSpent = economy.TotalGoldSpent,
-
             DailyCompletions = economy.DailyTaskCompletions,
             DailyCompletionsMax = economy.MaxDailyCompletions,
             DailyProgress = (double)economy.DailyTaskCompletions / economy.MaxDailyCompletions,
             DailyResetTime = _heroTimeService.GetNextLocalMidnightUtc(utcNow, effectiveTimeZone),
-
             XpMultiplier = (double)economy.GetFinalXpMultiplier(),
             GoldMultiplier = (double)economy.GoldMultiplier,
-
             IsInPenaltyPeriod = economy.IsInPenaltyPeriod,
             PenaltyEndsAt = economy.PenaltyEndsAt,
             IsInRecovery = hero.IsInRecovery(),
             RecoveryEndsAt = hero.RecoveryEndsAt,
             RecoveryMultiplier = hero.GetRecoveryMultiplier(),
-
             ActiveStreaks = hero.Streaks.Count(s => s.CurrentDays > 0),
             LongestStreak = hero.Streaks.Any() ? hero.Streaks.Max(s => s.LongestDays) : 0,
-
             CreatedDate = hero.CreatedDate,
-            UpdatedAt = hero.UpdatedAt
+            UpdatedAt = hero.UpdatedAt,
         });
     }
 
     [HttpPatch("{id}/timezone")]
     public async Task<ActionResult<HeroTimeZoneUpdateResponse>> UpdateHeroTimeZone(int id, [FromBody] UpdateHeroTimeZoneRequest request)
     {
+        _ = RequireCurrentDevice(out var errorResult);
+        if (errorResult is not null)
+            return errorResult;
+
         if (string.IsNullOrWhiteSpace(request.TimeZoneId))
             return BadRequest("timeZoneId is required");
 
-        var hero = await _context.Heroes.FindAsync(id);
+        var hero = await CurrentHeroService.GetOwnedHeroAsync(HttpContext, id);
         if (hero == null)
             return NotFound("Hero not found");
 
@@ -239,17 +248,20 @@ public class HeroController : ControllerBase
             CurrentTimeZoneId: currentTimeZone,
             PendingTimeZoneId: hero.PendingTimeZoneId,
             SwitchAfterLocalDate: hero.TimeZoneSwitchAfterLocalDate,
-            Message: "Timezone switch scheduled for next local day"
-        ));
+            Message: "Timezone switch scheduled for next local day"));
     }
 
     [HttpPost("{id}/respawn")]
     public async Task<ActionResult<RespawnResponse>> RespawnHero(int id)
     {
-        var hero = await _context.Heroes
-            .Include(h => h.EconomyBalance)
-            .Include(h => h.Streaks)
-            .FirstOrDefaultAsync(h => h.Id == id);
+        _ = RequireCurrentDevice(out var errorResult);
+        if (errorResult is not null)
+            return errorResult;
+
+        var hero = await CurrentHeroService.GetOwnedHeroAsync(
+            HttpContext,
+            id,
+            query => query.Include(h => h.EconomyBalance).Include(h => h.Streaks));
 
         if (hero == null)
             return NotFound("Hero not found");
@@ -258,7 +270,6 @@ public class HeroController : ControllerBase
             return BadRequest("Hero is not dead");
 
         int hpBefore = hero.CurrentHp;
-
         hero.Respawn();
 
         var economy = hero.EconomyBalance;
@@ -284,14 +295,18 @@ public class HeroController : ControllerBase
             DeathCount = hero.DeathCount,
             Message = $"Welcome back, {hero.Name}! You respawned with {hero.CurrentHp}/{hero.MaxHp} HP. " +
                       $"Recovery debuff active for {GameConstants.RecoveryDebuffHours} hours " +
-                      $"({(int)((1 - GameConstants.RecoveryDebuffMultiplier) * 100)}% reduced rewards)."
+                      $"({(int)((1 - GameConstants.RecoveryDebuffMultiplier) * 100)}% reduced rewards).",
         });
     }
 
     [HttpPost("{id}/heal")]
     public async Task<ActionResult<HealResponse>> HealHero(int id, [FromQuery] int amount = 0)
     {
-        var hero = await _context.Heroes.FindAsync(id);
+        _ = RequireCurrentDevice(out var errorResult);
+        if (errorResult is not null)
+            return errorResult;
+
+        var hero = await CurrentHeroService.GetOwnedHeroAsync(HttpContext, id);
         if (hero == null)
             return NotFound("Hero not found");
 
@@ -324,11 +339,20 @@ public class HeroController : ControllerBase
             NewHp = hero.CurrentHp,
             MaxHp = hero.MaxHp,
             NewGold = hero.Gold,
-            Message = $"Healed {healAmount} HP for {goldCost} gold"
+            Message = $"Healed {healAmount} HP for {goldCost} gold",
         });
     }
 
-    private HeroDto MapToDto(Hero hero)
+    private async Task ApplyDailyResetAsync(Hero hero)
+    {
+        var utcNow = DateTimeOffset.UtcNow;
+        var effectiveTimeZone = _heroTimeService.ResolveEffectiveTimeZone(hero, utcNow);
+        var todayLocalDate = _heroTimeService.GetLocalDate(utcNow, effectiveTimeZone);
+        hero.EconomyBalance?.CheckDailyReset(todayLocalDate);
+        await _context.SaveChangesAsync();
+    }
+
+    private static HeroDto MapToDto(Hero hero)
     {
         var economy = hero.EconomyBalance ?? new EconomyBalance { HeroId = hero.Id };
 
@@ -349,7 +373,7 @@ public class HeroController : ControllerBase
             XpBoostPercent = hero.XpBoostPercent,
             XpBoostTasksRemaining = hero.XpBoostTasksRemaining,
             DailyCompletions = economy.DailyTaskCompletions,
-            DailyCompletionsMax = economy.MaxDailyCompletions
+            DailyCompletionsMax = economy.MaxDailyCompletions,
         };
     }
 }

@@ -1,6 +1,8 @@
+using System.Collections;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
+using LifeTracker.Configuration;
 using LifeTracker.Data;
 using LifeTracker.Services;
 
@@ -17,13 +19,17 @@ builder.Services.AddControllers()
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+var connectionString = RuntimeConfiguration.ResolveConnectionString(builder.Configuration);
+
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(connectionString));
 
 builder.Services.AddSingleton<GameEngineService>();
 builder.Services.AddScoped<LifeTracker.Services.Achievements.AchievementService>();
 builder.Services.AddScoped<IShopService, ShopService>();
+builder.Services.AddScoped<ICurrentHeroService, CurrentHeroService>();
 builder.Services.AddScoped<LifeTracker.Services.Time.IHeroTimeService, LifeTracker.Services.Time.HeroTimeService>();
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddProblemDetails();
 
 var app = builder.Build();
@@ -52,5 +58,5 @@ app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
 
-app.Urls.Add("http://0.0.0.0:5000");
+app.Urls.Add(RuntimeConfiguration.ResolveListenUrl(Environment.GetEnvironmentVariables()));
 app.Run();

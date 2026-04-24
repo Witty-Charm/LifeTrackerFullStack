@@ -16,6 +16,7 @@ import com.lifetracker.mobile.ui.screens.CreateDailyScreen
 import com.lifetracker.mobile.ui.screens.CreateHeroScreen
 import com.lifetracker.mobile.ui.screens.CreateTaskScreen
 import com.lifetracker.mobile.ui.screens.HomeScreen
+import com.lifetracker.mobile.ui.screens.StatsScreenRoot
 import com.lifetracker.mobile.ui.viewmodel.CreateDailyViewModel
 import com.lifetracker.mobile.ui.viewmodel.HeroViewModel
 import org.koin.androidx.compose.koinViewModel
@@ -47,6 +48,12 @@ sealed interface Screen {
         override val route = "achievements/{heroId}"
 
         fun route(heroId: Int) = "achievements/$heroId"
+    }
+
+    data object Stats : Screen {
+        override val route = "stats/{heroId}"
+
+        fun route(heroId: Int) = "stats/$heroId"
     }
 
     data object CreateDaily : Screen {
@@ -130,6 +137,14 @@ fun NavGraph(
         ) { backStackEntry ->
             val heroId = backStackEntry.arguments?.getInt("heroId") ?: return@composable
             AchievementsScreenRoot(heroId = heroId, onBack = { navController.popBackStack() })
+        }
+
+        composable(
+            route = Screen.Stats.route,
+            arguments = listOf(navArgument("heroId") { type = NavType.IntType }),
+        ) { backStackEntry ->
+            val heroId = backStackEntry.arguments?.getInt("heroId") ?: return@composable
+            StatsScreenRoot(heroId = heroId, onBack = { navController.popBackStack() })
         }
 
         composable(

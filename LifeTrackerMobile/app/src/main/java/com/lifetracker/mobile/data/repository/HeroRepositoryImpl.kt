@@ -25,8 +25,8 @@ class HeroRepositoryImpl(
     override suspend fun getHeroes(): DomainResult<List<HeroDomain>> {
         val remote =
             caller
-                .safeApiCall { api.getHeroes() }
-                .map { list -> list.map { it.toDomain() } }
+                .safeApiCall { api.getCurrentHero() }
+                .map { hero -> listOf(hero.toDomain()) }
                 .toDomainResult()
 
         return when (remote) {
@@ -67,17 +67,17 @@ class HeroRepositoryImpl(
         }
     }
 
-    override suspend fun getFirstHero(): DomainResult<HeroDomain?> {
+    override suspend fun getCurrentHero(): DomainResult<HeroDomain?> {
         val remote =
             caller
-                .safeApiCall { api.getHeroes() }
-                .map { it.firstOrNull()?.toDomain() }
+                .safeApiCall { api.getCurrentHero() }
+                .map { it.toDomain() }
                 .toDomainResult()
 
         return when (remote) {
             is DomainResult.Success -> {
-                remote.data?.let { heroDao.upsert(it.toEntity()) }
-                remote
+                heroDao.upsert(remote.data.toEntity())
+                DomainResult.Success(remote.data)
             }
 
             is DomainResult.Failure -> {
@@ -86,6 +86,8 @@ class HeroRepositoryImpl(
             }
         }
     }
+
+    override suspend fun getFirstHero(): DomainResult<HeroDomain?> = getCurrentHero()
 
     override suspend fun createHero(
         name: String,

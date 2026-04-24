@@ -9,6 +9,7 @@ import com.lifetracker.mobile.domain.model.HeroStatsDomain
 import com.lifetracker.mobile.domain.model.RespawnResult
 import com.lifetracker.mobile.domain.repository.HeroRepository
 import com.lifetracker.mobile.domain.usecase.hero.CreateHeroUseCase
+import com.lifetracker.mobile.domain.usecase.hero.GetCurrentHeroUseCase
 import com.lifetracker.mobile.domain.usecase.hero.GetFirstHeroUseCase
 import com.lifetracker.mobile.domain.usecase.hero.GetHeroAchievementsUseCase
 import com.lifetracker.mobile.domain.usecase.hero.GetHeroStatsUseCase
@@ -120,6 +121,7 @@ class AchievementsViewModelTest {
         HeroUseCases(
             getHeroes = GetHeroesUseCase(repository),
             getHero = GetHeroUseCase(repository),
+            getCurrentHero = GetCurrentHeroUseCase(repository),
             getFirstHero = GetFirstHeroUseCase(repository),
             createHero = CreateHeroUseCase(repository),
             getHeroStats = GetHeroStatsUseCase(repository),
@@ -135,6 +137,8 @@ class AchievementsViewModelTest {
         override suspend fun getHeroes(): DomainResult<List<HeroDomain>> = DomainResult.Success(emptyList())
 
         override suspend fun getHero(id: Int): DomainResult<HeroDomain> = DomainResult.Failure(GameError.Unknown("Not used in this test"))
+
+        override suspend fun getCurrentHero(): DomainResult<HeroDomain?> = DomainResult.Success(null)
 
         override suspend fun getFirstHero(): DomainResult<HeroDomain?> = DomainResult.Success(null)
 
