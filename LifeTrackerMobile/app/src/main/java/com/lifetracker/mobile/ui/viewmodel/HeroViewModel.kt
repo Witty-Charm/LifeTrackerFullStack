@@ -26,14 +26,18 @@ import com.lifetracker.mobile.ui.mapper.toUi
 import com.lifetracker.mobile.ui.mapper.toUiError
 import com.lifetracker.mobile.ui.model.HeroScreenState
 import com.lifetracker.mobile.ui.model.TaskActionFeedback
+import com.lifetracker.mobile.ui.model.TaskPendingAction
+import com.lifetracker.mobile.ui.model.TaskUi
 import com.lifetracker.mobile.ui.model.UiDifficulty
 import com.lifetracker.mobile.ui.model.UiEvent
 import com.lifetracker.mobile.ui.model.UiTaskType
+import com.lifetracker.mobile.ui.model.UiTaskType as TaskUiType
 import kotlinx.collections.immutable.toPersistentList
 import kotlinx.collections.immutable.toPersistentSet
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -58,6 +62,8 @@ class HeroViewModel(
 
     private companion object {
         const val FOREGROUND_REFRESH_DEBOUNCE_MS = 30_000L
+        const val SILENT_REFRESH_DEBOUNCE_MS = 350L
+        const val TASK_ACTION_FAILED_MESSAGE = "Действие не выполнено. Попробуйте ещё раз."
     }
 
     private object ActionKeys {
@@ -80,6 +86,7 @@ class HeroViewModel(
     val events = _events.receiveAsFlow()
 
     private var loadJob: Job? = null
+    private var refreshTasksJob: Job? = null
     private var lastForegroundRefreshAt: Long = 0L
 
     // confined to Main thread via viewModelScope - do not read/write from IO/Default context
@@ -153,14 +160,23 @@ class HeroViewModel(
 
     fun completeTask(taskId: Int) =
         launchAction(ActionKeys.taskComplete(taskId)) {
-            if (isPendingSync(taskId)) {
-                _events.send(UiEvent.ShowSnackbar("Task is not synced yet. Try again when online."))
+            val task = findTask(taskId) ?: return@launchAction
+            if (isServerMutationBlocked(task)) {
+                showOfflineTaskActionBlockedMessage()
                 return@launchAction
             }
+            patchTask(taskId) { it.copy(pendingAction = TaskPendingAction.Complete, actionError = null) }
             executeAction { taskUseCases.completeTask(taskId) }
                 ?.let { result ->
                     applySnapshot(result.heroSnapshot)
-                    doRefreshTasks()
+                    when (task.type) {
+                        TaskUiType.OneTime -> removeTask(taskId)
+                        TaskUiType.Daily,
+                        TaskUiType.Habit,
+                        TaskUiType.Unknown,
+                        -> patchTask(taskId) { current -> current.copy(pendingAction = null, actionError = null) }
+                    }
+                    requestTasksRefresh()
                     _events.send(
                         UiEvent.TaskAction(
                             TaskActionFeedback.Completed(
@@ -174,19 +190,22 @@ class HeroViewModel(
                     for (achievement in result.unlockedAchievements) {
                         _events.send(UiEvent.ShowSnackbar("Achievement unlocked: ${achievement.title} (+${achievement.goldReward} Gold)"))
                     }
-                }
+                } ?: patchTask(taskId) { current -> current.copy(pendingAction = null, actionError = TASK_ACTION_FAILED_MESSAGE) }
         }
 
     fun failTask(taskId: Int) =
         launchAction(ActionKeys.taskFail(taskId)) {
-            if (isPendingSync(taskId)) {
-                _events.send(UiEvent.ShowSnackbar("Task is not synced yet. Try again when online."))
+            val task = findTask(taskId) ?: return@launchAction
+            if (isServerMutationBlocked(task)) {
+                showOfflineTaskActionBlockedMessage()
                 return@launchAction
             }
+            patchTask(taskId) { it.copy(pendingAction = TaskPendingAction.Fail, actionError = null) }
             executeAction { taskUseCases.failTask(taskId) }
                 ?.let { result ->
                     applySnapshot(result.heroSnapshot)
-                    doRefreshTasks()
+                    patchTask(taskId) { current -> current.copy(pendingAction = null, actionError = null) }
+                    requestTasksRefresh()
                     _events.send(
                         UiEvent.TaskAction(
                             TaskActionFeedback.Failed(
@@ -196,7 +215,7 @@ class HeroViewModel(
                             ),
                         ),
                     )
-                }
+                } ?: patchTask(taskId) { current -> current.copy(pendingAction = null, actionError = TASK_ACTION_FAILED_MESSAGE) }
         }
 
     fun createTask(
@@ -231,12 +250,18 @@ class HeroViewModel(
 
     fun deleteTask(taskId: Int) =
         launchAction(ActionKeys.taskDelete(taskId)) {
+            val task = findTask(taskId) ?: return@launchAction
+            if (task.pendingAction != null) return@launchAction
+            if (taskId >= 0) {
+                patchTask(taskId) { it.copy(pendingAction = TaskPendingAction.Delete, actionError = null) }
+            }
             executeAction { taskUseCases.deleteTask(taskId) }
                 ?.let {
-                    _state.update { current ->
-                        current.copy(tasks = current.tasks.filter { it.id != taskId }.toPersistentList())
+                    removeTask(taskId)
+                    if (taskId >= 0) {
+                        requestTasksRefresh()
                     }
-                }
+                } ?: patchTask(taskId) { current -> current.copy(pendingAction = null, actionError = TASK_ACTION_FAILED_MESSAGE) }
         }
 
     fun retrySync(taskId: Int) =
@@ -339,10 +364,41 @@ class HeroViewModel(
             }
     }
 
-    private fun isPendingSync(taskId: Int): Boolean =
-        _state.value.tasks
-            .find { it.id == taskId }
-            ?.isPendingSync == true
+    private fun findTask(taskId: Int): TaskUi? =
+        _state.value.tasks.firstOrNull { it.id == taskId }
+
+    private fun isServerMutationBlocked(task: TaskUi): Boolean =
+        task.pendingAction != null || task.id < 0 || task.isPendingSync || task.syncError != null
+
+    private suspend fun showOfflineTaskActionBlockedMessage() {
+        _events.send(UiEvent.ShowSnackbar("Task is not synced yet. Try again when online."))
+    }
+
+    private fun patchTask(
+        taskId: Int,
+        transform: (TaskUi) -> TaskUi,
+    ) {
+        _state.update { state ->
+            state.copy(
+                tasks = state.tasks.map { task -> if (task.id == taskId) transform(task) else task }.toPersistentList(),
+            )
+        }
+    }
+
+    private fun removeTask(taskId: Int) {
+        _state.update { state ->
+            state.copy(tasks = state.tasks.filter { it.id != taskId }.toPersistentList())
+        }
+    }
+
+    private fun requestTasksRefresh() {
+        if (refreshTasksJob?.isActive == true) return
+        refreshTasksJob =
+            viewModelScope.launch {
+                delay(SILENT_REFRESH_DEBOUNCE_MS)
+                doRefreshTasks()
+            }
+    }
 
     private fun launchAction(
         key: String,
@@ -386,7 +442,9 @@ class HeroViewModel(
         val id = heroId ?: return
         safeCall { taskUseCases.getTasks(id) }
             .onSuccess { data ->
-                _state.update { state -> state.copy(tasks = data.toVisibleUiTasks()) }
+                _state.update { state ->
+                    state.copy(tasks = data.toVisibleUiTasksPreservingActionState(state.tasks))
+                }
             }.onFailure { Timber.w("Background task refresh failed: $it") }
     }
 
@@ -434,6 +492,17 @@ class HeroViewModel(
         filter { task -> !task.isCompleted || task.type == TaskType.Habit || task.type == TaskType.Daily }
             .map { task -> task.toUi() }
             .toPersistentList()
+
+    private fun List<GameTaskDomain>.toVisibleUiTasksPreservingActionState(previous: List<TaskUi>) =
+        filter { task -> !task.isCompleted || task.type == TaskType.Habit || task.type == TaskType.Daily }
+            .map { task ->
+                val ui = task.toUi()
+                val old = previous.firstOrNull { it.id == ui.id }
+                ui.copy(
+                    pendingAction = old?.pendingAction,
+                    actionError = old?.actionError,
+                )
+            }.toPersistentList()
 
     private suspend fun <T> safeCall(block: suspend () -> DomainResult<T>): DomainResult<T> =
         try {

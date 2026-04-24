@@ -99,6 +99,8 @@ fun GameTaskDomain.toUi(): TaskUi =
                 ?.let { "\uD83D\uDD25 ${it.currentDays} days (+${it.bonusXpPercent}%)" },
         isPendingSync = pendingSync,
         syncError = syncError,
+        pendingAction = null,
+        actionError = null,
         isShieldActive = streak?.isShieldActive ?: false,
     )
 
