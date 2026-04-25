@@ -56,6 +56,7 @@ import com.lifetracker.mobile.domain.usecase.task.GetTasksUseCase
 import com.lifetracker.mobile.domain.usecase.task.RetryTaskSyncUseCase
 import com.lifetracker.mobile.domain.usecase.task.SetDailyTaskStateUseCase
 import com.lifetracker.mobile.domain.usecase.task.TaskUseCases
+import com.lifetracker.mobile.domain.usecase.task.UpdateTaskUseCase
 import com.lifetracker.mobile.ui.viewmodel.AchievementsViewModel
 import com.lifetracker.mobile.ui.viewmodel.CreateDailyViewModel
 import com.lifetracker.mobile.ui.viewmodel.HeroViewModel
@@ -139,6 +140,7 @@ val appModule =
                 completeTask = CompleteTaskUseCase(taskRepo),
                 setDailyTaskState = SetDailyTaskStateUseCase(taskRepo),
                 createTask = CreateTaskUseCase(taskRepo),
+                updateTask = UpdateTaskUseCase(taskRepo),
                 failTask = FailTaskUseCase(taskRepo),
                 deleteTask = DeleteTaskUseCase(taskRepo),
                 checkOverdue = CheckOverdueTasksUseCase(taskRepo),
@@ -159,6 +161,7 @@ val appModule =
         viewModel { params ->
             CreateDailyViewModel(
                 heroId = params.get(),
+                editingTaskId = params.getOrNull(),
                 taskUseCases = get(),
                 reminderScheduler = get(),
             )

@@ -129,6 +129,15 @@ fun UiDifficulty.toDomain(): TaskDifficulty =
         UiDifficulty.Epic -> TaskDifficulty.Epic
     }
 
+fun TaskDifficulty.toUi(): UiDifficulty =
+    when (this) {
+        TaskDifficulty.Easy -> UiDifficulty.Easy
+        TaskDifficulty.Medium -> UiDifficulty.Medium
+        TaskDifficulty.Hard -> UiDifficulty.Hard
+        TaskDifficulty.Epic -> UiDifficulty.Epic
+        TaskDifficulty.Unknown -> UiDifficulty.Easy
+    }
+
 private val shortDateFormatter: DateTimeFormatter by lazy {
     DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT).withLocale(Locale.getDefault())
 }

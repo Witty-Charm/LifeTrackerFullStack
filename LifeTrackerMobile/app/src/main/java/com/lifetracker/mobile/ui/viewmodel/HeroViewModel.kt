@@ -7,6 +7,7 @@ import androidx.work.WorkManager
 import com.lifetracker.mobile.BuildConfig
 import com.lifetracker.mobile.core.sync.SyncScheduler
 import com.lifetracker.mobile.domain.model.CreateTaskParams
+import com.lifetracker.mobile.domain.model.UpdateTaskParams
 import com.lifetracker.mobile.domain.model.DomainResult
 import com.lifetracker.mobile.domain.model.GameError
 import com.lifetracker.mobile.domain.model.GameTaskDomain
@@ -80,6 +81,8 @@ class HeroViewModel(
         fun taskFail(id: Int) = "task_fail_$id"
 
         fun taskDelete(id: Int) = "task_delete_$id"
+
+        fun taskUpdate(id: Int) = "task_update_$id"
     }
 
     private val _state = MutableStateFlow(HeroScreenState())
@@ -259,6 +262,42 @@ class HeroViewModel(
             }
     }
 
+    fun updateTask(
+        taskId: Int,
+        title: String,
+        description: String?,
+        type: UiTaskType,
+        difficulty: UiDifficulty,
+        dueDate: kotlin.time.Instant?,
+        habitPolarity: HabitPolarity = HabitPolarity.Both,
+        onSuccess: (() -> Unit)? = null,
+    ) = launchAction(ActionKeys.taskUpdate(taskId)) {
+        val params =
+            UpdateTaskParams(
+                taskId = taskId,
+                type = type.toDomain(),
+                title = title,
+                description = description,
+                difficulty = difficulty.toDomain(),
+                habitPolarity = habitPolarity,
+                dueDate = dueDate,
+            )
+        executeAction { taskUseCases.updateTask(params) }
+            ?.let { task ->
+                val updated = task.toUi()
+                _state.update { current ->
+                    current.copy(
+                        tasks =
+                            current.tasks
+                                .map { if (it.id == taskId) updated else it }
+                                .toPersistentList(),
+                    )
+                }
+                _events.send(UiEvent.TaskUpdated(type))
+                onSuccess?.invoke()
+            }
+    }
+
     fun deleteTask(taskId: Int) =
         launchAction(ActionKeys.taskDelete(taskId)) {
             val task = findTask(taskId) ?: return@launchAction
@@ -377,6 +416,12 @@ class HeroViewModel(
 
     private fun findTask(taskId: Int): TaskUi? =
         _state.value.tasks.firstOrNull { it.id == taskId }
+
+    // Used by edit screens to populate the form. We hit the network/Room cache
+    // through the repository so deep-links / cold starts (where state.tasks may
+    // be empty) still work. Returns null on failure — caller should bail out.
+    suspend fun loadTaskForEdit(taskId: Int): GameTaskDomain? =
+        safeCall { taskUseCases.getTask(taskId) }.dataOrNull()
 
     private fun isServerMutationBlocked(task: TaskUi): Boolean =
         task.pendingAction != null || task.id < 0 || task.isPendingSync || task.syncError != null

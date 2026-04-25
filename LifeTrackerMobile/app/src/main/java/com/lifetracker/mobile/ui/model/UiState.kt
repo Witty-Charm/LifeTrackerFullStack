@@ -177,6 +177,10 @@ sealed interface UiEvent {
         val type: UiTaskType,
     ) : UiEvent
 
+    data class TaskUpdated(
+        val type: UiTaskType,
+    ) : UiEvent
+
     data class TaskAction(
         val feedback: TaskActionFeedback,
     ) : UiEvent

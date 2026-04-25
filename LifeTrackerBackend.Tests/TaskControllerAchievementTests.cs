@@ -283,6 +283,141 @@ public class TaskControllerAchievementTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task UpdateTask_UpdatesEditableFieldsAndPreservesType()
+    {
+        await using var db = CreateDbContext();
+        var hero = await CreateHeroAsync(db);
+        var task = await CreateTaskAsync(db, hero.Id, TaskType.OneTime, HabitPolarity.Both);
+        var controller = CreateController(db);
+
+        var dueDate = new DateTimeOffset(2030, 1, 2, 3, 4, 5, TimeSpan.Zero);
+        var actionResult = await controller.UpdateTask(task.Id, new UpdateTaskRequest
+        {
+            Title = "  New title  ",
+            Description = "New description",
+            Difficulty = TaskDifficulty.Hard,
+            DueDate = dueDate,
+        });
+
+        var ok = Assert.IsType<OkObjectResult>(actionResult.Result);
+        var dto = Assert.IsType<TaskDto>(ok.Value);
+        Assert.Equal("New title", dto.Title);
+        Assert.Equal("New description", dto.Description);
+        Assert.Equal(TaskDifficulty.Hard, dto.Difficulty);
+        Assert.Equal(TaskType.OneTime, dto.Type);
+        Assert.Equal(dueDate, dto.DueDate);
+
+        var stored = await db.GameTasks.SingleAsync(x => x.Id == task.Id);
+        Assert.Equal("New title", stored.Title);
+        Assert.Equal(TaskType.OneTime, stored.Type);
+    }
+
+    [Fact]
+    public async Task UpdateTask_BlankTitle_ReturnsBadRequest()
+    {
+        await using var db = CreateDbContext();
+        var hero = await CreateHeroAsync(db);
+        var task = await CreateTaskAsync(db, hero.Id, TaskType.OneTime, HabitPolarity.Both);
+        var controller = CreateController(db);
+
+        var actionResult = await controller.UpdateTask(task.Id, new UpdateTaskRequest
+        {
+            Title = "   ",
+            Difficulty = TaskDifficulty.Easy,
+        });
+
+        Assert.IsType<BadRequestObjectResult>(actionResult.Result);
+    }
+
+    [Fact]
+    public async Task UpdateTask_UnknownId_ReturnsNotFound()
+    {
+        await using var db = CreateDbContext();
+        await CreateHeroAsync(db);
+        var controller = CreateController(db);
+
+        var actionResult = await controller.UpdateTask(99999, new UpdateTaskRequest
+        {
+            Title = "Anything",
+            Difficulty = TaskDifficulty.Easy,
+        });
+
+        Assert.IsType<NotFoundResult>(actionResult.Result);
+    }
+
+    [Fact]
+    public async Task UpdateTask_NonHabit_DropsDailyOnlyFieldsAndPolarity()
+    {
+        await using var db = CreateDbContext();
+        var hero = await CreateHeroAsync(db);
+        var task = await CreateTaskAsync(db, hero.Id, TaskType.OneTime, HabitPolarity.Both);
+        var controller = CreateController(db);
+
+        var actionResult = await controller.UpdateTask(task.Id, new UpdateTaskRequest
+        {
+            Title = "OneTime",
+            Difficulty = TaskDifficulty.Easy,
+            Polarity = HabitPolarity.Positive,
+            RepeatPattern = "DAILY:1",
+            ChecklistJson = "[{\"id\":\"a\",\"text\":\"x\",\"isChecked\":false}]",
+            RemindersJson = "[{\"id\":\"r1\",\"hour\":9,\"minute\":0}]",
+        });
+
+        var ok = Assert.IsType<OkObjectResult>(actionResult.Result);
+        var dto = Assert.IsType<TaskDto>(ok.Value);
+        Assert.Equal(HabitPolarity.Both, dto.Polarity);
+        Assert.Null(dto.RepeatPattern);
+        Assert.Null(dto.ChecklistJson);
+        Assert.Null(dto.RemindersJson);
+    }
+
+    [Fact]
+    public async Task UpdateTask_Habit_AppliesPolarityFromRequest()
+    {
+        await using var db = CreateDbContext();
+        var hero = await CreateHeroAsync(db);
+        var task = await CreateTaskAsync(db, hero.Id, TaskType.Habit, HabitPolarity.Both);
+        var controller = CreateController(db);
+
+        var actionResult = await controller.UpdateTask(task.Id, new UpdateTaskRequest
+        {
+            Title = "Habit",
+            Difficulty = TaskDifficulty.Easy,
+            Polarity = HabitPolarity.Positive,
+        });
+
+        var ok = Assert.IsType<OkObjectResult>(actionResult.Result);
+        var dto = Assert.IsType<TaskDto>(ok.Value);
+        Assert.Equal(HabitPolarity.Positive, dto.Polarity);
+    }
+
+    [Fact]
+    public async Task UpdateTask_Daily_PersistsDailyFields()
+    {
+        await using var db = CreateDbContext();
+        var hero = await CreateHeroAsync(db);
+        var task = await CreateTaskAsync(db, hero.Id, TaskType.Daily, HabitPolarity.Both);
+        var controller = CreateController(db);
+
+        var checklist = "[{\"id\":\"a\",\"text\":\"x\",\"isChecked\":false}]";
+        var reminders = "[{\"id\":\"r1\",\"hour\":9,\"minute\":0}]";
+        var actionResult = await controller.UpdateTask(task.Id, new UpdateTaskRequest
+        {
+            Title = "Daily",
+            Difficulty = TaskDifficulty.Easy,
+            RepeatPattern = "DAILY:2",
+            ChecklistJson = checklist,
+            RemindersJson = reminders,
+        });
+
+        var ok = Assert.IsType<OkObjectResult>(actionResult.Result);
+        var dto = Assert.IsType<TaskDto>(ok.Value);
+        Assert.Equal("DAILY:2", dto.RepeatPattern);
+        Assert.Equal(checklist, dto.ChecklistJson);
+        Assert.Equal(reminders, dto.RemindersJson);
+    }
+
+    [Fact]
     public async Task FailTask_PositiveHabit_ReturnsBadRequest()
     {
         await using var db = CreateDbContext();

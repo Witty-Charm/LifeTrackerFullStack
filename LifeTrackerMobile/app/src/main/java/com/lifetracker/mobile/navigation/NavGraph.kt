@@ -35,11 +35,16 @@ sealed interface Screen {
 
     data object CreateTask : Screen {
         private const val baseRoute = "create_task"
-        private const val initialTypeArg = "initialType"
+        const val initialTypeArg = "initialType"
+        const val taskIdArg = "taskId"
 
-        override val route = "$baseRoute?$initialTypeArg={$initialTypeArg}"
+        override val route = "$baseRoute?$initialTypeArg={$initialTypeArg}&$taskIdArg={$taskIdArg}"
 
-        fun route(initialType: UiTaskType) = "$baseRoute?$initialTypeArg=${initialType.name}"
+        fun route(initialType: UiTaskType) =
+            "$baseRoute?$initialTypeArg=${initialType.name}"
+
+        fun routeForEdit(taskId: Int) =
+            "$baseRoute?$taskIdArg=$taskId"
 
         fun defaultRoute() = baseRoute
     }
@@ -57,9 +62,14 @@ sealed interface Screen {
     }
 
     data object CreateDaily : Screen {
-        override val route = "create_daily/{heroId}"
+        const val taskIdArg = "taskId"
+
+        override val route = "create_daily/{heroId}?$taskIdArg={$taskIdArg}"
 
         fun route(heroId: Int) = "create_daily/$heroId"
+
+        fun routeForEdit(heroId: Int, taskId: Int) =
+            "create_daily/$heroId?$taskIdArg=$taskId"
     }
 }
 
@@ -82,13 +92,13 @@ fun NavGraph(
         startDestination = Screen.Home.route,
     ) {
         composable(Screen.Home.route) {
-            val createdTaskType =
+            val taskChanged =
                 navController.currentBackStackEntry
                     ?.savedStateHandle
-                    ?.remove<UiTaskType>("task_created")
+                    ?.remove<Boolean>("task_changed")
 
-            LaunchedEffect(createdTaskType) {
-                if (createdTaskType != null) {
+            LaunchedEffect(taskChanged) {
+                if (taskChanged == true) {
                     vm.refreshTasks()
                 }
             }
@@ -104,13 +114,19 @@ fun NavGraph(
             route = Screen.CreateTask.route,
             arguments =
                 listOf(
-                    navArgument("initialType") {
+                    navArgument(Screen.CreateTask.initialTypeArg) {
+                        type = NavType.StringType
+                        nullable = true
+                    },
+                    navArgument(Screen.CreateTask.taskIdArg) {
                         type = NavType.StringType
                         nullable = true
                     },
                 ),
         ) { backStackEntry ->
-            val rawInitialType = backStackEntry.arguments?.getString("initialType")
+            val rawInitialType = backStackEntry.arguments?.getString(Screen.CreateTask.initialTypeArg)
+            val rawTaskId = backStackEntry.arguments?.getString(Screen.CreateTask.taskIdArg)
+            val editingTaskId = rawTaskId?.toIntOrNull()
             val initialType =
                 when (rawInitialType) {
                     UiTaskType.Habit.name -> UiTaskType.Habit
@@ -123,7 +139,8 @@ fun NavGraph(
                 vm = vm,
                 navController = navController,
                 initialType = initialType,
-                lockTypeSelection = rawInitialType != null,
+                lockTypeSelection = rawInitialType != null || editingTaskId != null,
+                editingTaskId = editingTaskId,
             )
         }
 
@@ -149,13 +166,25 @@ fun NavGraph(
 
         composable(
             route = Screen.CreateDaily.route,
-            arguments = listOf(navArgument("heroId") { type = NavType.IntType }),
+            arguments =
+                listOf(
+                    navArgument("heroId") { type = NavType.IntType },
+                    navArgument(Screen.CreateDaily.taskIdArg) {
+                        type = NavType.StringType
+                        nullable = true
+                    },
+                ),
         ) { backStackEntry ->
             val heroId = backStackEntry.arguments?.getInt("heroId") ?: return@composable
+            val editingTaskId =
+                backStackEntry.arguments
+                    ?.getString(Screen.CreateDaily.taskIdArg)
+                    ?.toIntOrNull()
 
             val createDailyVm: CreateDailyViewModel =
                 koinViewModel(
-                    parameters = { parametersOf(heroId) },
+                    key = "create_daily_${heroId}_${editingTaskId ?: "new"}",
+                    parameters = { parametersOf(heroId, editingTaskId) },
                 )
             val createDailyState by createDailyVm.state.collectAsStateWithLifecycle()
 

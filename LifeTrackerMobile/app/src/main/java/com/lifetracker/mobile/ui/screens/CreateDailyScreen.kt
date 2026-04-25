@@ -46,7 +46,6 @@ import com.lifetracker.mobile.domain.model.ReminderItem
 import com.lifetracker.mobile.ui.components.CreateScreenFloatingFooter
 import com.lifetracker.mobile.ui.components.CreateScreenTopBar
 import com.lifetracker.mobile.ui.components.GameDatePickerDialog
-import com.lifetracker.mobile.ui.mapper.toUi
 import com.lifetracker.mobile.ui.model.CreateDailyFormState
 import com.lifetracker.mobile.ui.model.RepeatFrequency
 import com.lifetracker.mobile.ui.model.UiDifficulty
@@ -85,7 +84,7 @@ fun CreateDailyScreen(
                 is CreateDailyUiEvent.Success -> {
                     navController.previousBackStackEntry
                         ?.savedStateHandle
-                        ?.set("task_created", event.type.toUi())
+                        ?.set("task_changed", true)
                     navController.popBackStack()
                 }
             }
@@ -122,13 +121,13 @@ fun CreateDailyScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             CreateScreenTopBar(
-                title = "Create Daily",
+                title = if (state.isEditMode) "Edit Daily" else "Create Daily",
                 onBack = { navController.popBackStack() },
             )
         },
         bottomBar = {
             CreateScreenFloatingFooter(
-                actionLabel = "Save",
+                actionLabel = if (state.isEditMode) "Save changes" else "Save",
                 enabled = state.canSubmit,
                 onClick = { vm.onSubmit() },
                 isLoading = state.isSaving,
@@ -192,14 +191,18 @@ fun CreateDailyScreen(
                 onIntervalChange = vm::onIntervalChange,
             )
 
-            Text("Imported streak", style = MaterialTheme.typography.titleSmall)
-            OutlinedTextField(
-                value = state.initialStreak.toString(),
-                onValueChange = { vm.onInitialStreakChange(it.toIntOrNull() ?: 0) },
-                label = { Text("Initial streak") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth(),
-            )
+            // "Initial streak" only seeds the streak when the task is created — it
+            // can't change after the fact, so we hide it in edit mode.
+            if (!state.isEditMode) {
+                Text("Imported streak", style = MaterialTheme.typography.titleSmall)
+                OutlinedTextField(
+                    value = state.initialStreak.toString(),
+                    onValueChange = { vm.onInitialStreakChange(it.toIntOrNull() ?: 0) },
+                    label = { Text("Initial streak") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
 
             RemindersSection(
                 reminders = state.reminders,

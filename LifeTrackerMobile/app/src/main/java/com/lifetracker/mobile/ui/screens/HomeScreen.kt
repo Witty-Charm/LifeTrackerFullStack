@@ -217,11 +217,31 @@ fun HomeScreen(
                             ) {
                                 items(filteredTasks, key = { it.id }) { task ->
                                     val taskId = task.id
+                                    val taskType = task.type
                                     val onComplete = remember(taskId) { { vm.completeTask(taskId) } }
                                     val onFail = remember(taskId) { { vm.failTask(taskId) } }
                                     val onDelete = remember(taskId) { { vm.deleteTask(taskId) } }
                                     val onRetry = remember(taskId) { { vm.retrySync(taskId) } }
                                     val onDeleteFailed = remember(taskId) { { vm.deleteFailedTask(taskId) } }
+                                    val currentHeroId = state.hero?.id
+                                    val onEdit: () -> Unit =
+                                        remember(taskId, taskType, currentHeroId) {
+                                            {
+                                                val route =
+                                                    when (taskType) {
+                                                        UiTaskType.Daily ->
+                                                            currentHeroId?.let { hid ->
+                                                                Screen.CreateDaily.routeForEdit(hid, taskId)
+                                                            }
+                                                        UiTaskType.Habit, UiTaskType.OneTime ->
+                                                            Screen.CreateTask.routeForEdit(taskId)
+                                                        else -> null
+                                                    }
+                                                if (route != null) {
+                                                    navController.navigate(route)
+                                                }
+                                            }
+                                        }
                                     TaskItem(
                                         task = task,
                                         onCompleteClick = onComplete,
@@ -230,6 +250,7 @@ fun HomeScreen(
                                         isActionLoading = state.isTaskLoading(taskId),
                                         onRetrySyncClick = onRetry,
                                         onDeleteFailedTaskClick = onDeleteFailed,
+                                        onEditClick = onEdit,
                                     )
                                 }
                             }
