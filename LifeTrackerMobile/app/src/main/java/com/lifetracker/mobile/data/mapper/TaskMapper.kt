@@ -1,6 +1,7 @@
 package com.lifetracker.mobile.data.mapper
 
 import com.lifetracker.mobile.data.remote.dto.CompleteTaskResponse
+import com.lifetracker.mobile.data.remote.dto.DailyTaskStateResponse
 import com.lifetracker.mobile.data.remote.dto.FailTaskResponse
 import com.lifetracker.mobile.data.remote.dto.OverdueCheckResponse
 import com.lifetracker.mobile.data.remote.dto.StreakInfoDto
@@ -24,6 +25,7 @@ fun TaskDto.toDomain(): GameTaskDomain =
         difficulty = difficulty.toDomain(),
         habitPolarity = habitPolarity.toDomain(),
         isCompleted = isCompleted,
+        isCheckedToday = isCheckedToday,
         isActive = isActive,
         dueDate = dueDate,
         repeatPattern = repeatPattern,
@@ -56,6 +58,36 @@ fun CompleteTaskResponse.toDomain(): TaskCompletionResult =
         taskTitle = taskTitle,
         xpGained = xpGained,
         goldGained = goldGained,
+        leveledUp = leveledUp,
+        newLevel = newLevel,
+        streakBonus = streakBonus,
+        currentStreak = currentStreak,
+        message = message,
+        heroSnapshot =
+            HeroSnapshot(
+                heroId = heroId,
+                level = newLevel,
+                currentXp = newXp,
+                xpForNextLevel = xpForNextLevel,
+                currentHp = newHp,
+                maxHp = maxHp,
+                gold = newGold,
+                deathCount = deathCount,
+                dailyCompletions = dailyCompletions,
+                dailyCompletionsMax = maxDailyCompletions,
+                isDead = false,
+                xpBoostPercent = xpBoostPercent,
+                xpBoostTasksRemaining = xpBoostTasksRemaining,
+            ),
+        unlockedAchievements = unlockedAchievements.map { it.toDomain() },
+    )
+
+fun DailyTaskStateResponse.toDomain(): TaskCompletionResult =
+    TaskCompletionResult(
+        taskId = taskId,
+        taskTitle = taskTitle,
+        xpGained = xpDelta,
+        goldGained = goldDelta,
         leveledUp = leveledUp,
         newLevel = newLevel,
         streakBonus = streakBonus,

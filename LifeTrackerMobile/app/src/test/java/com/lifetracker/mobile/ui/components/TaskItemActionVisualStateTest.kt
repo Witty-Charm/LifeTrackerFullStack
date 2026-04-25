@@ -1,9 +1,11 @@
 package com.lifetracker.mobile.ui.components
 
+import androidx.compose.ui.graphics.Color
 import com.lifetracker.mobile.domain.model.HabitPolarity
 import com.lifetracker.mobile.ui.model.TaskPendingAction
 import com.lifetracker.mobile.ui.model.TaskUi
 import com.lifetracker.mobile.ui.model.UiTaskType
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -41,10 +43,13 @@ class TaskItemActionVisualStateTest {
 
     @Test
     fun pendingAction_blocksActionButtons() {
-        val task = testTask(UiTaskType.OneTime, HabitPolarity.Both).copy(pendingAction = TaskPendingAction.Complete)
+        val normalTask = testTask(UiTaskType.OneTime, HabitPolarity.Both)
+        val pendingTask = normalTask.copy(pendingAction = TaskPendingAction.Complete)
 
-        assertFalse(positiveActionClickable(task, canAct = false))
-        assertFalse(negativeActionClickable(task, canAct = false))
+        assertTrue(positiveActionClickable(normalTask, canAct = true))
+        assertTrue(negativeActionClickable(normalTask, canAct = true))
+        assertFalse(positiveActionClickable(pendingTask, canAct = false))
+        assertFalse(negativeActionClickable(pendingTask, canAct = false))
     }
 
     @Test
@@ -58,12 +63,27 @@ class TaskItemActionVisualStateTest {
     }
 
     @Test
-    fun completedDaily_disablesPositiveAction() {
-        val task = testTask(UiTaskType.Daily, HabitPolarity.Both).copy(isCompleted = true)
+    fun checkedDaily_keepsPositiveActionClickable() {
+        val task = testTask(UiTaskType.Daily, HabitPolarity.Both).copy(isCheckedToday = true)
 
         assertTrue(task.showsPositiveAction)
         assertFalse(task.showsNegativeAction)
-        assertFalse(positiveActionClickable(task, canAct = true))
+        assertTrue(positiveActionClickable(task, canAct = true))
+    }
+
+    @Test
+    fun checkedDaily_usesSofterCardAlpha() {
+        val task = testTask(UiTaskType.Daily, HabitPolarity.Both).copy(isCheckedToday = true)
+
+        assertEquals(0.72f, taskCardAlpha(task), 0.001f)
+    }
+
+    @Test
+    fun dailyCheckmarkHelpers_matchHiddenAndVisibleStates() {
+        assertEquals(0f, dailyCheckmarkAlpha(isCheckedToday = false), 0.001f)
+        assertEquals(1f, dailyCheckmarkAlpha(isCheckedToday = true), 0.001f)
+        assertEquals(0.82f, dailyCheckmarkScale(isCheckedToday = false), 0.001f)
+        assertEquals(1f, dailyCheckmarkScale(isCheckedToday = true), 0.001f)
     }
 
     private fun testTask(
@@ -78,6 +98,7 @@ class TaskItemActionVisualStateTest {
         difficultyLabel = "Easy",
         difficultyColor = 0xFF4CAF50,
         isCompleted = false,
+        isCheckedToday = false,
         isOverdue = false,
         dueDateText = null,
         rewardText = "+10 XP +5 Gold",

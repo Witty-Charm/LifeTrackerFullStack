@@ -45,6 +45,7 @@ public class GameTask
 
     public Hero? Hero { get; set; }
     public Streak? Streak { get; set; }
+    public ICollection<DailyTaskCompletion> DailyTaskCompletions { get; set; } = new List<DailyTaskCompletion>();
 
     public int GetBaseRewardXP()
     {

@@ -58,6 +58,7 @@ public class TaskController : DeviceScopedControllerBase
         var tasks = await _context.GameTasks
             .Include(t => t.Streak)
             .Include(t => t.Hero)
+            .Include(t => t.DailyTaskCompletions)
             .Where(t => t.IsActive && t.HeroId == effectiveHeroId)
             .ToListAsync();
 
@@ -165,6 +166,9 @@ public class TaskController : DeviceScopedControllerBase
 
         if (task.IsCompleted && task.Type == TaskType.OneTime)
             return BadRequest("Task is already completed");
+
+        if (task.Type == TaskType.Daily)
+            return BadRequest("Daily tasks use /api/Task/{id}/daily-state");
 
         if (task.Type == TaskType.Habit && task.Polarity == HabitPolarity.Negative)
             return BadRequest("Negative habits cannot be completed");
@@ -290,6 +294,206 @@ public class TaskController : DeviceScopedControllerBase
                 ? $"LEVEL UP! You're now level {hero.Level}! +{xpReward} XP, +{goldReward} Gold"
                 : $"Task completed! +{xpReward} XP, +{goldReward} Gold",
         });
+    }
+
+    [HttpPut("{id}/daily-state")]
+    public async Task<ActionResult<SetDailyTaskStateResponse>> SetDailyTaskState(int id, [FromBody] SetDailyTaskStateRequest request)
+    {
+        _ = RequireCurrentDevice(out var errorResult);
+        if (errorResult is not null)
+            return errorResult;
+
+        if (string.IsNullOrWhiteSpace(request.LocalDate))
+            return BadRequest("localDate is required");
+
+        var task = await LoadOwnedTaskAsync(id);
+        if (task == null)
+            return NotFound("Task not found");
+
+        if (task.Type != TaskType.Daily)
+            return BadRequest("daily-state is only available for Daily tasks");
+
+        var hero = await LoadOwnedHeroForTaskAsync(task.HeroId);
+        if (hero == null)
+            return NotFound("Hero not found");
+
+        if (hero.IsDead)
+            return BadRequest(new
+            {
+                errorCode = "HERO_DEAD",
+                error = "Hero is dead",
+                message = "Use /api/Hero/{id}/respawn to continue playing",
+            });
+
+        var utcNow = DateTimeOffset.UtcNow;
+        var effectiveTimeZone = _heroTimeService.ResolveEffectiveTimeZone(hero, utcNow);
+        var todayLocalDate = _heroTimeService.GetLocalDate(utcNow, effectiveTimeZone);
+        var requestedLocalDate = _heroTimeService.ParseLocalDate(request.LocalDate);
+        if (requestedLocalDate != todayLocalDate)
+            return BadRequest("Only today's daily state can be changed");
+
+        var economy = hero.EconomyBalance;
+        if (economy == null)
+        {
+            economy = new EconomyBalance { HeroId = hero.Id };
+            _context.EconomyBalances.Add(economy);
+            hero.EconomyBalance = economy;
+        }
+
+        economy.CheckDailyReset(todayLocalDate);
+
+        var streak = task.Streak ?? await _context.Streaks.FirstOrDefaultAsync(s => s.HeroId == hero.Id && s.TaskId == task.Id);
+        string? legacySeedAnchorLocalDate = null;
+        if (streak != null && streak.CurrentDays > 0 && string.IsNullOrWhiteSpace(streak.LastCheckInLocalDate))
+        {
+            legacySeedAnchorLocalDate = FormatSeedAnchorLocalDate(hero, streak.CreatedAt);
+        }
+
+        var completion = await _context.DailyTaskCompletions.FirstOrDefaultAsync(c =>
+            c.HeroId == hero.Id &&
+            c.TaskId == task.Id &&
+            c.LocalDate == request.LocalDate);
+
+        if (request.IsChecked)
+        {
+            if (completion?.IsChecked == true)
+            {
+                return Ok(BuildDailyStateResponse(task, hero, economy, streak, true, 0, 0));
+            }
+
+            if (!economy.CanCompleteTask(todayLocalDate))
+            {
+                return BadRequest(new
+                {
+                    errorCode = "DAILY_LIMIT_REACHED",
+                    error = "Daily limit reached",
+                    message = $"You have completed {economy.DailyTaskCompletions}/{economy.MaxDailyCompletions} tasks today. Try again tomorrow!",
+                    dailyCompletions = economy.DailyTaskCompletions,
+                    maxDailyCompletions = economy.MaxDailyCompletions,
+                    resetTime = _heroTimeService.GetNextLocalMidnightUtc(utcNow, effectiveTimeZone),
+                });
+            }
+
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+
+            if (streak == null)
+            {
+                streak = new Streak
+                {
+                    HeroId = hero.Id,
+                    TaskId = task.Id,
+                    CurrentDays = 0,
+                    LongestDays = 0,
+                };
+                _context.Streaks.Add(streak);
+            }
+
+            if (legacySeedAnchorLocalDate != null)
+            {
+                streak.LastCheckInLocalDate = legacySeedAnchorLocalDate;
+                streak.StartDate ??= streak.CreatedAt;
+                _logger.LogInformation(
+                    "streak.seeded_legacy_backfill taskId={TaskId} heroId={HeroId} currentDays={CurrentDays} anchorLocalDate={AnchorLocalDate}",
+                    task.Id,
+                    hero.Id,
+                    streak.CurrentDays,
+                    streak.LastCheckInLocalDate);
+            }
+
+            var rewardXp = _gameEngine.CalculateFinalXpReward(task, hero, streak, economy);
+            var rewardGold = _gameEngine.CalculateFinalGoldReward(task, hero, economy);
+            var consumedXpBoostCharge = hero.XpBoostTasksRemaining > 0;
+            var consumedLastXpBoostCharge = hero.XpBoostTasksRemaining == 1 && hero.XpBoostPercent > 0;
+            var previousXpBoostPercent = hero.XpBoostPercent;
+            var previousTaskCompletionCount = task.CompletionCount;
+            var previousTaskLastCompletedAt = task.LastCompletedAt;
+            var streakExistedBefore = completion?.StreakExistedBefore ?? (task.Streak != null || streak.CurrentDays > 0 || !string.IsNullOrWhiteSpace(streak.LastCheckInLocalDate));
+            var previousStreakCurrentDays = streak.CurrentDays;
+            var previousStreakLongestDays = streak.LongestDays;
+            var previousStreakStartDate = streak.StartDate;
+            var previousStreakLastCheckIn = streak.LastCheckIn;
+            var previousStreakLastCheckInLocalDate = streak.LastCheckInLocalDate;
+
+            streak.RegisterSuccess(todayLocalDate, utcNow);
+            var (_, _, leveledUp, streakBonus) = _gameEngine.ApplyTaskCompletion(task, hero, streak, economy, todayLocalDate);
+
+            completion ??= new DailyTaskCompletion
+            {
+                HeroId = hero.Id,
+                TaskId = task.Id,
+                LocalDate = request.LocalDate,
+                CreatedAt = utcNow,
+            };
+            completion.IsChecked = true;
+            completion.RewardXp = rewardXp;
+            completion.RewardGold = rewardGold;
+            completion.ConsumedXpBoostCharge = consumedXpBoostCharge;
+            completion.ConsumedLastXpBoostCharge = consumedLastXpBoostCharge;
+            completion.PreviousXpBoostPercent = previousXpBoostPercent;
+            completion.PreviousTaskCompletionCount = previousTaskCompletionCount;
+            completion.PreviousTaskLastCompletedAt = previousTaskLastCompletedAt;
+            completion.StreakExistedBefore = streakExistedBefore;
+            completion.PreviousStreakCurrentDays = previousStreakCurrentDays;
+            completion.PreviousStreakLongestDays = previousStreakLongestDays;
+            completion.PreviousStreakStartDate = previousStreakStartDate;
+            completion.PreviousStreakLastCheckIn = previousStreakLastCheckIn;
+            completion.PreviousStreakLastCheckInLocalDate = previousStreakLastCheckInLocalDate;
+            completion.UpdatedAt = utcNow;
+            if (completion.Id == 0)
+            {
+                _context.DailyTaskCompletions.Add(completion);
+                task.DailyTaskCompletions.Add(completion);
+            }
+
+            if (!await SaveChangesWithSingleRetryAsync())
+                return Conflict(new { errorCode = "CONCURRENCY_CONFLICT", message = "Task state changed concurrently. Please retry." });
+
+            var unlockedAchievements = await _achievementService.EvaluateAndStageNewUnlocksAsync(hero.Id);
+            if (!await SaveChangesWithSingleRetryAsync())
+                return Conflict(new { errorCode = "CONCURRENCY_CONFLICT", message = "Task state changed concurrently. Please retry." });
+
+            await transaction.CommitAsync();
+
+            var response = BuildDailyStateResponse(task, hero, economy, streak, true, rewardXp, rewardGold);
+            response.UnlockedAchievements = unlockedAchievements.ToList();
+            response.LeveledUp = leveledUp;
+            response.StreakBonus = streakBonus;
+            return Ok(response);
+        }
+
+        if (completion?.IsChecked != true)
+        {
+            return Ok(BuildDailyStateResponse(task, hero, economy, streak, false, 0, 0));
+        }
+
+        hero.RollbackDailyCompletion(completion.RewardXp, completion.ConsumedXpBoostCharge, completion.ConsumedLastXpBoostCharge, completion.PreviousXpBoostPercent);
+        hero.Gold = Math.Max(0, hero.Gold - completion.RewardGold);
+        economy.TotalXpEarned = Math.Max(0, economy.TotalXpEarned - completion.RewardXp);
+        economy.TotalGoldEarned = Math.Max(0, economy.TotalGoldEarned - completion.RewardGold);
+        economy.DailyTaskCompletions = Math.Max(0, economy.DailyTaskCompletions - 1);
+        economy.UpdatedAt = utcNow;
+
+        task.CompletionCount = completion.PreviousTaskCompletionCount;
+        task.LastCompletedAt = completion.PreviousTaskLastCompletedAt;
+        task.UpdatedAt = utcNow;
+
+        if (streak != null)
+        {
+            streak.CurrentDays = completion.PreviousStreakCurrentDays ?? 0;
+            streak.LongestDays = completion.PreviousStreakLongestDays ?? streak.LongestDays;
+            streak.StartDate = completion.PreviousStreakStartDate;
+            streak.LastCheckIn = completion.PreviousStreakLastCheckIn;
+            streak.LastCheckInLocalDate = completion.PreviousStreakLastCheckInLocalDate;
+            streak.UpdatedAt = utcNow;
+        }
+
+        _context.DailyTaskCompletions.Remove(completion);
+        task.DailyTaskCompletions.Remove(completion);
+
+        if (!await SaveChangesWithSingleRetryAsync())
+            return Conflict(new { errorCode = "CONCURRENCY_CONFLICT", message = "Task state changed concurrently. Please retry." });
+
+        return Ok(BuildDailyStateResponse(task, hero, economy, streak, false, -completion.RewardXp, -completion.RewardGold));
     }
 
     [HttpPut("{id}/fail")]
@@ -481,6 +685,7 @@ public class TaskController : DeviceScopedControllerBase
             .Include(t => t.Streak)
             .Include(t => t.Hero)
             .ThenInclude(h => h!.EconomyBalance)
+            .Include(t => t.DailyTaskCompletions)
             .FirstOrDefaultAsync(t => t.Id == taskId && t.Hero != null && t.Hero.OwnerDeviceId == deviceId);
     }
 
@@ -494,42 +699,87 @@ public class TaskController : DeviceScopedControllerBase
         return createdLocalDate.AddDays(-1).ToString("yyyy-MM-dd");
     }
 
-    private static TaskDto MapToDto(GameTask task) => new()
+    private SetDailyTaskStateResponse BuildDailyStateResponse(
+        GameTask task,
+        Hero hero,
+        EconomyBalance economy,
+        Streak? streak,
+        bool isChecked,
+        long xpDelta,
+        int goldDelta) =>
+        new()
+        {
+            Success = true,
+            TaskId = task.Id,
+            TaskTitle = task.Title,
+            IsChecked = isChecked,
+            XpDelta = xpDelta,
+            GoldDelta = goldDelta,
+            HeroId = hero.Id,
+            NewLevel = hero.Level,
+            LeveledUp = false,
+            NewXp = hero.CurrentXp,
+            XpForNextLevel = hero.GetXpRequiredForNextLevel(),
+            XpProgress = (double)hero.CurrentXp / hero.GetXpRequiredForNextLevel(),
+            NewGold = hero.Gold,
+            NewHp = hero.CurrentHp,
+            MaxHp = hero.MaxHp,
+            DeathCount = hero.DeathCount,
+            XpBoostPercent = hero.XpBoostPercent,
+            XpBoostTasksRemaining = hero.XpBoostTasksRemaining,
+            StreakBonus = streak?.GetBonusXpPercent() ?? 0,
+            CurrentStreak = streak?.CurrentDays ?? 0,
+            StreakMultiplier = streak?.GetStreakMultiplier() ?? 1.0,
+            DailyCompletions = economy.DailyTaskCompletions,
+            MaxDailyCompletions = economy.MaxDailyCompletions,
+            Message = isChecked ? "Daily checked" : "Daily unchecked",
+        };
+
+    private TaskDto MapToDto(GameTask task)
     {
-        Id = task.Id,
-        HeroId = task.HeroId,
-        Title = task.Title,
-        Description = task.Description,
-        Type = task.Type,
-        Difficulty = task.Difficulty,
-        Polarity = task.Polarity,
-        IsCompleted = task.IsCompleted,
-        IsActive = task.IsActive,
-        DueDate = task.DueDate,
-        RepeatPattern = task.RepeatPattern,
-        ChecklistJson = task.ChecklistJson,
-        RemindersJson = task.RemindersJson,
-        IsOverdue = task.IsOverdue(),
-        CompletionCount = task.CompletionCount,
-        FailCount = task.FailCount,
-        LastCompletedAt = task.LastCompletedAt,
-        OverdueProcessedAt = task.OverdueProcessedAt,
-        BaseXp = task.GetBaseRewardXP(),
-        BaseGold = task.GetGoldReward(),
-        HpPenalty = task.GetHpPenalty(),
-        GoldPenalty = task.GetGoldPenalty(),
-        StreakInfo = task.Streak != null
-            ? new StreakInfoDto
-            {
-                CurrentDays = task.Streak.CurrentDays,
-                BonusXpPercent = task.Streak.GetBonusXpPercent(),
-                Multiplier = task.Streak.GetStreakMultiplier(),
-                IsFrozen = task.Streak.IsFrozen(),
-                IsShieldActive = task.Hero?.IsShieldActive ?? false,
-                ShieldExpiresAtUtc = null,
-            }
-            : null,
-    };
+        var todayLocalDate = task.Hero != null
+            ? _heroTimeService.GetLocalDate(DateTimeOffset.UtcNow, _heroTimeService.ResolveEffectiveTimeZone(task.Hero, DateTimeOffset.UtcNow)).ToString("yyyy-MM-dd")
+            : null;
+        var isCheckedToday = todayLocalDate != null && task.DailyTaskCompletions.Any(c => c.LocalDate == todayLocalDate && c.IsChecked);
+
+        return new TaskDto
+        {
+            Id = task.Id,
+            HeroId = task.HeroId,
+            Title = task.Title,
+            Description = task.Description,
+            Type = task.Type,
+            Difficulty = task.Difficulty,
+            Polarity = task.Polarity,
+            IsCompleted = task.IsCompleted,
+            IsCheckedToday = isCheckedToday,
+            IsActive = task.IsActive,
+            DueDate = task.DueDate,
+            RepeatPattern = task.RepeatPattern,
+            ChecklistJson = task.ChecklistJson,
+            RemindersJson = task.RemindersJson,
+            IsOverdue = task.IsOverdue(),
+            CompletionCount = task.CompletionCount,
+            FailCount = task.FailCount,
+            LastCompletedAt = task.LastCompletedAt,
+            OverdueProcessedAt = task.OverdueProcessedAt,
+            BaseXp = task.GetBaseRewardXP(),
+            BaseGold = task.GetGoldReward(),
+            HpPenalty = task.GetHpPenalty(),
+            GoldPenalty = task.GetGoldPenalty(),
+            StreakInfo = task.Streak != null
+                ? new StreakInfoDto
+                {
+                    CurrentDays = task.Streak.CurrentDays,
+                    BonusXpPercent = task.Streak.GetBonusXpPercent(),
+                    Multiplier = task.Streak.GetStreakMultiplier(),
+                    IsFrozen = task.Streak.IsFrozen(),
+                    IsShieldActive = task.Hero?.IsShieldActive ?? false,
+                    ShieldExpiresAtUtc = null,
+                }
+                : null,
+        };
+    }
 
     private async Task<bool> SaveChangesWithSingleRetryAsync()
     {
@@ -604,6 +854,7 @@ public class TaskDto
     public TaskDifficulty Difficulty { get; set; }
     public HabitPolarity Polarity { get; set; }
     public bool IsCompleted { get; set; }
+    public bool IsCheckedToday { get; set; }
     public bool IsActive { get; set; }
     public DateTimeOffset? DueDate { get; set; }
     public string? RepeatPattern { get; set; }
@@ -644,6 +895,41 @@ public class CreateTaskRequest
     public int InitialStreak { get; set; } = 0;
     public string? ChecklistJson { get; set; }
     public string? RemindersJson { get; set; }
+}
+
+public class SetDailyTaskStateRequest
+{
+    public string LocalDate { get; set; } = string.Empty;
+    public bool IsChecked { get; set; }
+}
+
+public class SetDailyTaskStateResponse
+{
+    public bool Success { get; set; }
+    public int TaskId { get; set; }
+    public string TaskTitle { get; set; } = string.Empty;
+    public bool IsChecked { get; set; }
+    public long XpDelta { get; set; }
+    public int GoldDelta { get; set; }
+    public int HeroId { get; set; }
+    public int NewLevel { get; set; }
+    public bool LeveledUp { get; set; }
+    public long NewXp { get; set; }
+    public long XpForNextLevel { get; set; }
+    public double XpProgress { get; set; }
+    public int NewGold { get; set; }
+    public int NewHp { get; set; }
+    public int MaxHp { get; set; }
+    public int StreakBonus { get; set; }
+    public int DeathCount { get; set; }
+    public int CurrentStreak { get; set; }
+    public double StreakMultiplier { get; set; }
+    public int DailyCompletions { get; set; }
+    public int MaxDailyCompletions { get; set; }
+    public int XpBoostPercent { get; set; }
+    public int XpBoostTasksRemaining { get; set; }
+    public List<AchievementUnlock> UnlockedAchievements { get; set; } = new();
+    public string Message { get; set; } = string.Empty;
 }
 
 public class CompleteTaskResponse

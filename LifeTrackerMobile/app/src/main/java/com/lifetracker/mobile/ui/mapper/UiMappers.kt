@@ -87,6 +87,7 @@ fun GameTaskDomain.toUi(): TaskUi =
                 TaskDifficulty.Unknown -> 0xFF9E9E9E
             },
         isCompleted = isCompleted,
+        isCheckedToday = isCheckedToday,
         isOverdue = isOverdue,
         dueDateText = dueDate?.toDisplayDate(),
         repeatPatternText = repeatPattern?.toRepeatText(),

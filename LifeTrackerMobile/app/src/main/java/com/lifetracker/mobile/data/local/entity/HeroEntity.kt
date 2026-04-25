@@ -19,6 +19,7 @@ data class HeroEntity(
     val recoveryMultiplier: Double,
     val xpBoostPercent: Int = 0,
     val xpBoostTasksRemaining: Int = 0,
+    val timeZoneId: String = "UTC",
     val dailyCompletions: Int,
     val dailyCompletionsMax: Int,
     val pendingSync: Boolean = false

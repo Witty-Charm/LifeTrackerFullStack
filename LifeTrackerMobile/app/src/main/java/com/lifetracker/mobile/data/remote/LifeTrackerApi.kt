@@ -3,6 +3,7 @@ package com.lifetracker.mobile.data.remote
 import com.lifetracker.mobile.data.remote.dto.BuyItemRequestDto
 import com.lifetracker.mobile.data.remote.dto.BuyResultDto
 import com.lifetracker.mobile.data.remote.dto.CompleteTaskResponse
+import com.lifetracker.mobile.data.remote.dto.DailyTaskStateResponse
 import com.lifetracker.mobile.data.remote.dto.CreateHeroRequest
 import com.lifetracker.mobile.data.remote.dto.CreateTaskRequest
 import com.lifetracker.mobile.data.remote.dto.FailTaskResponse
@@ -13,6 +14,7 @@ import com.lifetracker.mobile.data.remote.dto.HeroStatsDto
 import com.lifetracker.mobile.data.remote.dto.OverdueCheckResponse
 import com.lifetracker.mobile.data.remote.dto.PurchasedItemDto
 import com.lifetracker.mobile.data.remote.dto.RespawnResponse
+import com.lifetracker.mobile.data.remote.dto.SetDailyTaskStateRequest
 import com.lifetracker.mobile.data.remote.dto.ShopItemDto
 import com.lifetracker.mobile.data.remote.dto.TaskDto
 import com.lifetracker.mobile.data.remote.dto.UpdateHeroTimeZoneRequest
@@ -86,6 +88,12 @@ interface LifeTrackerApi {
     suspend fun completeTask(
         @Path("id") id: Int,
     ): Response<CompleteTaskResponse>
+
+    @PUT("api/Task/{id}/daily-state")
+    suspend fun setDailyTaskState(
+        @Path("id") id: Int,
+        @Body request: SetDailyTaskStateRequest,
+    ): Response<DailyTaskStateResponse>
 
     @PUT("api/Task/{id}/fail")
     suspend fun failTask(

@@ -32,6 +32,9 @@ import com.lifetracker.mobile.ui.model.UiDifficulty
 import com.lifetracker.mobile.ui.model.UiEvent
 import com.lifetracker.mobile.ui.model.UiTaskType
 import com.lifetracker.mobile.ui.model.UiTaskType as TaskUiType
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
+import kotlin.time.Clock
 import kotlinx.collections.immutable.toPersistentList
 import kotlinx.collections.immutable.toPersistentSet
 import kotlinx.coroutines.CancellationException
@@ -63,7 +66,7 @@ class HeroViewModel(
     private companion object {
         const val FOREGROUND_REFRESH_DEBOUNCE_MS = 30_000L
         const val SILENT_REFRESH_DEBOUNCE_MS = 350L
-        const val TASK_ACTION_FAILED_MESSAGE = "Action failed. Try again."
+        const val TASK_ACTION_FAILED_MESSAGE = "Действие не выполнено. Попробуйте ещё раз."
     }
 
     private object ActionKeys {
@@ -166,31 +169,39 @@ class HeroViewModel(
                 return@launchAction
             }
             patchTask(taskId) { it.copy(pendingAction = TaskPendingAction.Complete, actionError = null) }
-            executeAction { taskUseCases.completeTask(taskId) }
-                ?.let { result ->
-                    applySnapshot(result.heroSnapshot)
-                    when (task.type) {
-                        TaskUiType.OneTime -> removeTask(taskId)
-                        TaskUiType.Daily,
-                        TaskUiType.Habit,
-                        TaskUiType.Unknown,
-                        -> patchTask(taskId) { current -> current.copy(pendingAction = null, actionError = null) }
-                    }
-                    requestTasksRefresh()
-                    _events.send(
-                        UiEvent.TaskAction(
-                            TaskActionFeedback.Completed(
-                                xpGained = result.xpGained,
-                                goldGained = result.goldGained,
-                                leveledUp = result.leveledUp,
-                                newLevel = result.newLevel.takeIf { result.leveledUp },
-                            ),
+            val result =
+                if (task.type == TaskUiType.Daily) {
+                    val heroTimeZoneId = heroDomain?.timeZoneId ?: TimeZone.currentSystemDefault().id
+                    val today = Clock.System.now().toLocalDateTime(TimeZone.of(heroTimeZoneId)).date.toString()
+                    executeAction { taskUseCases.setDailyTaskState(taskId, today, !task.isCheckedToday) }
+                } else {
+                    executeAction { taskUseCases.completeTask(taskId) }
+                }
+
+            result?.let { actionResult ->
+                applySnapshot(actionResult.heroSnapshot)
+                when (task.type) {
+                    TaskUiType.OneTime -> removeTask(taskId)
+                    TaskUiType.Daily,
+                    TaskUiType.Habit,
+                    TaskUiType.Unknown,
+                    -> patchTask(taskId) { current -> current.copy(pendingAction = null, actionError = null) }
+                }
+                requestTasksRefresh()
+                _events.send(
+                    UiEvent.TaskAction(
+                        TaskActionFeedback.Completed(
+                            xpGained = actionResult.xpGained,
+                            goldGained = actionResult.goldGained,
+                            leveledUp = actionResult.leveledUp,
+                            newLevel = actionResult.newLevel.takeIf { actionResult.leveledUp },
                         ),
-                    )
-                    for (achievement in result.unlockedAchievements) {
-                        _events.send(UiEvent.ShowSnackbar("Achievement unlocked: ${achievement.title} (+${achievement.goldReward} Gold)"))
-                    }
-                } ?: patchTask(taskId) { current -> current.copy(pendingAction = null, actionError = TASK_ACTION_FAILED_MESSAGE) }
+                    ),
+                )
+                for (achievement in actionResult.unlockedAchievements) {
+                    _events.send(UiEvent.ShowSnackbar("Achievement unlocked: ${achievement.title} (+${achievement.goldReward} Gold)"))
+                }
+            } ?: patchTask(taskId) { current -> current.copy(pendingAction = null, actionError = TASK_ACTION_FAILED_MESSAGE) }
         }
 
     fun failTask(taskId: Int) =

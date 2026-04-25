@@ -37,6 +37,16 @@ class TaskUiPolarityTest {
     }
 
     @Test
+    fun dailyChecked_keepsPositiveActionEnabled() {
+        val task = testTask(type = UiTaskType.Daily, habitPolarity = HabitPolarity.Both).copy(isCheckedToday = true)
+
+        assertTrue(task.showsPositiveAction)
+        assertFalse(task.showsNegativeAction)
+        assertTrue(task.positiveActionEnabled)
+        assertFalse(task.negativeActionEnabled)
+    }
+
+    @Test
     fun nonHabit_keepsBothActionsEnabled() {
         val task = testTask(type = UiTaskType.OneTime, habitPolarity = HabitPolarity.Negative)
 
@@ -58,6 +68,7 @@ class TaskUiPolarityTest {
         difficultyLabel = "Easy",
         difficultyColor = 0xFF4CAF50,
         isCompleted = false,
+        isCheckedToday = false,
         isOverdue = false,
         dueDateText = null,
         rewardText = "+10 XP +5 Gold",

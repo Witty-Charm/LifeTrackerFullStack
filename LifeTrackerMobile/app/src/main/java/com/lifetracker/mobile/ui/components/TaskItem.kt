@@ -1,16 +1,18 @@
 package com.lifetracker.mobile.ui.components
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -22,6 +24,7 @@ import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,12 +48,12 @@ fun TaskItem(
     onRetrySyncClick: () -> Unit,
     onDeleteFailedTaskClick: () -> Unit,
 ) {
-    val isCompleted = task.isCompleted
+    val isCompleted = if (task.type == UiTaskType.Daily) task.isCheckedToday else task.isCompleted
     val hasPendingAction = task.pendingAction != null
     val isLocalOnly = task.id < 0 || task.isPendingSync || task.syncError != null
-    val completeFailEnabled = !isCompleted && !hasPendingAction && !isLocalOnly && !isActionLoading
+    val completeFailEnabled = !hasPendingAction && !isLocalOnly && !isActionLoading
     val deleteEnabled = !hasPendingAction && !isActionLoading
-    val cardAlpha = if (isCompleted) 0.5f else 1f
+    val cardAlpha = taskCardAlpha(task)
 
     if (task.isPendingSync) {
         TaskCardContent(
@@ -188,25 +191,47 @@ private fun TaskCardContent(
                     contentAlignment = Alignment.Center,
                 ) {
                     if (task.type == UiTaskType.Daily) {
+                        val isCheckedToday = task.isCheckedToday
+                        val dailyCircleColor =
+                            if (isCheckedToday) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.surfaceVariant
+                            }
+                        val animatedDailyCheckScale by animateFloatAsState(
+                            targetValue = dailyCheckmarkScale(isCheckedToday = isCheckedToday),
+                            animationSpec = tween(durationMillis = 150),
+                            label = "dailyCheckScale",
+                        )
+                        val animatedDailyCheckAlpha by animateFloatAsState(
+                            targetValue = dailyCheckmarkAlpha(isCheckedToday = isCheckedToday),
+                            animationSpec = tween(durationMillis = 110),
+                            label = "dailyCheckAlpha",
+                        )
+
                         Box(
                             modifier =
                                 Modifier
-                                    .size(18.dp)
+                                    .size(20.dp)
                                     .background(
-                                        color = if (task.isCompleted) positiveTextColor else Color.Transparent,
+                                        color = dailyCircleColor,
                                         shape = CircleShape,
-                                    )
-                                    .border(width = 2.dp, color = positiveTextColor, shape = CircleShape),
+                                    ),
                             contentAlignment = Alignment.Center,
                         ) {
-                            if (task.isCompleted) {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = null,
-                                    tint = positiveContainerColor,
-                                    modifier = Modifier.size(12.dp),
-                                )
-                            }
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null,
+                                tint = dailyCheckmarkTint(MaterialTheme.colorScheme.onPrimary),
+                                modifier =
+                                    Modifier
+                                        .size(13.dp)
+                                        .graphicsLayer {
+                                            alpha = animatedDailyCheckAlpha
+                                            scaleX = animatedDailyCheckScale
+                                            scaleY = animatedDailyCheckScale
+                                        },
+                            )
                         }
                     } else {
                         Text(
@@ -410,6 +435,19 @@ private fun TaskCardContent(
         }
     }
 }
+
+internal fun taskCardAlpha(task: TaskUi): Float =
+    when {
+        task.type == UiTaskType.Daily && task.isCheckedToday -> 0.72f
+        task.isCompleted -> 0.5f
+        else -> 1f
+    }
+
+internal fun dailyCheckmarkAlpha(isCheckedToday: Boolean): Float = if (isCheckedToday) 1f else 0f
+
+internal fun dailyCheckmarkScale(isCheckedToday: Boolean): Float = if (isCheckedToday) 1f else 0.82f
+
+internal fun dailyCheckmarkTint(onCompletedColor: Color): Color = onCompletedColor
 
 internal fun positiveActionHighlighted(
     task: TaskUi,

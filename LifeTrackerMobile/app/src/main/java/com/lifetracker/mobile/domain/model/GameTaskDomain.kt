@@ -11,6 +11,7 @@ data class GameTaskDomain(
     val difficulty: TaskDifficulty,
     val habitPolarity: HabitPolarity = HabitPolarity.Both,
     val isCompleted: Boolean,
+    val isCheckedToday: Boolean = false,
     val isActive: Boolean,
     val dueDate: Instant?,
     val repeatPattern: String? = null,

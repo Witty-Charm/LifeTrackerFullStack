@@ -5,6 +5,7 @@ data class TaskUseCases(
     val getTask: GetTaskUseCase,
     val createTask: CreateTaskUseCase,
     val completeTask: CompleteTaskUseCase,
+    val setDailyTaskState: SetDailyTaskStateUseCase,
     val failTask: FailTaskUseCase,
     val checkOverdue: CheckOverdueTasksUseCase,
     val deleteTask: DeleteTaskUseCase,

@@ -69,6 +69,7 @@ data class TaskUi(
     val difficultyLabel: String,
     val difficultyColor: Long,
     val isCompleted: Boolean,
+    val isCheckedToday: Boolean,
     val isOverdue: Boolean,
     val dueDateText: String?,
     val repeatPatternText: String? = null,
@@ -90,7 +91,7 @@ data class TaskUi(
 
     val positiveActionEnabled: Boolean
         get() = when (type) {
-            UiTaskType.Daily -> !isCompleted
+            UiTaskType.Daily -> true
             UiTaskType.Habit -> habitPolarity != HabitPolarity.Negative
             else -> true
         }

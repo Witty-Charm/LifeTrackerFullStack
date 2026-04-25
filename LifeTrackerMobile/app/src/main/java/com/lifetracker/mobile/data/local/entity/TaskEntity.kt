@@ -23,6 +23,7 @@ data class TaskEntity(
     val difficulty: TaskDifficulty,
     val habitPolarity: HabitPolarity? = null,
     val isCompleted: Boolean,
+    val isCheckedToday: Boolean = false,
     val isActive: Boolean,
     val dueDate: Long?,
     val repeatPattern: String?,

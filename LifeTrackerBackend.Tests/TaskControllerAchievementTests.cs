@@ -163,6 +163,83 @@ public class TaskControllerAchievementTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task SetDailyTaskState_AchievementPhaseFails_RollsBackCheckedStateAndReward()
+    {
+        await using var db = CreateDbContext();
+
+        var hero = new Hero
+        {
+            Name = "Alex",
+            Gold = 0,
+            Level = 1,
+            CurrentHp = 100,
+            MaxHp = 100,
+            TimeZoneId = "UTC",
+            OwnerDeviceId = TestDeviceId,
+        };
+        db.Heroes.Add(hero);
+        await db.SaveChangesAsync();
+
+        db.EconomyBalances.Add(new EconomyBalance
+        {
+            HeroId = hero.Id,
+            TotalGoldEarned = 0,
+            LastDailyResetLocalDate = "2026-04-20",
+            MaxDailyCompletions = GameConstants.DailyTaskCap,
+        });
+
+        var task = new GameTask
+        {
+            HeroId = hero.Id,
+            Title = "Rollback daily",
+            Type = TaskType.Daily,
+            Difficulty = TaskDifficulty.Easy,
+            CompletionCount = 9,
+            IsCompleted = false,
+            IsActive = true,
+        };
+        db.GameTasks.Add(task);
+        await db.SaveChangesAsync();
+
+        db.Streaks.Add(new Streak
+        {
+            HeroId = hero.Id,
+            TaskId = task.Id,
+            CurrentDays = 0,
+            LongestDays = 0,
+        });
+        await db.SaveChangesAsync();
+
+        var controller = new TaskController(db, new GameEngineService(), new ThrowingAchievementService(db), new HeroTimeService(), Microsoft.Extensions.Logging.Abstractions.NullLogger<TaskController>.Instance, new CurrentHeroService(db));
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext(),
+        };
+        controller.ControllerContext.HttpContext.Request.Headers["X-Device-Id"] = TestDeviceId;
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            controller.SetDailyTaskState(task.Id, new SetDailyTaskStateRequest
+            {
+                LocalDate = DateOnly.FromDateTime(DateTime.UtcNow).ToString("yyyy-MM-dd"),
+                IsChecked = true,
+            }));
+
+        await using var verificationDb = CreateDbContext();
+        var storedTask = await verificationDb.GameTasks.SingleAsync(x => x.Id == task.Id);
+        var storedHero = await verificationDb.Heroes.SingleAsync(x => x.Id == hero.Id);
+        var storedEconomy = await verificationDb.EconomyBalances.SingleAsync(x => x.HeroId == hero.Id);
+        var storedUnlocks = await verificationDb.Set<HeroAchievement>().ToListAsync();
+        var dailyRows = await verificationDb.Set<DailyTaskCompletion>().ToListAsync();
+
+        Assert.Equal(9, storedTask.CompletionCount);
+        Assert.Equal(0, storedHero.Gold);
+        Assert.Equal(0, storedEconomy.TotalGoldEarned);
+        Assert.Equal(0, storedEconomy.DailyTaskCompletions);
+        Assert.Empty(storedUnlocks);
+        Assert.Empty(dailyRows);
+    }
+
+    [Fact]
     public async Task PostTask_HabitWithoutPolarity_DefaultsToBoth()
     {
         await using var db = CreateDbContext();
@@ -380,10 +457,14 @@ public class TaskControllerAchievementTests : IAsyncLifetime
 
         var controller = CreateController(db, new FixedHeroTimeService(utcNow));
 
-        var actionResult = await controller.CompleteTask(task.Id);
+        var actionResult = await controller.SetDailyTaskState(task.Id, new SetDailyTaskStateRequest
+        {
+            LocalDate = completionLocalDate.ToString("yyyy-MM-dd"),
+            IsChecked = true,
+        });
 
         var ok = Assert.IsType<OkObjectResult>(actionResult.Result);
-        var response = Assert.IsType<CompleteTaskResponse>(ok.Value);
+        var response = Assert.IsType<SetDailyTaskStateResponse>(ok.Value);
         var streak = await db.Streaks.SingleAsync(x => x.TaskId == task.Id);
 
         Assert.Equal(31, response.CurrentStreak);
@@ -471,16 +552,215 @@ public class TaskControllerAchievementTests : IAsyncLifetime
 
         var controller = CreateController(db, new FixedHeroTimeService(completionUtc));
 
-        var actionResult = await controller.CompleteTask(task.Id);
+        var actionResult = await controller.SetDailyTaskState(task.Id, new SetDailyTaskStateRequest
+        {
+            LocalDate = "2026-04-25",
+            IsChecked = true,
+        });
 
         var ok = Assert.IsType<OkObjectResult>(actionResult.Result);
-        var response = Assert.IsType<CompleteTaskResponse>(ok.Value);
+        var response = Assert.IsType<SetDailyTaskStateResponse>(ok.Value);
         var streak = await db.Streaks.SingleAsync(x => x.TaskId == task.Id);
 
         Assert.Equal(1, response.CurrentStreak);
         Assert.Equal(1, streak.CurrentDays);
         Assert.Equal(30, streak.LongestDays);
         Assert.Equal("2026-04-25", streak.LastCheckInLocalDate);
+    }
+
+    [Fact]
+    public async Task SetDailyTaskState_FirstCheck_AppliesRewardAndMarksTaskCheckedToday()
+    {
+        await using var db = CreateDbContext();
+        var utcNow = new DateTimeOffset(2026, 04, 24, 12, 00, 00, TimeSpan.Zero);
+        var hero = await CreateHeroAsync(db, timeZoneId: "UTC", createdAt: utcNow);
+        var task = await CreateTaskAsync(db, hero.Id, TaskType.Daily, HabitPolarity.Both, createdAt: utcNow);
+        var controller = CreateController(db, new FixedHeroTimeService(utcNow));
+
+        var actionResult = await controller.SetDailyTaskState(task.Id, new SetDailyTaskStateRequest
+        {
+            LocalDate = "2026-04-24",
+            IsChecked = true,
+        });
+
+        var ok = Assert.IsType<OkObjectResult>(actionResult.Result);
+        var response = Assert.IsType<SetDailyTaskStateResponse>(ok.Value);
+        var dtoResult = await controller.GetTask(task.Id);
+        var dtoOk = Assert.IsType<OkObjectResult>(dtoResult.Result);
+        var dto = Assert.IsType<TaskDto>(dtoOk.Value);
+        var updatedTask = await db.GameTasks.SingleAsync(x => x.Id == task.Id);
+        var updatedEconomy = await db.EconomyBalances.SingleAsync(x => x.HeroId == hero.Id);
+
+        Assert.True(response.IsChecked);
+        Assert.True(dto.IsCheckedToday);
+        Assert.Equal(1, updatedTask.CompletionCount);
+        Assert.Equal(1, updatedEconomy.DailyTaskCompletions);
+        Assert.Equal(task.GetGoldReward(), response.GoldDelta);
+        Assert.True(response.XpDelta > 0);
+    }
+
+    [Fact]
+    public async Task SetDailyTaskState_RepeatedCheck_IsIdempotent()
+    {
+        await using var db = CreateDbContext();
+        var utcNow = new DateTimeOffset(2026, 04, 24, 12, 00, 00, TimeSpan.Zero);
+        var hero = await CreateHeroAsync(db, timeZoneId: "UTC", createdAt: utcNow);
+        var task = await CreateTaskAsync(db, hero.Id, TaskType.Daily, HabitPolarity.Both, createdAt: utcNow);
+        var controller = CreateController(db, new FixedHeroTimeService(utcNow));
+
+        await controller.SetDailyTaskState(task.Id, new SetDailyTaskStateRequest
+        {
+            LocalDate = "2026-04-24",
+            IsChecked = true,
+        });
+        var goldAfterFirstCheck = (await db.Heroes.SingleAsync(x => x.Id == hero.Id)).Gold;
+
+        var actionResult = await controller.SetDailyTaskState(task.Id, new SetDailyTaskStateRequest
+        {
+            LocalDate = "2026-04-24",
+            IsChecked = true,
+        });
+
+        var ok = Assert.IsType<OkObjectResult>(actionResult.Result);
+        var response = Assert.IsType<SetDailyTaskStateResponse>(ok.Value);
+        var updatedTask = await db.GameTasks.SingleAsync(x => x.Id == task.Id);
+        var updatedHero = await db.Heroes.SingleAsync(x => x.Id == hero.Id);
+
+        Assert.True(response.IsChecked);
+        Assert.Equal(0, response.GoldDelta);
+        Assert.Equal(0, response.XpDelta);
+        Assert.Equal(1, updatedTask.CompletionCount);
+        Assert.Equal(goldAfterFirstCheck, updatedHero.Gold);
+    }
+
+    [Fact]
+    public async Task SetDailyTaskState_Uncheck_RollsBackTaskRewardButKeepsAchievementUnlock()
+    {
+        await using var db = CreateDbContext();
+        var utcNow = new DateTimeOffset(2026, 04, 24, 12, 00, 00, TimeSpan.Zero);
+        var hero = new Hero
+        {
+            Name = "Alex",
+            Gold = 0,
+            Level = 1,
+            CurrentHp = 100,
+            MaxHp = 100,
+            TimeZoneId = "UTC",
+            OwnerDeviceId = TestDeviceId,
+            CreatedDate = utcNow,
+            UpdatedAt = utcNow,
+        };
+        db.Heroes.Add(hero);
+        await db.SaveChangesAsync();
+
+        db.EconomyBalances.Add(new EconomyBalance
+        {
+            HeroId = hero.Id,
+            TotalGoldEarned = 0,
+            LastDailyResetLocalDate = "2026-04-20",
+            MaxDailyCompletions = GameConstants.DailyTaskCap,
+            CreatedAt = utcNow,
+            UpdatedAt = utcNow,
+        });
+
+        var task = new GameTask
+        {
+            HeroId = hero.Id,
+            Title = "Threshold daily",
+            Type = TaskType.Daily,
+            Difficulty = TaskDifficulty.Easy,
+            Polarity = HabitPolarity.Both,
+            CompletionCount = 9,
+            IsCompleted = false,
+            IsActive = true,
+            CreatedAt = utcNow,
+            UpdatedAt = utcNow,
+        };
+        db.GameTasks.Add(task);
+        await db.SaveChangesAsync();
+        db.Streaks.Add(new Streak
+        {
+            HeroId = hero.Id,
+            TaskId = task.Id,
+            CurrentDays = 0,
+            LongestDays = 0,
+            CreatedAt = utcNow,
+            UpdatedAt = utcNow,
+        });
+        await db.SaveChangesAsync();
+
+        var controller = CreateController(db, new FixedHeroTimeService(utcNow));
+        await controller.SetDailyTaskState(task.Id, new SetDailyTaskStateRequest
+        {
+            LocalDate = "2026-04-24",
+            IsChecked = true,
+        });
+
+        var actionResult = await controller.SetDailyTaskState(task.Id, new SetDailyTaskStateRequest
+        {
+            LocalDate = "2026-04-24",
+            IsChecked = false,
+        });
+
+        var ok = Assert.IsType<OkObjectResult>(actionResult.Result);
+        var response = Assert.IsType<SetDailyTaskStateResponse>(ok.Value);
+        var updatedTask = await db.GameTasks.SingleAsync(x => x.Id == task.Id);
+        var updatedHero = await db.Heroes.SingleAsync(x => x.Id == hero.Id);
+        var updatedEconomy = await db.EconomyBalances.SingleAsync(x => x.HeroId == hero.Id);
+        var storedUnlocks = await db.Set<HeroAchievement>().ToListAsync();
+        var dtoResult = await controller.GetTask(task.Id);
+        var dtoOk = Assert.IsType<OkObjectResult>(dtoResult.Result);
+        var dto = Assert.IsType<TaskDto>(dtoOk.Value);
+
+        Assert.False(response.IsChecked);
+        Assert.False(dto.IsCheckedToday);
+        Assert.Equal(9, updatedTask.CompletionCount);
+        Assert.Equal(25, updatedHero.Gold);
+        Assert.Equal(25, updatedEconomy.TotalGoldEarned);
+        Assert.Single(storedUnlocks);
+        Assert.Equal(-task.GetGoldReward(), response.GoldDelta);
+        Assert.True(response.XpDelta < 0);
+    }
+
+    [Fact]
+    public async Task SetDailyTaskState_RepeatedUncheck_IsIdempotent()
+    {
+        await using var db = CreateDbContext();
+        var utcNow = new DateTimeOffset(2026, 04, 24, 12, 00, 00, TimeSpan.Zero);
+        var hero = await CreateHeroAsync(db, timeZoneId: "UTC", createdAt: utcNow);
+        var task = await CreateTaskAsync(db, hero.Id, TaskType.Daily, HabitPolarity.Both, createdAt: utcNow);
+        var controller = CreateController(db, new FixedHeroTimeService(utcNow));
+
+        await controller.SetDailyTaskState(task.Id, new SetDailyTaskStateRequest
+        {
+            LocalDate = "2026-04-24",
+            IsChecked = true,
+        });
+        await controller.SetDailyTaskState(task.Id, new SetDailyTaskStateRequest
+        {
+            LocalDate = "2026-04-24",
+            IsChecked = false,
+        });
+        var heroAfterFirstUncheck = await db.Heroes.SingleAsync(x => x.Id == hero.Id);
+
+        var actionResult = await controller.SetDailyTaskState(task.Id, new SetDailyTaskStateRequest
+        {
+            LocalDate = "2026-04-24",
+            IsChecked = false,
+        });
+
+        var ok = Assert.IsType<OkObjectResult>(actionResult.Result);
+        var response = Assert.IsType<SetDailyTaskStateResponse>(ok.Value);
+        var updatedTask = await db.GameTasks.SingleAsync(x => x.Id == task.Id);
+        var updatedHero = await db.Heroes.SingleAsync(x => x.Id == hero.Id);
+        var updatedEconomy = await db.EconomyBalances.SingleAsync(x => x.HeroId == hero.Id);
+
+        Assert.False(response.IsChecked);
+        Assert.Equal(0, response.GoldDelta);
+        Assert.Equal(0, response.XpDelta);
+        Assert.Equal(0, updatedTask.CompletionCount);
+        Assert.Equal(heroAfterFirstUncheck.Gold, updatedHero.Gold);
+        Assert.Equal(0, updatedEconomy.DailyTaskCompletions);
     }
 
     private static T ReadProperty<T>(object source, string propertyName)

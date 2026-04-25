@@ -39,6 +39,7 @@ public class Hero
 
     public ICollection<GameTask> Tasks { get; set; } = new List<GameTask>();
     public ICollection<Streak> Streaks { get; set; } = new List<Streak>();
+    public ICollection<DailyTaskCompletion> DailyTaskCompletions { get; set; } = new List<DailyTaskCompletion>();
     public EconomyBalance? EconomyBalance { get; set; }
 
     public long GetXpRequiredForNextLevel() => GameConstants.CalculateXpForLevel(Level);
@@ -59,6 +60,34 @@ public class Hero
             MaxHp = GameConstants.CalculateMaxHp(Level);
             CurrentHp = MaxHp;
         }
+    }
+
+    public void RollbackDailyCompletion(long xpAmount, bool consumedXpBoostCharge, bool consumedLastXpBoostCharge, int previousXpBoostPercent)
+    {
+        if (xpAmount > TotalXpEarned)
+            xpAmount = TotalXpEarned;
+
+        TotalXpEarned -= xpAmount;
+
+        while (xpAmount > CurrentXp && Level > 1)
+        {
+            xpAmount -= CurrentXp;
+            Level--;
+            MaxHp = GameConstants.CalculateMaxHp(Level);
+            CurrentHp = Math.Min(CurrentHp, MaxHp);
+            CurrentXp = GetXpRequiredForNextLevel();
+        }
+
+        CurrentXp = Math.Max(0, CurrentXp - xpAmount);
+
+        if (consumedXpBoostCharge)
+        {
+            XpBoostTasksRemaining++;
+            if (consumedLastXpBoostCharge)
+                XpBoostPercent = previousXpBoostPercent;
+        }
+
+        UpdatedAt = DateTimeOffset.UtcNow;
     }
 
     public void TakeDamage(int damage)

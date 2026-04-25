@@ -12,6 +12,7 @@ import com.lifetracker.mobile.domain.model.RespawnResult
 fun HeroDto.toDomain(): HeroDomain = HeroDomain(
     id = id,
     name = name,
+    timeZoneId = timeZoneId,
     level = level,
     currentXp = xp,
     maxXp = maxXP,

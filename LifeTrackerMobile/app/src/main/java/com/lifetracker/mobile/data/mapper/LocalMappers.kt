@@ -13,6 +13,7 @@ fun HeroEntity.toDomain(): HeroDomain =
     HeroDomain(
         id = id,
         name = name,
+        timeZoneId = timeZoneId,
         level = level,
         currentXp = currentXp,
         maxXp = maxXp,
@@ -33,6 +34,7 @@ fun HeroDomain.toEntity(pendingSync: Boolean = false): HeroEntity =
     HeroEntity(
         id = id,
         name = name,
+        timeZoneId = timeZoneId,
         level = level,
         currentXp = currentXp,
         maxXp = maxXp,
@@ -60,6 +62,7 @@ fun TaskEntity.toDomain(): GameTaskDomain =
         difficulty = difficulty,
         habitPolarity = if (type == TaskType.Habit) habitPolarity ?: HabitPolarity.Both else HabitPolarity.Both,
         isCompleted = isCompleted,
+        isCheckedToday = isCheckedToday,
         isActive = isActive,
         dueDate = dueDate?.let { Instant.fromEpochMilliseconds(it) },
         repeatPattern = repeatPattern,
@@ -100,6 +103,7 @@ fun GameTaskDomain.toEntity(pendingSync: Boolean = this.pendingSync): TaskEntity
         difficulty = difficulty,
         habitPolarity = if (type == TaskType.Habit) habitPolarity else HabitPolarity.Both,
         isCompleted = isCompleted,
+        isCheckedToday = isCheckedToday,
         isActive = isActive,
         dueDate = dueDate?.toEpochMilliseconds(),
         repeatPattern = repeatPattern,

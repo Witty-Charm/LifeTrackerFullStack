@@ -38,6 +38,7 @@ import com.lifetracker.mobile.domain.usecase.task.FailTaskUseCase
 import com.lifetracker.mobile.domain.usecase.task.GetTaskUseCase
 import com.lifetracker.mobile.domain.usecase.task.GetTasksUseCase
 import com.lifetracker.mobile.domain.usecase.task.RetryTaskSyncUseCase
+import com.lifetracker.mobile.domain.usecase.task.SetDailyTaskStateUseCase
 import com.lifetracker.mobile.domain.usecase.task.TaskUseCases
 import com.lifetracker.mobile.ui.model.UiEvent
 import io.mockk.every
@@ -54,10 +55,13 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
+import kotlin.time.Clock
 import kotlin.time.Instant
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -275,13 +279,13 @@ class HeroViewModelTest {
         }
 
     @Test
-    fun completeTask_dailyKeepsTaskInList() =
+    fun completeTask_dailyUsesExplicitDailyStateFlowAndKeepsTaskInList() =
         runTest {
             val heroRepository = FakeHeroRepository()
             val taskRepository =
                 FakeTaskRepository().apply {
                     tasks = listOf(createTestTask(id = 1, type = TaskType.Daily))
-                    completeTaskResults[1] = DomainResult.Success(createCompletionResult(taskId = 1))
+                    setDailyTaskStateResults[1] = DomainResult.Success(createDailyStateResult(taskId = 1, isChecked = true))
                 }
             val viewModel = buildViewModel(heroRepository, taskRepository)
             advanceUntilIdle()
@@ -289,7 +293,10 @@ class HeroViewModelTest {
             viewModel.completeTask(1)
             advanceUntilIdle()
 
-            assertEquals(listOf(1), taskRepository.completeTaskCalls)
+            val expectedLocalDate = Clock.System.now().toLocalDateTime(TimeZone.of(heroRepository.hero.timeZoneId)).date.toString()
+
+            assertEquals(emptyList<Int>(), taskRepository.completeTaskCalls)
+            assertEquals(listOf(Triple(1, expectedLocalDate, true)), taskRepository.setDailyTaskStateCalls)
             assertEquals(1, viewModel.state.value.tasks.size)
         }
 
@@ -320,6 +327,7 @@ class HeroViewModelTest {
                     getTask = GetTaskUseCase(taskRepository),
                     createTask = CreateTaskUseCase(taskRepository),
                     completeTask = CompleteTaskUseCase(taskRepository),
+                    setDailyTaskState = SetDailyTaskStateUseCase(taskRepository),
                     failTask = FailTaskUseCase(taskRepository),
                     checkOverdue = CheckOverdueTasksUseCase(taskRepository),
                     deleteTask = DeleteTaskUseCase(taskRepository),
@@ -334,7 +342,7 @@ class HeroViewModelTest {
         var achievementsResult: DomainResult<List<AchievementDomain>> = DomainResult.Success(emptyList())
         var getCurrentHeroCalls: Int = 0
         var getFirstHeroCalls: Int = 0
-        private val hero = createTestHero()
+        val hero = createTestHero()
 
         override suspend fun getHeroes(): DomainResult<List<HeroDomain>> = DomainResult.Success(listOf(hero))
 
@@ -381,8 +389,10 @@ class HeroViewModelTest {
         var lastCreateTaskParams: CreateTaskParams? = null
         var tasks: List<GameTaskDomain> = listOf(createTestTask())
         val completeTaskCalls = mutableListOf<Int>()
+        val setDailyTaskStateCalls = mutableListOf<Triple<Int, String, Boolean>>()
         val deleteTaskCalls = mutableListOf<Int>()
         val completeTaskResults = mutableMapOf<Int, DomainResult<TaskCompletionResult>>()
+        val setDailyTaskStateResults = mutableMapOf<Int, DomainResult<TaskCompletionResult>>()
         val completeTaskGates = mutableMapOf<Int, CompletableDeferred<Unit>>()
 
         override suspend fun getTasks(heroId: Int): DomainResult<List<GameTaskDomain>> {
@@ -401,6 +411,15 @@ class HeroViewModelTest {
             completeTaskCalls += taskId
             completeTaskGates[taskId]?.await()
             return completeTaskResults[taskId] ?: completeTaskResult
+        }
+
+        override suspend fun setDailyTaskState(
+            taskId: Int,
+            localDate: String,
+            isChecked: Boolean,
+        ): DomainResult<TaskCompletionResult> {
+            setDailyTaskStateCalls += Triple(taskId, localDate, isChecked)
+            return setDailyTaskStateResults[taskId] ?: DomainResult.Failure(GameError.Unknown("Not used in this test"))
         }
 
         override suspend fun failTask(taskId: Int): DomainResult<TaskFailureResult> =
@@ -426,6 +445,7 @@ class HeroViewModelTest {
             HeroDomain(
                 id = 1,
                 name = "Alex",
+                timeZoneId = "UTC",
                 level = 3,
                 currentXp = 40,
                 maxXp = 100,
@@ -474,6 +494,24 @@ class HeroViewModelTest {
                 unlockedAchievements = emptyList(),
             )
 
+        private fun createDailyStateResult(
+            taskId: Int,
+            isChecked: Boolean,
+        ) =
+            TaskCompletionResult(
+                taskId = taskId,
+                taskTitle = "Task $taskId",
+                xpGained = if (isChecked) 10 else -10,
+                goldGained = if (isChecked) 5 else -5,
+                leveledUp = false,
+                newLevel = 3,
+                streakBonus = 0,
+                currentStreak = if (isChecked) 1 else 0,
+                message = if (isChecked) "Daily checked" else "Daily unchecked",
+                heroSnapshot = createHeroSnapshot(gold = if (isChecked) 55 else 45),
+                unlockedAchievements = emptyList(),
+            )
+
         private fun createTestTask(
             id: Int = 1,
             type: TaskType = TaskType.OneTime,
@@ -489,6 +527,7 @@ class HeroViewModelTest {
             difficulty = TaskDifficulty.Easy,
             habitPolarity = habitPolarity,
             isCompleted = false,
+            isCheckedToday = false,
             isActive = true,
             dueDate = null,
             repeatPattern = null,

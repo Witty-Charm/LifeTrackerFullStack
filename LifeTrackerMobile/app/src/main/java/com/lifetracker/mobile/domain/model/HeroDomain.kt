@@ -3,6 +3,7 @@ package com.lifetracker.mobile.domain.model
 data class HeroDomain(
     val id: Int,
     val name: String,
+    val timeZoneId: String = "UTC",
     val level: Int,
     val currentXp: Long,
     val maxXp: Long,

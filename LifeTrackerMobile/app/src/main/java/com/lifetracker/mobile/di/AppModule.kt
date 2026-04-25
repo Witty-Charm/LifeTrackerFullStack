@@ -16,6 +16,8 @@ import com.lifetracker.mobile.data.local.AppDatabase
 import com.lifetracker.mobile.data.local.MIGRATION_2_3
 import com.lifetracker.mobile.data.local.MIGRATION_3_4
 import com.lifetracker.mobile.data.local.MIGRATION_4_5
+import com.lifetracker.mobile.data.local.MIGRATION_5_6
+import com.lifetracker.mobile.data.local.MIGRATION_6_7
 import com.lifetracker.mobile.data.remote.NetworkModule
 import com.lifetracker.mobile.data.repository.DataStoreSettingsRepository
 import com.lifetracker.mobile.data.repository.HeroRepositoryImpl
@@ -52,6 +54,7 @@ import com.lifetracker.mobile.domain.usecase.task.FailTaskUseCase
 import com.lifetracker.mobile.domain.usecase.task.GetTaskUseCase
 import com.lifetracker.mobile.domain.usecase.task.GetTasksUseCase
 import com.lifetracker.mobile.domain.usecase.task.RetryTaskSyncUseCase
+import com.lifetracker.mobile.domain.usecase.task.SetDailyTaskStateUseCase
 import com.lifetracker.mobile.domain.usecase.task.TaskUseCases
 import com.lifetracker.mobile.ui.viewmodel.AchievementsViewModel
 import com.lifetracker.mobile.ui.viewmodel.CreateDailyViewModel
@@ -134,6 +137,7 @@ val appModule =
                 getTask = GetTaskUseCase(taskRepo),
                 getTasks = GetTasksUseCase(taskRepo),
                 completeTask = CompleteTaskUseCase(taskRepo),
+                setDailyTaskState = SetDailyTaskStateUseCase(taskRepo),
                 createTask = CreateTaskUseCase(taskRepo),
                 failTask = FailTaskUseCase(taskRepo),
                 deleteTask = DeleteTaskUseCase(taskRepo),
@@ -168,7 +172,7 @@ val appModule =
         single {
             Room
                 .databaseBuilder(androidContext(), AppDatabase::class.java, "lifetracker.db")
-                .addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+                .addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
                 .fallbackToDestructiveMigration(dropAllTables = true)
                 .build()
         }

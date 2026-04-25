@@ -49,6 +49,7 @@ import com.lifetracker.mobile.domain.usecase.task.FailTaskUseCase
 import com.lifetracker.mobile.domain.usecase.task.GetTaskUseCase
 import com.lifetracker.mobile.domain.usecase.task.GetTasksUseCase
 import com.lifetracker.mobile.domain.usecase.task.RetryTaskSyncUseCase
+import com.lifetracker.mobile.domain.usecase.task.SetDailyTaskStateUseCase
 import com.lifetracker.mobile.domain.usecase.task.TaskUseCases
 import com.lifetracker.mobile.ui.model.CreateDailyFormState
 import com.lifetracker.mobile.ui.model.HeroScreenState
@@ -255,6 +256,7 @@ private fun rememberHeroViewModel(): HeroViewModel {
                     getTasks = GetTasksUseCase(taskRepository),
                     createTask = CreateTaskUseCase(taskRepository),
                     completeTask = CompleteTaskUseCase(taskRepository),
+                    setDailyTaskState = SetDailyTaskStateUseCase(taskRepository),
                     failTask = FailTaskUseCase(taskRepository),
                     checkOverdue = CheckOverdueTasksUseCase(taskRepository),
                     retryTaskSync = RetryTaskSyncUseCase(taskRepository),
@@ -280,6 +282,7 @@ private fun rememberCreateDailyViewModel(): CreateDailyViewModel {
                     getTasks = GetTasksUseCase(taskRepository),
                     createTask = CreateTaskUseCase(taskRepository),
                     completeTask = CompleteTaskUseCase(taskRepository),
+                    setDailyTaskState = SetDailyTaskStateUseCase(taskRepository),
                     failTask = FailTaskUseCase(taskRepository),
                     checkOverdue = CheckOverdueTasksUseCase(taskRepository),
                     retryTaskSync = RetryTaskSyncUseCase(taskRepository),
@@ -360,6 +363,7 @@ private class CreateScreenFakeTaskRepository : TaskRepository {
                 difficulty = params.difficulty,
                 habitPolarity = params.habitPolarity,
                 isCompleted = false,
+                isCheckedToday = false,
                 isActive = true,
                 dueDate = params.dueDate,
                 repeatPattern = params.repeatPattern,
@@ -381,6 +385,13 @@ private class CreateScreenFakeTaskRepository : TaskRepository {
         )
 
     override suspend fun completeTask(taskId: Int): DomainResult<TaskCompletionResult> =
+        DomainResult.Failure(GameError.Unknown("Not used in this test"))
+
+    override suspend fun setDailyTaskState(
+        taskId: Int,
+        localDate: String,
+        isChecked: Boolean,
+    ): DomainResult<TaskCompletionResult> =
         DomainResult.Failure(GameError.Unknown("Not used in this test"))
 
     override suspend fun failTask(taskId: Int): DomainResult<TaskFailureResult> =

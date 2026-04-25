@@ -54,6 +54,7 @@ import com.lifetracker.mobile.domain.usecase.task.FailTaskUseCase
 import com.lifetracker.mobile.domain.usecase.task.GetTaskUseCase
 import com.lifetracker.mobile.domain.usecase.task.GetTasksUseCase
 import com.lifetracker.mobile.domain.usecase.task.RetryTaskSyncUseCase
+import com.lifetracker.mobile.domain.usecase.task.SetDailyTaskStateUseCase
 import com.lifetracker.mobile.domain.usecase.task.TaskUseCases
 import com.lifetracker.mobile.ui.model.HeroScreenState
 import com.lifetracker.mobile.ui.model.TaskUi
@@ -161,6 +162,7 @@ private fun rememberHeroViewModel(): HeroViewModel {
                     getTask = GetTaskUseCase(taskRepository),
                     getTasks = GetTasksUseCase(taskRepository),
                     completeTask = CompleteTaskUseCase(taskRepository),
+                    setDailyTaskState = SetDailyTaskStateUseCase(taskRepository),
                     createTask = CreateTaskUseCase(taskRepository),
                     failTask = FailTaskUseCase(taskRepository),
                     deleteTask = DeleteTaskUseCase(taskRepository),
@@ -196,6 +198,7 @@ private fun testTask(
         difficultyLabel = "Easy",
         difficultyColor = 0L,
         isCompleted = false,
+        isCheckedToday = false,
         isOverdue = false,
         dueDateText = null,
         rewardText = "+10 XP • +5 Gold",
@@ -271,6 +274,7 @@ private class FakeTaskRepository : TaskRepository {
                 difficulty = TaskDifficulty.Easy,
                 habitPolarity = com.lifetracker.mobile.domain.model.HabitPolarity.Both,
                 isCompleted = false,
+                isCheckedToday = false,
                 isActive = true,
                 dueDate = null,
                 repeatPattern = null,
@@ -299,6 +303,13 @@ private class FakeTaskRepository : TaskRepository {
         DomainResult.Failure(GameError.Unknown("Not used in this test"))
 
     override suspend fun completeTask(taskId: Int): DomainResult<TaskCompletionResult> =
+        DomainResult.Failure(GameError.Unknown("Not used in this test"))
+
+    override suspend fun setDailyTaskState(
+        taskId: Int,
+        localDate: String,
+        isChecked: Boolean,
+    ): DomainResult<TaskCompletionResult> =
         DomainResult.Failure(GameError.Unknown("Not used in this test"))
 
     override suspend fun failTask(taskId: Int): DomainResult<TaskFailureResult> =

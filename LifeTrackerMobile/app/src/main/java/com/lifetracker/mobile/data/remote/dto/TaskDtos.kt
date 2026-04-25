@@ -15,6 +15,7 @@ data class TaskDto(
     @SerialName("polarity")
     val habitPolarity: HabitPolarity = HabitPolarity.Both,
     val isCompleted: Boolean,
+    val isCheckedToday: Boolean = false,
     val isActive: Boolean,
     val dueDate: Instant? = null,
     val repeatPattern: String? = null,
@@ -56,6 +57,41 @@ data class CreateTaskRequest(
     val initialStreak: Int = 0,
     val checklistJson: String? = null,
     val remindersJson: String? = null,
+)
+
+@Serializable
+data class SetDailyTaskStateRequest(
+    val localDate: String,
+    val isChecked: Boolean,
+)
+
+@Serializable
+data class DailyTaskStateResponse(
+    val success: Boolean,
+    val taskId: Int,
+    val taskTitle: String,
+    val isChecked: Boolean,
+    val xpDelta: Long,
+    val goldDelta: Int,
+    val heroId: Int,
+    val newLevel: Int,
+    val leveledUp: Boolean,
+    val newXp: Long,
+    val xpForNextLevel: Long,
+    val xpProgress: Double,
+    val newGold: Int,
+    val newHp: Int,
+    val maxHp: Int,
+    val streakBonus: Int,
+    val currentStreak: Int,
+    val streakMultiplier: Double,
+    val dailyCompletions: Int,
+    val maxDailyCompletions: Int,
+    val deathCount: Int,
+    val xpBoostPercent: Int = 0,
+    val xpBoostTasksRemaining: Int = 0,
+    val unlockedAchievements: List<AchievementDto> = emptyList(),
+    val message: String,
 )
 
 @Serializable

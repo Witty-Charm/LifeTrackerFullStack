@@ -26,6 +26,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<GameTask> GameTasks { get; set; }
     public DbSet<Streak> Streaks { get; set; }
     public DbSet<EconomyBalance> EconomyBalances { get; set; }
+    public DbSet<DailyTaskCompletion> DailyTaskCompletions { get; set; }
     public DbSet<ShopItem> ShopItems { get; set; }
     public DbSet<Purchase> Purchases { get; set; }
     public DbSet<HeroAchievement> HeroAchievements { get; set; }
@@ -52,11 +53,23 @@ public class ApplicationDbContext : DbContext
             .HasForeignKey<EconomyBalance>(e => e.HeroId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        modelBuilder.Entity<Hero>()
+            .HasMany(h => h.DailyTaskCompletions)
+            .WithOne(c => c.Hero)
+            .HasForeignKey(c => c.HeroId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         modelBuilder.Entity<GameTask>()
             .HasOne(t => t.Streak)
             .WithOne(s => s.Task)
             .HasForeignKey<Streak>(s => s.TaskId)
             .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<GameTask>()
+            .HasMany(t => t.DailyTaskCompletions)
+            .WithOne(c => c.Task)
+            .HasForeignKey(c => c.TaskId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<GameTask>()
             .Property(t => t.Difficulty)
@@ -111,6 +124,14 @@ public class ApplicationDbContext : DbContext
                 value => value,
                 value => DateTime.SpecifyKind(value, DateTimeKind.Utc));
 
+        modelBuilder.Entity<DailyTaskCompletion>()
+            .HasIndex(c => new { c.HeroId, c.TaskId, c.LocalDate })
+            .IsUnique();
+
+        modelBuilder.Entity<DailyTaskCompletion>()
+            .Property(c => c.RowVersion)
+            .IsConcurrencyToken();
+
         modelBuilder.Entity<Streak>()
             .Property(s => s.RowVersion)
             .IsConcurrencyToken();
@@ -135,6 +156,12 @@ public class ApplicationDbContext : DbContext
         }
 
         foreach (var entry in ChangeTracker.Entries<EconomyBalance>()
+                     .Where(e => e.State is EntityState.Added or EntityState.Modified))
+        {
+            entry.Entity.RowVersion = Guid.NewGuid().ToByteArray();
+        }
+
+        foreach (var entry in ChangeTracker.Entries<DailyTaskCompletion>()
                      .Where(e => e.State is EntityState.Added or EntityState.Modified))
         {
             entry.Entity.RowVersion = Guid.NewGuid().ToByteArray();

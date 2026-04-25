@@ -10,6 +10,7 @@ import com.lifetracker.mobile.data.mapper.toDto
 import com.lifetracker.mobile.data.mapper.toEntity
 import com.lifetracker.mobile.data.remote.LifeTrackerApi
 import com.lifetracker.mobile.data.remote.dto.CreateTaskRequest
+import com.lifetracker.mobile.data.remote.dto.SetDailyTaskStateRequest
 import com.lifetracker.mobile.domain.model.CreateTaskParams
 import com.lifetracker.mobile.domain.model.DomainResult
 import com.lifetracker.mobile.domain.model.GameTaskDomain
@@ -145,6 +146,38 @@ class TaskRepositoryImpl(
         if (remote is DomainResult.Success) {
             taskDao.getById(taskId)?.let { entity ->
                 taskDao.upsert(entity.copy(isCompleted = true, pendingSync = false))
+            }
+        }
+
+        return remote
+    }
+
+    override suspend fun setDailyTaskState(
+        taskId: Int,
+        localDate: String,
+        isChecked: Boolean,
+    ): DomainResult<TaskCompletionResult> {
+        val remote =
+            caller
+                .safeApiCall {
+                    api.setDailyTaskState(
+                        taskId,
+                        SetDailyTaskStateRequest(
+                            localDate = localDate,
+                            isChecked = isChecked,
+                        ),
+                    )
+                }.map { it.toDomain() }
+                .toDomainResult()
+
+        if (remote is DomainResult.Success) {
+            taskDao.getById(taskId)?.let { entity ->
+                taskDao.upsert(
+                    entity.copy(
+                        isCompleted = entity.isCompleted,
+                        pendingSync = false,
+                    ),
+                )
             }
         }
 
