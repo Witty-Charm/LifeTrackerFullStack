@@ -47,6 +47,25 @@ class TaskItemActionVisualStateTest {
         assertFalse(negativeActionClickable(task, canAct = false))
     }
 
+    @Test
+    fun daily_showsOnlyPositiveAction() {
+        val task = testTask(UiTaskType.Daily, HabitPolarity.Both)
+
+        assertTrue(task.showsPositiveAction)
+        assertFalse(task.showsNegativeAction)
+        assertTrue(positiveActionClickable(task, canAct = true))
+        assertFalse(negativeActionClickable(task, canAct = true))
+    }
+
+    @Test
+    fun completedDaily_disablesPositiveAction() {
+        val task = testTask(UiTaskType.Daily, HabitPolarity.Both).copy(isCompleted = true)
+
+        assertTrue(task.showsPositiveAction)
+        assertFalse(task.showsNegativeAction)
+        assertFalse(positiveActionClickable(task, canAct = true))
+    }
+
     private fun testTask(
         type: UiTaskType,
         habitPolarity: HabitPolarity,

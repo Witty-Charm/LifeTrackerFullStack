@@ -274,6 +274,25 @@ class HeroViewModelTest {
             assertEquals(2, taskRepository.getTasksCalls)
         }
 
+    @Test
+    fun completeTask_dailyKeepsTaskInList() =
+        runTest {
+            val heroRepository = FakeHeroRepository()
+            val taskRepository =
+                FakeTaskRepository().apply {
+                    tasks = listOf(createTestTask(id = 1, type = TaskType.Daily))
+                    completeTaskResults[1] = DomainResult.Success(createCompletionResult(taskId = 1))
+                }
+            val viewModel = buildViewModel(heroRepository, taskRepository)
+            advanceUntilIdle()
+
+            viewModel.completeTask(1)
+            advanceUntilIdle()
+
+            assertEquals(listOf(1), taskRepository.completeTaskCalls)
+            assertEquals(1, viewModel.state.value.tasks.size)
+        }
+
     private fun buildViewModel(
         heroRepository: FakeHeroRepository,
         taskRepository: FakeTaskRepository,

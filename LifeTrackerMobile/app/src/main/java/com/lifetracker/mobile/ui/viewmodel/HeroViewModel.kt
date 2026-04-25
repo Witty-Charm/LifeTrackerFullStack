@@ -63,7 +63,7 @@ class HeroViewModel(
     private companion object {
         const val FOREGROUND_REFRESH_DEBOUNCE_MS = 30_000L
         const val SILENT_REFRESH_DEBOUNCE_MS = 350L
-        const val TASK_ACTION_FAILED_MESSAGE = "Действие не выполнено. Попробуйте ещё раз."
+        const val TASK_ACTION_FAILED_MESSAGE = "Action failed. Try again."
     }
 
     private object ActionKeys {

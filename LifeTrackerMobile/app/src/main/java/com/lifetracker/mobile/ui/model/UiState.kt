@@ -86,13 +86,21 @@ data class TaskUi(
         get() = true
 
     val showsNegativeAction: Boolean
-        get() = true
+        get() = type != UiTaskType.Daily
 
     val positiveActionEnabled: Boolean
-        get() = type != UiTaskType.Habit || habitPolarity != HabitPolarity.Negative
+        get() = when (type) {
+            UiTaskType.Daily -> !isCompleted
+            UiTaskType.Habit -> habitPolarity != HabitPolarity.Negative
+            else -> true
+        }
 
     val negativeActionEnabled: Boolean
-        get() = type != UiTaskType.Habit || habitPolarity != HabitPolarity.Positive
+        get() = when (type) {
+            UiTaskType.Daily -> false
+            UiTaskType.Habit -> habitPolarity != HabitPolarity.Positive
+            else -> true
+        }
 }
 
 @Immutable

@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -30,6 +31,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.lifetracker.mobile.ui.model.TaskPendingAction
 import com.lifetracker.mobile.ui.model.TaskUi
+import com.lifetracker.mobile.ui.model.UiTaskType
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -185,11 +187,34 @@ private fun TaskCardContent(
                             ),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(
-                        text = "+",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = positiveTextColor,
-                    )
+                    if (task.type == UiTaskType.Daily) {
+                        Box(
+                            modifier =
+                                Modifier
+                                    .size(18.dp)
+                                    .background(
+                                        color = if (task.isCompleted) positiveTextColor else Color.Transparent,
+                                        shape = CircleShape,
+                                    )
+                                    .border(width = 2.dp, color = positiveTextColor, shape = CircleShape),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            if (task.isCompleted) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = positiveContainerColor,
+                                    modifier = Modifier.size(12.dp),
+                                )
+                            }
+                        }
+                    } else {
+                        Text(
+                            text = "+",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = positiveTextColor,
+                        )
+                    }
                 }
             }
         }
