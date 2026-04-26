@@ -51,6 +51,7 @@ import com.lifetracker.mobile.ui.model.RepeatFrequency
 import com.lifetracker.mobile.ui.model.UiDifficulty
 import com.lifetracker.mobile.ui.viewmodel.CreateDailyUiEvent
 import com.lifetracker.mobile.ui.viewmodel.CreateDailyViewModel
+import com.lifetracker.mobile.ui.components.GlassmorphismSnackbar
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
 import kotlinx.datetime.TimeZone
@@ -118,7 +119,12 @@ fun CreateDailyScreen(
     }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = {
+            SnackbarHost(
+                hostState = snackbarHostState,
+                snackbar = { GlassmorphismSnackbar(it, hazeState) },
+            )
+        },
         topBar = {
             CreateScreenTopBar(
                 title = if (state.isEditMode) "Edit Daily" else "Create Daily",

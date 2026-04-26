@@ -24,10 +24,13 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.rememberNavController
 import com.lifetracker.mobile.core.theme.ThemeController
 import com.lifetracker.mobile.navigation.NavGraph
+import com.lifetracker.mobile.ui.components.GlassmorphismSnackbar
 import com.lifetracker.mobile.ui.model.UiEvent
 import com.lifetracker.mobile.ui.snackbar.TaskActionSnackbarBatcher
 import com.lifetracker.mobile.ui.theme.LifeTrackerMobileTheme
 import com.lifetracker.mobile.ui.viewmodel.HeroViewModel
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -58,6 +61,7 @@ class MainActivity : ComponentActivity() {
                 val navController = rememberNavController()
                 val snackbarHostState = remember { SnackbarHostState() }
                 val taskActionBatcher = remember { TaskActionSnackbarBatcher() }
+                val hazeState = rememberHazeState()
 
                 LaunchedEffect(Unit) {
                     var flushJob: Job? = null
@@ -137,7 +141,8 @@ class MainActivity : ComponentActivity() {
                     modifier =
                         Modifier
                             .fillMaxSize()
-                            .background(MaterialTheme.colorScheme.background),
+                            .background(MaterialTheme.colorScheme.background)
+                            .hazeSource(hazeState),
                 ) {
                     NavGraph(navController = navController, vm = vm, state = state)
                     SnackbarHost(
@@ -146,6 +151,7 @@ class MainActivity : ComponentActivity() {
                             Modifier
                                 .align(Alignment.BottomCenter)
                                 .padding(bottom = 104.dp),
+                        snackbar = { GlassmorphismSnackbar(it, hazeState) },
                     )
                 }
             }

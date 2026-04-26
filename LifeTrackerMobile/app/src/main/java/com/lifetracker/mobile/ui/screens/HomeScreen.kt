@@ -49,6 +49,7 @@ import com.lifetracker.mobile.ui.model.isRespawnLoading
 import com.lifetracker.mobile.ui.model.isTaskLoading
 import com.lifetracker.mobile.ui.viewmodel.HeroViewModel
 import com.lifetracker.mobile.ui.viewmodel.ShopViewModel
+import com.lifetracker.mobile.ui.components.GlassmorphismSnackbar
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.rememberHazeState
 import kotlinx.coroutines.launch
@@ -104,6 +105,7 @@ fun HomeScreen(
             SnackbarHost(
                 hostState = shopSnackbar,
                 modifier = Modifier.padding(bottom = 24.dp),
+                snackbar = { GlassmorphismSnackbar(it, hazeState) },
             )
         },
         topBar = {
