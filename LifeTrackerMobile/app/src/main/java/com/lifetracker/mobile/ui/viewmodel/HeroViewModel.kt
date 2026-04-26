@@ -171,12 +171,19 @@ class HeroViewModel(
                 showOfflineTaskActionBlockedMessage()
                 return@launchAction
             }
-            patchTask(taskId) { it.copy(pendingAction = TaskPendingAction.Complete, actionError = null) }
+            val originalIsCheckedToday = task.isCheckedToday
+            patchTask(taskId) {
+                it.copy(
+                    pendingAction = TaskPendingAction.Complete,
+                    actionError = null,
+                    isCheckedToday = if (it.type == TaskUiType.Daily) !it.isCheckedToday else it.isCheckedToday,
+                )
+            }
             val result =
                 if (task.type == TaskUiType.Daily) {
                     val heroTimeZoneId = heroDomain?.timeZoneId ?: TimeZone.currentSystemDefault().id
                     val today = Clock.System.now().toLocalDateTime(TimeZone.of(heroTimeZoneId)).date.toString()
-                    executeAction { taskUseCases.setDailyTaskState(taskId, today, !task.isCheckedToday) }
+                    executeAction { taskUseCases.setDailyTaskState(taskId, today, !originalIsCheckedToday) }
                 } else {
                     executeAction { taskUseCases.completeTask(taskId) }
                 }
@@ -204,7 +211,13 @@ class HeroViewModel(
                 for (achievement in actionResult.unlockedAchievements) {
                     _events.send(UiEvent.ShowSnackbar("Achievement unlocked: ${achievement.title} (+${achievement.goldReward} Gold)"))
                 }
-            } ?: patchTask(taskId) { current -> current.copy(pendingAction = null, actionError = TASK_ACTION_FAILED_MESSAGE) }
+            } ?: patchTask(taskId) { current ->
+                current.copy(
+                    pendingAction = null,
+                    actionError = TASK_ACTION_FAILED_MESSAGE,
+                    isCheckedToday = if (current.type == TaskUiType.Daily) originalIsCheckedToday else current.isCheckedToday,
+                )
+            }
         }
 
     fun failTask(taskId: Int) =
