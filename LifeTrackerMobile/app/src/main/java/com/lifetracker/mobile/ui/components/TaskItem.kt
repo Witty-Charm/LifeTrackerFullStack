@@ -310,16 +310,19 @@ private fun TaskCardContent(
             }
 
             task.pendingAction?.let { pendingAction ->
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = when (pendingAction) {
-                        TaskPendingAction.Complete -> "Completing…"
-                        TaskPendingAction.Fail -> "Failing…"
-                        TaskPendingAction.Delete -> "Deleting…"
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                val suppressLabel = task.type == UiTaskType.Daily && pendingAction == TaskPendingAction.Complete
+                if (!suppressLabel) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = when (pendingAction) {
+                            TaskPendingAction.Complete -> "Completing…"
+                            TaskPendingAction.Fail -> "Failing…"
+                            TaskPendingAction.Delete -> "Deleting…"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
 
             if (task.actionError != null) {
