@@ -23,6 +23,7 @@ import com.lifetracker.mobile.domain.model.CreateTaskParams
 import com.lifetracker.mobile.domain.model.DomainResult
 import com.lifetracker.mobile.domain.model.GameError
 import com.lifetracker.mobile.domain.model.GameTaskDomain
+import com.lifetracker.mobile.domain.model.HabitPolarity
 import com.lifetracker.mobile.domain.model.HealResult
 import com.lifetracker.mobile.domain.model.HeroDomain
 import com.lifetracker.mobile.domain.model.HeroStatsDomain
@@ -32,6 +33,7 @@ import com.lifetracker.mobile.domain.model.TaskCompletionResult
 import com.lifetracker.mobile.domain.model.TaskDifficulty
 import com.lifetracker.mobile.domain.model.TaskFailureResult
 import com.lifetracker.mobile.domain.model.TaskType
+import com.lifetracker.mobile.domain.model.UpdateTaskParams
 import com.lifetracker.mobile.domain.repository.HeroRepository
 import com.lifetracker.mobile.domain.repository.TaskRepository
 import com.lifetracker.mobile.domain.usecase.hero.CreateHeroUseCase
@@ -56,6 +58,7 @@ import com.lifetracker.mobile.domain.usecase.task.GetTasksUseCase
 import com.lifetracker.mobile.domain.usecase.task.RetryTaskSyncUseCase
 import com.lifetracker.mobile.domain.usecase.task.SetDailyTaskStateUseCase
 import com.lifetracker.mobile.domain.usecase.task.TaskUseCases
+import com.lifetracker.mobile.domain.usecase.task.UpdateTaskUseCase
 import com.lifetracker.mobile.ui.model.HeroScreenState
 import com.lifetracker.mobile.ui.model.TaskUi
 import com.lifetracker.mobile.ui.model.UiTaskType
@@ -169,6 +172,7 @@ private fun rememberHeroViewModel(): HeroViewModel {
                     checkOverdue = CheckOverdueTasksUseCase(taskRepository),
                     retryTaskSync = RetryTaskSyncUseCase(taskRepository),
                     deleteLocalTask = DeleteLocalTaskUseCase(taskRepository),
+                    updateTask = UpdateTaskUseCase(taskRepository),
                 ),
             workManager = WorkManager.getInstance(context),
         )
@@ -272,7 +276,7 @@ private class FakeTaskRepository : TaskRepository {
                 description = "",
                 type = TaskType.OneTime,
                 difficulty = TaskDifficulty.Easy,
-                habitPolarity = com.lifetracker.mobile.domain.model.HabitPolarity.Both,
+                habitPolarity = HabitPolarity.Both,
                 isCompleted = false,
                 isCheckedToday = false,
                 isActive = true,
@@ -300,6 +304,9 @@ private class FakeTaskRepository : TaskRepository {
     override suspend fun getTask(id: Int): DomainResult<GameTaskDomain> = DomainResult.Success(tasks.first())
 
     override suspend fun createTask(params: CreateTaskParams): DomainResult<GameTaskDomain> =
+        DomainResult.Failure(GameError.Unknown("Not used in this test"))
+
+    override suspend fun updateTask(params: UpdateTaskParams): DomainResult<GameTaskDomain> =
         DomainResult.Failure(GameError.Unknown("Not used in this test"))
 
     override suspend fun completeTask(taskId: Int): DomainResult<TaskCompletionResult> =
