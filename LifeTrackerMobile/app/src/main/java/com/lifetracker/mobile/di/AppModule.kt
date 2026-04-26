@@ -159,9 +159,11 @@ val appModule =
         }
 
         viewModel { params ->
+            val heroIdParam: Int = params.get()
+            val editingIdParam: Int = params.get()
             CreateDailyViewModel(
-                heroId = params.get(),
-                editingTaskId = params.getOrNull(),
+                heroId = heroIdParam,
+                editingTaskId = editingIdParam.takeIf { it > 0 },
                 taskUseCases = get(),
                 reminderScheduler = get(),
             )

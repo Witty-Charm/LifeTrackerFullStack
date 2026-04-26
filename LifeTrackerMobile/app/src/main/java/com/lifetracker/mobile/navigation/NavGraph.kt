@@ -184,7 +184,7 @@ fun NavGraph(
             val createDailyVm: CreateDailyViewModel =
                 koinViewModel(
                     key = "create_daily_${heroId}_${editingTaskId ?: "new"}",
-                    parameters = { parametersOf(heroId, editingTaskId) },
+                    parameters = { parametersOf(heroId, editingTaskId ?: -1) },
                 )
             val createDailyState by createDailyVm.state.collectAsStateWithLifecycle()
 
