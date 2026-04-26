@@ -12,6 +12,7 @@ import com.lifetracker.mobile.domain.model.DomainResult
 import com.lifetracker.mobile.domain.model.GameError
 import com.lifetracker.mobile.domain.model.GameTaskDomain
 import com.lifetracker.mobile.domain.model.HabitPolarity
+import com.lifetracker.mobile.domain.model.HabitResetPeriod
 import com.lifetracker.mobile.domain.model.HeroDomain
 import com.lifetracker.mobile.domain.model.HeroSnapshot
 import com.lifetracker.mobile.domain.model.TaskType
@@ -252,6 +253,7 @@ class HeroViewModel(
         difficulty: UiDifficulty,
         dueDate: kotlin.time.Instant?,
         habitPolarity: HabitPolarity = HabitPolarity.Both,
+        habitResetPeriod: HabitResetPeriod = HabitResetPeriod.Default,
     ) = launchAction(ActionKeys.TASK_CREATE) {
         val id = heroId ?: return@launchAction
         val params =
@@ -262,6 +264,7 @@ class HeroViewModel(
                 type = type.toDomain(),
                 difficulty = difficulty.toDomain(),
                 habitPolarity = habitPolarity,
+                habitResetPeriod = habitResetPeriod,
                 dueDate = dueDate,
             )
         executeAction { taskUseCases.createTask(params) }
@@ -283,6 +286,7 @@ class HeroViewModel(
         difficulty: UiDifficulty,
         dueDate: kotlin.time.Instant?,
         habitPolarity: HabitPolarity = HabitPolarity.Both,
+        habitResetPeriod: HabitResetPeriod = HabitResetPeriod.Default,
         onSuccess: (() -> Unit)? = null,
     ) = launchAction(ActionKeys.taskUpdate(taskId)) {
         val params =
@@ -293,6 +297,7 @@ class HeroViewModel(
                 description = description,
                 difficulty = difficulty.toDomain(),
                 habitPolarity = habitPolarity,
+                habitResetPeriod = habitResetPeriod,
                 dueDate = dueDate,
             )
         executeAction { taskUseCases.updateTask(params) }

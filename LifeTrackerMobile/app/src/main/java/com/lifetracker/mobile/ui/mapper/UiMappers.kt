@@ -4,6 +4,7 @@ import com.lifetracker.mobile.core.serialization.JsonDefaults
 import com.lifetracker.mobile.domain.model.ChecklistItem
 import com.lifetracker.mobile.domain.model.GameTaskDomain
 import com.lifetracker.mobile.domain.model.HabitPolarity
+import com.lifetracker.mobile.domain.model.habitResetPeriod
 import com.lifetracker.mobile.domain.model.HeroDomain
 import com.lifetracker.mobile.domain.model.HeroStatsDomain
 import com.lifetracker.mobile.domain.model.InventoryItemDomain
@@ -89,8 +90,12 @@ fun GameTaskDomain.toUi(): TaskUi =
         isCompleted = isCompleted,
         isCheckedToday = isCheckedToday,
         isOverdue = isOverdue,
-        dueDateText = dueDate?.toDisplayDate(),
-        repeatPatternText = repeatPattern?.toRepeatText(),
+        dueDateText = if (type == TaskType.Habit) null else dueDate?.toDisplayDate(),
+        repeatPatternText =
+            when (type) {
+                TaskType.Habit -> habitResetPeriod?.let { "Reset: ${it.label}" }
+                else -> repeatPattern?.toRepeatText()
+            },
         checklistItems = parseChecklist(checklistJson),
         rewardText = "+$baseXp XP +$baseGold Gold",
         penaltyText = "-$hpPenalty HP -$goldPenalty Gold",
