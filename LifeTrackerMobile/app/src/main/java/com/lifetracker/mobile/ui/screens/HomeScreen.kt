@@ -258,11 +258,12 @@ fun HomeScreen(
                             DailyObjectiveCard(hero = hero, modifier = Modifier.padding(top = 4.dp, bottom = 8.dp))
                         }
                         val filteredTasks =
-                            remember(selectedTab, state.tasks) {
+                            remember(selectedTab, state.tasks, state.pendingDeletionTaskIds) {
+                                val visible = state.tasks.filter { it.id !in state.pendingDeletionTaskIds }
                                 when (selectedTab) {
-                                    HomeTab.Habits -> state.tasks.filter { it.type == UiTaskType.Habit }
-                                    HomeTab.ToDos -> state.tasks.filter { it.type == UiTaskType.OneTime }
-                                    HomeTab.Dailies -> state.tasks.filter { it.type == UiTaskType.Daily }
+                                    HomeTab.Habits -> visible.filter { it.type == UiTaskType.Habit }
+                                    HomeTab.ToDos -> visible.filter { it.type == UiTaskType.OneTime }
+                                    HomeTab.Dailies -> visible.filter { it.type == UiTaskType.Daily }
                                     else -> emptyList()
                                 }
                             }

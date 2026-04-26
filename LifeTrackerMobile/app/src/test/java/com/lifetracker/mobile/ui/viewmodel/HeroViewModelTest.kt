@@ -281,6 +281,93 @@ class HeroViewModelTest {
         }
 
     @Test
+    fun deleteTask_softHidesTaskAndEmitsUndoPrompt_withoutCallingRepository() =
+        runTest {
+            val heroRepository = FakeHeroRepository()
+            val taskRepository =
+                FakeTaskRepository().apply {
+                    tasks = listOf(createTestTask(id = 5, type = TaskType.Habit))
+                }
+            val viewModel = buildViewModel(heroRepository, taskRepository)
+            advanceUntilIdle()
+
+            val eventsDeferred = async { viewModel.events.take(1).toList() }
+
+            viewModel.deleteTask(5)
+            advanceUntilIdle()
+
+            assertEquals(emptyList<Int>(), taskRepository.deleteTaskCalls)
+            assertEquals(setOf(5), viewModel.state.value.pendingDeletionTaskIds.toSet())
+
+            val events = eventsDeferred.await()
+            assertEquals(1, events.size)
+            val prompt = events.first() as UiEvent.UndoDeletePrompt
+            assertEquals(5, prompt.taskId)
+            assertEquals(com.lifetracker.mobile.ui.model.UiTaskType.Habit, prompt.taskType)
+        }
+
+    @Test
+    fun undoDeleteTask_restoresVisibility_andRepositoryNeverCalled() =
+        runTest {
+            val heroRepository = FakeHeroRepository()
+            val taskRepository =
+                FakeTaskRepository().apply { tasks = listOf(createTestTask(id = 7)) }
+            val viewModel = buildViewModel(heroRepository, taskRepository)
+            advanceUntilIdle()
+
+            viewModel.deleteTask(7)
+            advanceUntilIdle()
+            viewModel.undoDeleteTask(7)
+            advanceUntilIdle()
+
+            assertEquals(emptyList<Int>(), taskRepository.deleteTaskCalls)
+            assertEquals(emptySet<Int>(), viewModel.state.value.pendingDeletionTaskIds.toSet())
+            assertEquals(1, viewModel.state.value.tasks.size)
+        }
+
+    @Test
+    fun confirmDeleteTask_callsRepository_andRemovesTaskOnSuccess() =
+        runTest {
+            val heroRepository = FakeHeroRepository()
+            val taskRepository =
+                FakeTaskRepository().apply { tasks = listOf(createTestTask(id = 9)) }
+            val viewModel = buildViewModel(heroRepository, taskRepository)
+            advanceUntilIdle()
+
+            viewModel.deleteTask(9)
+            advanceUntilIdle()
+            viewModel.confirmDeleteTask(9)
+            advanceUntilIdle()
+
+            assertEquals(listOf(9), taskRepository.deleteTaskCalls)
+            assertEquals(emptySet<Int>(), viewModel.state.value.pendingDeletionTaskIds.toSet())
+            assertEquals(emptyList<Int>(), viewModel.state.value.tasks.map { it.id })
+        }
+
+    @Test
+    fun confirmDeleteTask_onFailure_restoresTaskWithActionError() =
+        runTest {
+            val heroRepository = FakeHeroRepository()
+            val taskRepository =
+                FakeTaskRepository().apply {
+                    tasks = listOf(createTestTask(id = 11))
+                    deleteTaskFailure = GameError.Unknown("Server failed")
+                }
+            val viewModel = buildViewModel(heroRepository, taskRepository)
+            advanceUntilIdle()
+
+            viewModel.deleteTask(11)
+            advanceUntilIdle()
+            viewModel.confirmDeleteTask(11)
+            advanceUntilIdle()
+
+            assertEquals(listOf(11), taskRepository.deleteTaskCalls)
+            assertEquals(emptySet<Int>(), viewModel.state.value.pendingDeletionTaskIds.toSet())
+            val task = viewModel.state.value.tasks.first { it.id == 11 }
+            assertEquals("Действие не выполнено. Попробуйте ещё раз.", task.actionError)
+        }
+
+    @Test
     fun completeTask_dailyUsesExplicitDailyStateFlowAndKeepsTaskInList() =
         runTest {
             val heroRepository = FakeHeroRepository()
@@ -394,6 +481,7 @@ class HeroViewModelTest {
         val completeTaskCalls = mutableListOf<Int>()
         val setDailyTaskStateCalls = mutableListOf<Triple<Int, String, Boolean>>()
         val deleteTaskCalls = mutableListOf<Int>()
+        var deleteTaskFailure: GameError? = null
         val completeTaskResults = mutableMapOf<Int, DomainResult<TaskCompletionResult>>()
         val setDailyTaskStateResults = mutableMapOf<Int, DomainResult<TaskCompletionResult>>()
         val completeTaskGates = mutableMapOf<Int, CompletableDeferred<Unit>>()
@@ -438,7 +526,10 @@ class HeroViewModelTest {
 
         override suspend fun deleteTask(taskId: Int): DomainResult<Unit> {
             deleteTaskCalls += taskId
-            return DomainResult.Success(Unit)
+            return deleteTaskFailure?.let { DomainResult.Failure(it) } ?: run {
+                tasks = tasks.filterNot { it.id == taskId }
+                DomainResult.Success(Unit)
+            }
         }
 
         override suspend fun retryTaskSync(taskId: Int): DomainResult<Unit> = DomainResult.Success(Unit)

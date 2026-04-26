@@ -316,20 +316,65 @@ class HeroViewModel(
             }
     }
 
-    fun deleteTask(taskId: Int) =
-        launchAction(ActionKeys.taskDelete(taskId)) {
-            val task = findTask(taskId) ?: return@launchAction
-            if (task.pendingAction != null) return@launchAction
-            if (taskId >= 0) {
-                patchTask(taskId) { it.copy(pendingAction = TaskPendingAction.Delete, actionError = null) }
+    fun deleteTask(taskId: Int) {
+        val task = findTask(taskId) ?: return
+        if (task.pendingAction != null) return
+        if (taskId in _state.value.pendingDeletionTaskIds) return
+        if (taskId < 0) {
+            // Locally-only task (not synced yet) — keep immediate delete path, no undo.
+            launchAction(ActionKeys.taskDelete(taskId)) {
+                executeAction { taskUseCases.deleteTask(taskId) }?.let { removeTask(taskId) }
             }
+            return
+        }
+        _state.update { state ->
+            state.copy(pendingDeletionTaskIds = (state.pendingDeletionTaskIds + taskId).toPersistentSet())
+        }
+        viewModelScope.launch {
+            _events.send(
+                UiEvent.UndoDeletePrompt(
+                    taskId = taskId,
+                    message = deleteUndoMessage(task.type),
+                    taskType = task.type,
+                ),
+            )
+        }
+    }
+
+    fun undoDeleteTask(taskId: Int) {
+        if (taskId !in _state.value.pendingDeletionTaskIds) return
+        _state.update { state ->
+            state.copy(pendingDeletionTaskIds = (state.pendingDeletionTaskIds - taskId).toPersistentSet())
+        }
+    }
+
+    fun confirmDeleteTask(taskId: Int) {
+        if (taskId !in _state.value.pendingDeletionTaskIds) return
+        launchAction(ActionKeys.taskDelete(taskId)) {
             executeAction { taskUseCases.deleteTask(taskId) }
                 ?.let {
-                    removeTask(taskId)
-                    if (taskId >= 0) {
-                        requestTasksRefresh()
+                    _state.update { state ->
+                        state.copy(
+                            tasks = state.tasks.filter { it.id != taskId }.toPersistentList(),
+                            pendingDeletionTaskIds = (state.pendingDeletionTaskIds - taskId).toPersistentSet(),
+                        )
                     }
-                } ?: patchTask(taskId) { current -> current.copy(pendingAction = null, actionError = TASK_ACTION_FAILED_MESSAGE) }
+                    requestTasksRefresh()
+                } ?: run {
+                    _state.update { state ->
+                        state.copy(pendingDeletionTaskIds = (state.pendingDeletionTaskIds - taskId).toPersistentSet())
+                    }
+                    patchTask(taskId) { current -> current.copy(actionError = TASK_ACTION_FAILED_MESSAGE) }
+                }
+        }
+    }
+
+    private fun deleteUndoMessage(type: UiTaskType): String =
+        when (type) {
+            UiTaskType.Habit -> "Habit deleted"
+            UiTaskType.Daily -> "Daily deleted"
+            UiTaskType.OneTime -> "To-Do deleted"
+            UiTaskType.Unknown -> "Task deleted"
         }
 
     fun retrySync(taskId: Int) =
