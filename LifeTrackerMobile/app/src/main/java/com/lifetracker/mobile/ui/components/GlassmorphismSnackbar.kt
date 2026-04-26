@@ -1,6 +1,7 @@
 package com.lifetracker.mobile.ui.components
 
 import androidx.compose.foundation.border
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -24,6 +25,8 @@ fun GlassmorphismSnackbar(
 ) {
     val shape = RoundedCornerShape(24.dp)
     val surfaceColor = MaterialTheme.colorScheme.surface
+    val isDark = isSystemInDarkTheme()
+    val borderColor = if (isDark) Color.White else Color.Black
 
     Box(
         modifier = Modifier
@@ -36,11 +39,11 @@ fun GlassmorphismSnackbar(
                 noiseFactor = 0f
             }
             .border(
-                width = 0.5.dp,
+                width = if (isDark) 0.5.dp else 1.dp,
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        Color.White.copy(alpha = 0.20f),
-                        Color.White.copy(alpha = 0.04f),
+                        borderColor.copy(alpha = 0.20f),
+                        borderColor.copy(alpha = 0.06f),
                     ),
                 ),
                 shape = shape,

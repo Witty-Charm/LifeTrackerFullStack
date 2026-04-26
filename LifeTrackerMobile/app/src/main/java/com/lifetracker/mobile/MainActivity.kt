@@ -150,7 +150,7 @@ class MainActivity : ComponentActivity() {
                         modifier =
                             Modifier
                                 .align(Alignment.BottomCenter)
-                                .padding(bottom = 104.dp),
+                                .padding(bottom = 140.dp),
                         snackbar = { GlassmorphismSnackbar(it, hazeState) },
                     )
                 }
