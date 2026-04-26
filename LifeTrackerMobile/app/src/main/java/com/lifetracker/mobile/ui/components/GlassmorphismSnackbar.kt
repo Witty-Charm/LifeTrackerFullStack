@@ -3,14 +3,18 @@ package com.lifetracker.mobile.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarData
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
@@ -33,6 +37,8 @@ fun GlassmorphismSnackbar(
         surfaceColor.copy(alpha = 0.70f)
     else
         surfaceColor.copy(alpha = 0.80f)
+
+    val actionLabel = snackbarData.visuals.actionLabel
 
     Box(
         modifier = Modifier
@@ -57,10 +63,28 @@ fun GlassmorphismSnackbar(
             )
             .padding(horizontal = 16.dp, vertical = 14.dp),
     ) {
-        Text(
-            text = snackbarData.visuals.message,
-            color = MaterialTheme.colorScheme.onSurface,
-            style = MaterialTheme.typography.bodyMedium,
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                text = snackbarData.visuals.message,
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(end = if (actionLabel != null) 8.dp else 0.dp),
+            )
+            if (actionLabel != null) {
+                TextButton(
+                    onClick = { snackbarData.performAction() },
+                ) {
+                    Text(
+                        text = actionLabel,
+                        color = MaterialTheme.colorScheme.primary,
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                }
+            }
+        }
     }
 }

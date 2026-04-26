@@ -12,8 +12,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -86,6 +88,22 @@ class MainActivity : ComponentActivity() {
                                         delay(1_500)
                                         flushTaskBatch()
                                     }
+                            }
+
+                            is UiEvent.UndoDeletePrompt -> {
+                                flushJob?.cancel()
+                                flushTaskBatch()
+                                val result =
+                                    snackbarHostState.showSnackbar(
+                                        message = event.message,
+                                        actionLabel = "UNDO",
+                                        withDismissAction = false,
+                                        duration = SnackbarDuration.Short,
+                                    )
+                                when (result) {
+                                    SnackbarResult.ActionPerformed -> vm.undoDeleteTask(event.taskId)
+                                    SnackbarResult.Dismissed -> vm.confirmDeleteTask(event.taskId)
+                                }
                             }
 
                             is UiEvent.HeroRespawned -> {

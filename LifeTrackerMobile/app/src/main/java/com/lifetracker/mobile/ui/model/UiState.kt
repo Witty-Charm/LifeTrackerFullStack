@@ -18,6 +18,7 @@ data class HeroScreenState(
     val needsHeroCreation: Boolean = false,
     val criticalError: UiError? = null,
     val actionError: UiError? = null,
+    val pendingDeletionTaskIds: ImmutableSet<Int> = persistentSetOf(),
 )
 
 val HeroScreenState.isAnyActionLoading get() = loadingActions.isNotEmpty()
@@ -183,6 +184,12 @@ sealed interface UiEvent {
 
     data class TaskAction(
         val feedback: TaskActionFeedback,
+    ) : UiEvent
+
+    data class UndoDeletePrompt(
+        val taskId: Int,
+        val message: String,
+        val taskType: UiTaskType,
     ) : UiEvent
 
     data class HeroRespawned(
