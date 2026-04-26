@@ -68,7 +68,7 @@ class HeroViewModel(
     private companion object {
         const val FOREGROUND_REFRESH_DEBOUNCE_MS = 30_000L
         const val SILENT_REFRESH_DEBOUNCE_MS = 350L
-        const val TASK_ACTION_FAILED_MESSAGE = "Действие не выполнено. Попробуйте ещё раз."
+        const val TASK_ACTION_FAILED_MESSAGE = "Action failed. Please try again."
     }
 
     private object ActionKeys {
@@ -321,7 +321,6 @@ class HeroViewModel(
         if (task.pendingAction != null) return
         if (taskId in _state.value.pendingDeletionTaskIds) return
         if (taskId < 0) {
-            // Locally-only task (not synced yet) — keep immediate delete path, no undo.
             launchAction(ActionKeys.taskDelete(taskId)) {
                 executeAction { taskUseCases.deleteTask(taskId) }?.let { removeTask(taskId) }
             }
