@@ -364,7 +364,7 @@ class HeroViewModelTest {
             assertEquals(listOf(11), taskRepository.deleteTaskCalls)
             assertEquals(emptySet<Int>(), viewModel.state.value.pendingDeletionTaskIds.toSet())
             val task = viewModel.state.value.tasks.first { it.id == 11 }
-            assertEquals("Действие не выполнено. Попробуйте ещё раз.", task.actionError)
+            assertEquals("Action failed. Please try again.", task.actionError)
         }
 
     @Test
