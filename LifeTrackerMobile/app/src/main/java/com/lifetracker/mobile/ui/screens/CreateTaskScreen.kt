@@ -12,7 +12,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -32,6 +31,7 @@ import com.lifetracker.mobile.domain.model.TaskType
 import com.lifetracker.mobile.ui.components.CreateScreenFloatingFooter
 import com.lifetracker.mobile.ui.components.CreateScreenTopBar
 import com.lifetracker.mobile.ui.components.GameDatePickerDialog
+import com.lifetracker.mobile.ui.components.GameTextField
 import com.lifetracker.mobile.ui.mapper.toMessage
 import com.lifetracker.mobile.ui.mapper.toUi
 import com.lifetracker.mobile.ui.model.HeroScreenState
@@ -165,7 +165,7 @@ fun CreateTaskScreen(
                         .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                OutlinedTextField(
+                GameTextField(
                     value = title,
                     onValueChange = { title = it },
                     label = { Text(taskNameLabel(selectedType, lockTypeSelection)) },
@@ -173,7 +173,7 @@ fun CreateTaskScreen(
                     modifier = Modifier.fillMaxWidth(),
                 )
 
-                OutlinedTextField(
+                GameTextField(
                     value = description,
                     onValueChange = { description = it },
                     label = { Text("Description") },
