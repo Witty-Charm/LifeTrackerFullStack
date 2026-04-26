@@ -99,7 +99,14 @@ class MainActivity : ComponentActivity() {
                             is UiEvent.TaskCreated -> {
                                 navController.previousBackStackEntry
                                     ?.savedStateHandle
-                                    ?.set("task_created", event.type)
+                                    ?.set("task_changed", true)
+                                navController.popBackStack()
+                            }
+
+                            is UiEvent.TaskUpdated -> {
+                                navController.previousBackStackEntry
+                                    ?.savedStateHandle
+                                    ?.set("task_changed", true)
                                 navController.popBackStack()
                             }
 

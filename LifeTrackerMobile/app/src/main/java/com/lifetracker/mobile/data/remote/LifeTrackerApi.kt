@@ -6,6 +6,7 @@ import com.lifetracker.mobile.data.remote.dto.CompleteTaskResponse
 import com.lifetracker.mobile.data.remote.dto.DailyTaskStateResponse
 import com.lifetracker.mobile.data.remote.dto.CreateHeroRequest
 import com.lifetracker.mobile.data.remote.dto.CreateTaskRequest
+import com.lifetracker.mobile.data.remote.dto.UpdateTaskRequest
 import com.lifetracker.mobile.data.remote.dto.FailTaskResponse
 import com.lifetracker.mobile.data.remote.dto.HealResponse
 import com.lifetracker.mobile.data.remote.dto.HeroAchievementsResponseDto
@@ -82,6 +83,12 @@ interface LifeTrackerApi {
     @POST("api/Task")
     suspend fun createTask(
         @Body request: CreateTaskRequest,
+    ): Response<TaskDto>
+
+    @PUT("api/Task/{id}")
+    suspend fun updateTask(
+        @Path("id") id: Int,
+        @Body request: UpdateTaskRequest,
     ): Response<TaskDto>
 
     @PUT("api/Task/{id}/complete")

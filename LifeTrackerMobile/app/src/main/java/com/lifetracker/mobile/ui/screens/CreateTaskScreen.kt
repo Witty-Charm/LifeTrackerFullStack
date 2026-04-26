@@ -28,10 +28,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.lifetracker.mobile.domain.model.HabitPolarity
+import com.lifetracker.mobile.domain.model.TaskType
 import com.lifetracker.mobile.ui.components.CreateScreenFloatingFooter
 import com.lifetracker.mobile.ui.components.CreateScreenTopBar
 import com.lifetracker.mobile.ui.components.GameDatePickerDialog
 import com.lifetracker.mobile.ui.mapper.toMessage
+import com.lifetracker.mobile.ui.mapper.toUi
 import com.lifetracker.mobile.ui.model.HeroScreenState
 import com.lifetracker.mobile.ui.model.UiDifficulty
 import com.lifetracker.mobile.ui.model.UiTaskType
@@ -58,7 +60,9 @@ fun CreateTaskScreen(
     navController: NavController,
     initialType: UiTaskType = UiTaskType.OneTime,
     lockTypeSelection: Boolean = false,
+    editingTaskId: Int? = null,
 ) {
+    val isEditMode = editingTaskId != null
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var selectedType by remember(initialType) {
@@ -68,17 +72,49 @@ fun CreateTaskScreen(
     var selectedHabitPolarity by remember(selectedType) { mutableStateOf(defaultHabitPolarity(selectedType)) }
     var dueDate by remember { mutableStateOf<Instant?>(null) }
     var showDatePicker by remember { mutableStateOf(false) }
+    var hasLoadedForEdit by remember(editingTaskId) { mutableStateOf(false) }
     val context = LocalContext.current
     val hazeState = remember { HazeState() }
     val screenTitle =
         when {
+            isEditMode && selectedType == UiTaskType.Habit -> "Edit habit"
+            isEditMode -> "Edit to do"
             !lockTypeSelection -> "Create task"
             selectedType == UiTaskType.Habit -> "Create habit"
             else -> "Create to do"
         }
+    val actionLabel = if (isEditMode) "Save changes" else "Save"
 
     LaunchedEffect(Unit) {
         vm.clearError()
+    }
+
+    LaunchedEffect(editingTaskId) {
+        if (editingTaskId == null) return@LaunchedEffect
+        // Pre-fill from in-memory list (avoids a network round-trip when possible);
+        // then fetch the canonical version through the repo so cold starts /
+        // deep links and partially-mapped TaskUi (no dueDate Instant) still work.
+        val inMemory = state.tasks.firstOrNull { it.id == editingTaskId }
+        inMemory?.let {
+            selectedType = it.type
+            title = it.title
+            description = it.description
+            selectedHabitPolarity = it.habitPolarity
+        }
+        val task = vm.loadTaskForEdit(editingTaskId)
+        if (task == null && inMemory == null) {
+            navController.popBackStack()
+            return@LaunchedEffect
+        }
+        task?.let {
+            selectedType = it.type.toUi()
+            title = it.title
+            description = it.description
+            selectedDifficulty = it.difficulty.toUi()
+            selectedHabitPolarity = it.habitPolarity
+            dueDate = it.dueDate
+        }
+        hasLoadedForEdit = true
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -91,17 +127,32 @@ fun CreateTaskScreen(
             },
             bottomBar = {
                 CreateScreenFloatingFooter(
-                    actionLabel = "Save",
-                    enabled = title.isNotBlank() && !state.isAnyActionLoading,
+                    actionLabel = actionLabel,
+                    enabled =
+                        title.isNotBlank() &&
+                            !state.isAnyActionLoading &&
+                            (!isEditMode || hasLoadedForEdit),
                     onClick = {
-                        vm.createTask(
-                            title = title,
-                            description = description.ifBlank { null },
-                            type = selectedType,
-                            difficulty = selectedDifficulty,
-                            dueDate = dueDate,
-                            habitPolarity = selectedHabitPolarity,
-                        )
+                        if (editingTaskId != null) {
+                            vm.updateTask(
+                                taskId = editingTaskId,
+                                title = title,
+                                description = description.ifBlank { null },
+                                type = selectedType,
+                                difficulty = selectedDifficulty,
+                                dueDate = dueDate,
+                                habitPolarity = selectedHabitPolarity,
+                            )
+                        } else {
+                            vm.createTask(
+                                title = title,
+                                description = description.ifBlank { null },
+                                type = selectedType,
+                                difficulty = selectedDifficulty,
+                                dueDate = dueDate,
+                                habitPolarity = selectedHabitPolarity,
+                            )
+                        }
                     },
                     isLoading = state.isAnyActionLoading,
                 )

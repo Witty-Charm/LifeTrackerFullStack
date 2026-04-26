@@ -153,6 +153,64 @@ public class TaskController : DeviceScopedControllerBase
         return CreatedAtAction(nameof(GetTask), new { id = task.Id }, MapToDto(createdTask));
     }
 
+    [HttpPut("{id}")]
+    public async Task<ActionResult<TaskDto>> UpdateTask(int id, [FromBody] UpdateTaskRequest request)
+    {
+        _ = RequireCurrentDevice(out var errorResult);
+        if (errorResult is not null)
+            return errorResult;
+
+        if (string.IsNullOrWhiteSpace(request.Title))
+            return BadRequest("Title is required");
+
+        var task = await LoadOwnedTaskAsync(id);
+        if (task == null)
+            return NotFound();
+
+        // Type is intentionally not editable: changing Type would invalidate
+        // streaks, daily completions and game-engine reward formulas.
+        task.Title = request.Title.Trim();
+        task.Description = request.Description ?? string.Empty;
+        task.Difficulty = request.Difficulty;
+
+        if (task.Type == TaskType.Habit)
+        {
+            task.Polarity = request.Polarity ?? task.Polarity;
+        }
+        else
+        {
+            // Polarity is meaningful only for habits; for other types we keep the
+            // canonical default and ignore whatever the client sent.
+            task.Polarity = HabitPolarity.Both;
+        }
+
+        // For Daily tasks, DueDate is reused as the "start date" of the schedule.
+        // For OneTime tasks it is the deadline. For Habits it is unused.
+        task.DueDate = request.DueDate;
+
+        if (task.Type == TaskType.Daily)
+        {
+            task.RepeatPattern = string.IsNullOrWhiteSpace(request.RepeatPattern)
+                ? task.RepeatPattern
+                : request.RepeatPattern;
+            task.ChecklistJson = request.ChecklistJson;
+            task.RemindersJson = request.RemindersJson;
+        }
+        else
+        {
+            // Daily-only fields must not leak onto other task types.
+            task.RepeatPattern = null;
+            task.ChecklistJson = null;
+            task.RemindersJson = null;
+        }
+
+        task.UpdatedAt = DateTimeOffset.UtcNow;
+        await _context.SaveChangesAsync();
+
+        var updated = await LoadOwnedTaskAsync(task.Id) ?? task;
+        return Ok(MapToDto(updated));
+    }
+
     [HttpPut("{id}/complete")]
     public async Task<ActionResult<CompleteTaskResponse>> CompleteTask(int id)
     {
@@ -893,6 +951,18 @@ public class CreateTaskRequest
     public DateTimeOffset? DueDate { get; set; }
     public string? RepeatPattern { get; set; }
     public int InitialStreak { get; set; } = 0;
+    public string? ChecklistJson { get; set; }
+    public string? RemindersJson { get; set; }
+}
+
+public class UpdateTaskRequest
+{
+    public string Title { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public TaskDifficulty Difficulty { get; set; } = TaskDifficulty.Easy;
+    public HabitPolarity? Polarity { get; set; }
+    public DateTimeOffset? DueDate { get; set; }
+    public string? RepeatPattern { get; set; }
     public string? ChecklistJson { get; set; }
     public string? RemindersJson { get; set; }
 }

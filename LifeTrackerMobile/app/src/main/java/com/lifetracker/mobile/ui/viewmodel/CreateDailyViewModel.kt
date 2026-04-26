@@ -10,13 +10,17 @@ import com.lifetracker.mobile.domain.model.DomainResult
 import com.lifetracker.mobile.domain.model.GameError
 import com.lifetracker.mobile.domain.model.ReminderItem
 import com.lifetracker.mobile.domain.model.TaskType
+import com.lifetracker.mobile.domain.model.UpdateTaskParams
+import com.lifetracker.mobile.domain.model.dataOrNull
 import com.lifetracker.mobile.domain.model.fold
 import com.lifetracker.mobile.domain.usecase.task.TaskUseCases
 import com.lifetracker.mobile.ui.mapper.toDomain
+import com.lifetracker.mobile.ui.mapper.toUi
 import com.lifetracker.mobile.ui.model.CreateDailyFormState
 import com.lifetracker.mobile.ui.model.RepeatFrequency
 import com.lifetracker.mobile.ui.model.UiDifficulty
 import com.lifetracker.mobile.ui.mapper.toUiError
+import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,15 +39,81 @@ sealed interface CreateDailyUiEvent {
 
 class CreateDailyViewModel(
     private val heroId: Int,
+    private val editingTaskId: Int? = null,
     private val taskUseCases: TaskUseCases,
     private val reminderScheduler: ReminderScheduler,
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(CreateDailyFormState())
+    private val _state =
+        MutableStateFlow(
+            CreateDailyFormState(
+                editingTaskId = editingTaskId,
+                isLoading = editingTaskId != null,
+            ),
+        )
     val state: StateFlow<CreateDailyFormState> = _state.asStateFlow()
 
     private val _events = Channel<CreateDailyUiEvent>(Channel.BUFFERED)
     val events = _events.receiveAsFlow()
+
+    init {
+        if (editingTaskId != null) {
+            viewModelScope.launch { loadTask(editingTaskId) }
+        }
+    }
+
+    private suspend fun loadTask(id: Int) {
+        val task = safeCall { taskUseCases.getTask(id) }.dataOrNull()
+        if (task == null) {
+            _state.update {
+                it.copy(
+                    isLoading = false,
+                    actionError = GameError.Unknown("Task not found").toUiError(),
+                )
+            }
+            return
+        }
+
+        val (frequency, interval) = parseRepeatPattern(task.repeatPattern)
+        val checklist = decodeChecklist(task.checklistJson)
+        val reminders = decodeReminders(task.remindersJson)
+
+        _state.update {
+            it.copy(
+                title = task.title,
+                description = task.description,
+                difficulty = task.difficulty.toUi(),
+                startDate = task.dueDate ?: it.startDate,
+                frequency = frequency,
+                interval = interval,
+                checklistItems = checklist,
+                reminders = reminders,
+                isLoading = false,
+            )
+        }
+    }
+
+    private fun parseRepeatPattern(pattern: String?): Pair<RepeatFrequency, Int> {
+        if (pattern.isNullOrBlank()) return RepeatFrequency.DAILY to 1
+        val parts = pattern.split(":")
+        val frequency =
+            runCatching { RepeatFrequency.valueOf(parts[0]) }
+                .getOrDefault(RepeatFrequency.DAILY)
+        val interval = parts.getOrNull(1)?.toIntOrNull()?.coerceAtLeast(1) ?: 1
+        return frequency to interval
+    }
+
+    private fun decodeChecklist(json: String?): List<ChecklistItem> =
+        if (json.isNullOrBlank()) emptyList()
+        else runCatching {
+            JsonDefaults.decodeFromString(ListSerializer(ChecklistItem.serializer()), json)
+        }.getOrDefault(emptyList())
+
+    private fun decodeReminders(json: String?): List<ReminderItem> =
+        if (json.isNullOrBlank()) emptyList()
+        else runCatching {
+            JsonDefaults.decodeFromString(ListSerializer(ReminderItem.serializer()), json)
+        }.getOrDefault(emptyList())
 
     fun onTitleChange(value: String) =
         _state.update { it.copy(title = value) }
@@ -124,35 +194,57 @@ class CreateDailyViewModel(
             .takeIf { it.isNotEmpty() }
             ?.let { JsonDefaults.encodeToString(it) }
 
-        val params = CreateTaskParams(
-            heroId = heroId,
-            title = s.title,
-            description = s.description.ifBlank { null },
-            type = TaskType.Daily,
-            difficulty = s.difficulty.toDomain(),
-            dueDate = s.startDate,
-            repeatPattern = repeatPattern,
-            initialStreak = s.initialStreak,
-            checklistJson = checklistJson,
-            remindersJson = remindersJson,
-        )
+        val result =
+            if (editingTaskId != null) {
+                val params = UpdateTaskParams(
+                    taskId = editingTaskId,
+                    type = TaskType.Daily,
+                    title = s.title,
+                    description = s.description.ifBlank { null },
+                    difficulty = s.difficulty.toDomain(),
+                    // For Daily tasks dueDate is reused as the schedule's start date.
+                    dueDate = s.startDate,
+                    repeatPattern = repeatPattern,
+                    checklistJson = checklistJson,
+                    remindersJson = remindersJson,
+                )
+                safeCall { taskUseCases.updateTask(params) }
+            } else {
+                val params = CreateTaskParams(
+                    heroId = heroId,
+                    title = s.title,
+                    description = s.description.ifBlank { null },
+                    type = TaskType.Daily,
+                    difficulty = s.difficulty.toDomain(),
+                    dueDate = s.startDate,
+                    repeatPattern = repeatPattern,
+                    initialStreak = s.initialStreak,
+                    checklistJson = checklistJson,
+                    remindersJson = remindersJson,
+                )
+                safeCall { taskUseCases.createTask(params) }
+            }
 
-        safeCall { taskUseCases.createTask(params) }
-            .fold(
-                onSuccess = { task ->
-                    if (!remindersJson.isNullOrBlank()) {
-                        runCatching {
-                            reminderScheduler.schedule(task.id, task.title, remindersJson, repeatPattern)
-                        }.onFailure { error ->
-                            Timber.e(error, "Failed to schedule reminders for daily task %s", task.id)
-                        }
+        result.fold(
+            onSuccess = { task ->
+                // For both create and edit: cancel any previously scheduled reminders
+                // (so removing one in the form actually removes its notification),
+                // then re-schedule any that remain.
+                runCatching { reminderScheduler.cancelAll(task.id) }
+                    .onFailure { Timber.e(it, "Failed to cancel reminders for daily task %s", task.id) }
+                if (!remindersJson.isNullOrBlank()) {
+                    runCatching {
+                        reminderScheduler.schedule(task.id, task.title, remindersJson, repeatPattern)
+                    }.onFailure { error ->
+                        Timber.e(error, "Failed to schedule reminders for daily task %s", task.id)
                     }
-                    _events.send(CreateDailyUiEvent.Success(TaskType.Daily))
-                },
-                onFailure = { error ->
-                    _state.update { it.copy(actionError = error.toUiError()) }
-                },
-            )
+                }
+                _events.send(CreateDailyUiEvent.Success(TaskType.Daily))
+            },
+            onFailure = { error ->
+                _state.update { it.copy(actionError = error.toUiError()) }
+            },
+        )
     }
 
     private suspend fun <T> safeCall(block: suspend () -> DomainResult<T>): DomainResult<T> =

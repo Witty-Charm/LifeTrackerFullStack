@@ -11,6 +11,7 @@ import com.lifetracker.mobile.data.mapper.toEntity
 import com.lifetracker.mobile.data.remote.LifeTrackerApi
 import com.lifetracker.mobile.data.remote.dto.CreateTaskRequest
 import com.lifetracker.mobile.data.remote.dto.SetDailyTaskStateRequest
+import com.lifetracker.mobile.data.remote.dto.UpdateTaskRequest
 import com.lifetracker.mobile.domain.model.CreateTaskParams
 import com.lifetracker.mobile.domain.model.DomainResult
 import com.lifetracker.mobile.domain.model.GameTaskDomain
@@ -19,6 +20,7 @@ import com.lifetracker.mobile.domain.model.OverdueResult
 import com.lifetracker.mobile.domain.model.TaskCompletionResult
 import com.lifetracker.mobile.domain.model.TaskFailureResult
 import com.lifetracker.mobile.domain.model.TaskType
+import com.lifetracker.mobile.domain.model.UpdateTaskParams
 import com.lifetracker.mobile.domain.repository.TaskRepository
 import timber.log.Timber
 
@@ -134,6 +136,34 @@ class TaskRepositoryImpl(
                 DomainResult.Success(savedEntity.toDomain())
             }
         }
+    }
+
+    override suspend fun updateTask(params: UpdateTaskParams): DomainResult<GameTaskDomain> {
+        // Online-only on this iteration: SyncWorker queue handles only creates today.
+        val remote =
+            caller
+                .safeApiCall {
+                    api.updateTask(
+                        params.taskId,
+                        UpdateTaskRequest(
+                            title = params.title,
+                            description = params.description,
+                            difficulty = params.difficulty.toDto(),
+                            habitPolarity = params.habitPolarity.toRequestPolarity(params.type),
+                            dueDate = params.dueDate,
+                            repeatPattern = params.repeatPattern,
+                            checklistJson = params.checklistJson,
+                            remindersJson = params.remindersJson,
+                        ),
+                    )
+                }.map { it.toDomain() }
+                .toDomainResult()
+
+        if (remote is DomainResult.Success) {
+            taskDao.upsert(remote.data.toEntity(pendingSync = false))
+        }
+
+        return remote
     }
 
     override suspend fun completeTask(taskId: Int): DomainResult<TaskCompletionResult> {

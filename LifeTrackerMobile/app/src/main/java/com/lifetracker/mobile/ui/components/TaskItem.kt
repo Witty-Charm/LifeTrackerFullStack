@@ -47,12 +47,17 @@ fun TaskItem(
     onDeleteClick: () -> Unit,
     onRetrySyncClick: () -> Unit,
     onDeleteFailedTaskClick: () -> Unit,
+    onEditClick: () -> Unit = {},
 ) {
     val isCompleted = if (task.type == UiTaskType.Daily) task.isCheckedToday else task.isCompleted
     val hasPendingAction = task.pendingAction != null
     val isLocalOnly = task.id < 0 || task.isPendingSync || task.syncError != null
     val completeFailEnabled = !hasPendingAction && !isLocalOnly && !isActionLoading
     val deleteEnabled = !hasPendingAction && !isActionLoading
+    // Editing piggy-backs on the regular online flow: only allow it for tasks that
+    // exist on the server and aren't mid-action, otherwise the form would race
+    // with sync.
+    val editEnabled = !hasPendingAction && !isLocalOnly && !isActionLoading
     val cardAlpha = taskCardAlpha(task)
 
     if (task.isPendingSync) {
@@ -64,6 +69,8 @@ fun TaskItem(
             onFailClick = onFailClick,
             onRetrySyncClick = onRetrySyncClick,
             onDeleteFailedTaskClick = onDeleteFailedTaskClick,
+            onEditClick = onEditClick,
+            editEnabled = false,
             modifier = modifier,
         )
         return
@@ -93,6 +100,8 @@ fun TaskItem(
             onFailClick = onFailClick,
             onRetrySyncClick = onRetrySyncClick,
             onDeleteFailedTaskClick = onDeleteFailedTaskClick,
+            onEditClick = onEditClick,
+            editEnabled = editEnabled,
         )
     }
 }
@@ -125,6 +134,8 @@ private fun TaskCardContent(
     onFailClick: () -> Unit,
     onRetrySyncClick: () -> Unit,
     onDeleteFailedTaskClick: () -> Unit,
+    onEditClick: () -> Unit,
+    editEnabled: Boolean,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -248,6 +259,7 @@ private fun TaskCardContent(
             modifier =
                 Modifier
                     .weight(1f)
+                    .clickable(enabled = editEnabled, onClick = onEditClick)
                     .padding(horizontal = 12.dp, vertical = 10.dp),
         ) {
             Text(
