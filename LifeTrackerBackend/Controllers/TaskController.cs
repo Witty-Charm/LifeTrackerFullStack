@@ -190,6 +190,14 @@ public class TaskController : DeviceScopedControllerBase
             task.ChecklistJson = request.ChecklistJson;
             task.RemindersJson = request.RemindersJson;
         }
+        else if (task.Type == TaskType.Habit)
+        {
+            task.RepeatPattern = string.IsNullOrWhiteSpace(request.RepeatPattern)
+                ? task.RepeatPattern
+                : request.RepeatPattern;
+            task.ChecklistJson = null;
+            task.RemindersJson = null;
+        }
         else
         {
             task.RepeatPattern = null;
@@ -259,6 +267,8 @@ public class TaskController : DeviceScopedControllerBase
 
         var effectiveTimeZone = _heroTimeService.ResolveEffectiveTimeZone(hero, utcNow);
         var todayLocalDate = _heroTimeService.GetLocalDate(utcNow, effectiveTimeZone);
+
+        ResetHabitCounterIfNeeded(task, todayLocalDate, effectiveTimeZone, _heroTimeService.GetLocalDate);
 
         economy.CheckDailyReset(todayLocalDate);
         if (!economy.CanCompleteTask(todayLocalDate))
@@ -580,6 +590,8 @@ public class TaskController : DeviceScopedControllerBase
         var effectiveTimeZone = _heroTimeService.ResolveEffectiveTimeZone(hero, utcNow);
         var todayLocalDate = _heroTimeService.GetLocalDate(utcNow, effectiveTimeZone);
 
+        ResetHabitCounterIfNeeded(task, todayLocalDate, effectiveTimeZone, _heroTimeService.GetLocalDate);
+
         var failureResult = _gameEngine.ApplyTaskFailure(task, hero, streak, economy, todayLocalDate);
 
         if (!await SaveChangesWithSingleRetryAsync())
@@ -830,6 +842,58 @@ public class TaskController : DeviceScopedControllerBase
                 }
                 : null,
         };
+    }
+
+    private const string HabitResetPatternPrefix = "RESET:";
+
+    // Habitica-style reset counter. If the habit's RepeatPattern is "RESET:DAILY|WEEKLY|MONTHLY"
+    // and the current period bucket (in hero's local time zone) differs from the bucket of the last
+    // counter activity, reset CompletionCount and FailCount to 0 before the next increment.
+    internal static void ResetHabitCounterIfNeeded(
+        GameTask task,
+        DateOnly todayLocalDate,
+        string effectiveTimeZoneId,
+        Func<DateTimeOffset, string, DateOnly> getLocalDate)
+    {
+        if (task.Type != TaskType.Habit)
+            return;
+
+        if (string.IsNullOrWhiteSpace(task.RepeatPattern))
+            return;
+
+        if (!task.RepeatPattern.StartsWith(HabitResetPatternPrefix, StringComparison.Ordinal))
+            return;
+
+        var periodToken = task.RepeatPattern.Substring(HabitResetPatternPrefix.Length).Trim();
+        if (periodToken.Length == 0)
+            return;
+
+        // Anchor for the "previous" period bucket: last counter activity (complete or fail).
+        // Fall back to UpdatedAt (CreatedAt for new tasks) when no activity has been recorded yet.
+        var previousActivityUtc = task.LastCompletedAt ?? task.UpdatedAt;
+        var previousLocalDate = getLocalDate(previousActivityUtc, effectiveTimeZoneId);
+
+        bool bucketChanged = periodToken switch
+        {
+            "DAILY" => previousLocalDate != todayLocalDate,
+            "WEEKLY" => GetIsoWeekBucket(previousLocalDate) != GetIsoWeekBucket(todayLocalDate),
+            "MONTHLY" => (previousLocalDate.Year, previousLocalDate.Month) != (todayLocalDate.Year, todayLocalDate.Month),
+            _ => false,
+        };
+
+        if (bucketChanged)
+        {
+            task.CompletionCount = 0;
+            task.FailCount = 0;
+        }
+    }
+
+    private static (int IsoYear, int IsoWeek) GetIsoWeekBucket(DateOnly localDate)
+    {
+        var dt = localDate.ToDateTime(TimeOnly.MinValue);
+        var isoWeek = System.Globalization.ISOWeek.GetWeekOfYear(dt);
+        var isoYear = System.Globalization.ISOWeek.GetYear(dt);
+        return (isoYear, isoWeek);
     }
 
     private async Task<bool> SaveChangesWithSingleRetryAsync()

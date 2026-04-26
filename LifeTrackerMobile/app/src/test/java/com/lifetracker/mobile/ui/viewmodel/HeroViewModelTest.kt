@@ -3,6 +3,7 @@ package com.lifetracker.mobile.ui.viewmodel
 import androidx.work.WorkManager
 import com.lifetracker.mobile.domain.model.AchievementDomain
 import com.lifetracker.mobile.domain.model.CreateTaskParams
+import com.lifetracker.mobile.domain.model.UpdateTaskParams
 import com.lifetracker.mobile.domain.model.DomainResult
 import com.lifetracker.mobile.domain.model.GameError
 import com.lifetracker.mobile.domain.model.GameTaskDomain
@@ -32,6 +33,7 @@ import com.lifetracker.mobile.domain.usecase.hero.UpdateHeroTimeZoneUseCase
 import com.lifetracker.mobile.domain.usecase.task.CheckOverdueTasksUseCase
 import com.lifetracker.mobile.domain.usecase.task.CompleteTaskUseCase
 import com.lifetracker.mobile.domain.usecase.task.CreateTaskUseCase
+import com.lifetracker.mobile.domain.usecase.task.UpdateTaskUseCase
 import com.lifetracker.mobile.domain.usecase.task.DeleteLocalTaskUseCase
 import com.lifetracker.mobile.domain.usecase.task.DeleteTaskUseCase
 import com.lifetracker.mobile.domain.usecase.task.FailTaskUseCase
@@ -326,6 +328,7 @@ class HeroViewModelTest {
                     getTasks = GetTasksUseCase(taskRepository),
                     getTask = GetTaskUseCase(taskRepository),
                     createTask = CreateTaskUseCase(taskRepository),
+                    updateTask = UpdateTaskUseCase(taskRepository),
                     completeTask = CompleteTaskUseCase(taskRepository),
                     setDailyTaskState = SetDailyTaskStateUseCase(taskRepository),
                     failTask = FailTaskUseCase(taskRepository),
@@ -406,6 +409,9 @@ class HeroViewModelTest {
             lastCreateTaskParams = params
             return DomainResult.Success(createTestTask(type = params.type, habitPolarity = params.habitPolarity))
         }
+
+        override suspend fun updateTask(params: UpdateTaskParams): DomainResult<GameTaskDomain> =
+            DomainResult.Success(createTestTask(type = params.type, habitPolarity = params.habitPolarity))
 
         override suspend fun completeTask(taskId: Int): DomainResult<TaskCompletionResult> {
             completeTaskCalls += taskId

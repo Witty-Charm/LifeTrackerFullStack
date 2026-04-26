@@ -27,7 +27,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.lifetracker.mobile.domain.model.HabitPolarity
+import com.lifetracker.mobile.domain.model.HabitResetPeriod
 import com.lifetracker.mobile.domain.model.TaskType
+import com.lifetracker.mobile.domain.model.habitResetPeriod
 import com.lifetracker.mobile.ui.components.CreateScreenFloatingFooter
 import com.lifetracker.mobile.ui.components.CreateScreenTopBar
 import com.lifetracker.mobile.ui.components.GameDatePickerDialog
@@ -70,6 +72,7 @@ fun CreateTaskScreen(
     }
     var selectedDifficulty by remember { mutableStateOf(UiDifficulty.Easy) }
     var selectedHabitPolarity by remember(selectedType) { mutableStateOf(defaultHabitPolarity(selectedType)) }
+    var selectedHabitResetPeriod by remember(selectedType) { mutableStateOf(HabitResetPeriod.Default) }
     var dueDate by remember { mutableStateOf<Instant?>(null) }
     var showDatePicker by remember { mutableStateOf(false) }
     var hasLoadedForEdit by remember(editingTaskId) { mutableStateOf(false) }
@@ -109,7 +112,8 @@ fun CreateTaskScreen(
             description = it.description
             selectedDifficulty = it.difficulty.toUi()
             selectedHabitPolarity = it.habitPolarity
-            dueDate = it.dueDate
+            selectedHabitResetPeriod = it.habitResetPeriod ?: HabitResetPeriod.Default
+            dueDate = if (it.type == TaskType.Habit) null else it.dueDate
         }
         hasLoadedForEdit = true
     }
@@ -130,6 +134,7 @@ fun CreateTaskScreen(
                             !state.isAnyActionLoading &&
                             (!isEditMode || hasLoadedForEdit),
                     onClick = {
+                        val effectiveDueDate = if (selectedType == UiTaskType.Habit) null else dueDate
                         if (editingTaskId != null) {
                             vm.updateTask(
                                 taskId = editingTaskId,
@@ -137,8 +142,9 @@ fun CreateTaskScreen(
                                 description = description.ifBlank { null },
                                 type = selectedType,
                                 difficulty = selectedDifficulty,
-                                dueDate = dueDate,
+                                dueDate = effectiveDueDate,
                                 habitPolarity = selectedHabitPolarity,
+                                habitResetPeriod = selectedHabitResetPeriod,
                             )
                         } else {
                             vm.createTask(
@@ -146,8 +152,9 @@ fun CreateTaskScreen(
                                 description = description.ifBlank { null },
                                 type = selectedType,
                                 difficulty = selectedDifficulty,
-                                dueDate = dueDate,
+                                dueDate = effectiveDueDate,
                                 habitPolarity = selectedHabitPolarity,
+                                habitResetPeriod = selectedHabitResetPeriod,
                             )
                         }
                     },
@@ -243,21 +250,34 @@ fun CreateTaskScreen(
                     }
                 }
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    TextButton(onClick = { showDatePicker = true }) {
-                        Text("Set date")
+                if (selectedType == UiTaskType.Habit) {
+                    Text(text = "Reset counter", style = MaterialTheme.typography.titleSmall)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        HabitResetPeriod.entries.forEach { period ->
+                            FilterChip(
+                                selected = selectedHabitResetPeriod == period,
+                                onClick = { selectedHabitResetPeriod = period },
+                                label = { Text(period.label) },
+                            )
+                        }
                     }
+                } else {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        TextButton(onClick = { showDatePicker = true }) {
+                            Text("Set date")
+                        }
 
-                    if (dueDate != null) {
-                        Text(
-                            text = dueDate.toDisplayDate(),
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                        TextButton(onClick = { dueDate = null }) {
-                            Text("Clear")
+                        if (dueDate != null) {
+                            Text(
+                                text = dueDate.toDisplayDate(),
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                            TextButton(onClick = { dueDate = null }) {
+                                Text("Clear")
+                            }
                         }
                     }
                 }

@@ -31,6 +31,9 @@ data class GameTaskDomain(
     val syncError: String? = null,
 )
 
+val GameTaskDomain.habitResetPeriod: HabitResetPeriod?
+    get() = if (type == TaskType.Habit) HabitResetPeriod.decode(repeatPattern) else null
+
 data class StreakDomain(
     val currentDays: Int,
     val bonusXpPercent: Int,

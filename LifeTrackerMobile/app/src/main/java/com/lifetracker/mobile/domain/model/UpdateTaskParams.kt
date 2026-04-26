@@ -9,6 +9,7 @@ data class UpdateTaskParams(
     val description: String? = null,
     val difficulty: TaskDifficulty = TaskDifficulty.Easy,
     val habitPolarity: HabitPolarity = HabitPolarity.Both,
+    val habitResetPeriod: HabitResetPeriod = HabitResetPeriod.Default,
     val dueDate: Instant? = null,
     val repeatPattern: String? = null,
     val checklistJson: String? = null,

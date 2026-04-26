@@ -16,6 +16,7 @@ import com.lifetracker.mobile.domain.model.CreateTaskParams
 import com.lifetracker.mobile.domain.model.DomainResult
 import com.lifetracker.mobile.domain.model.GameTaskDomain
 import com.lifetracker.mobile.domain.model.HabitPolarity
+import com.lifetracker.mobile.domain.model.HabitResetPeriod
 import com.lifetracker.mobile.domain.model.OverdueResult
 import com.lifetracker.mobile.domain.model.TaskCompletionResult
 import com.lifetracker.mobile.domain.model.TaskFailureResult
@@ -77,6 +78,8 @@ class TaskRepositoryImpl(
     }
 
     override suspend fun createTask(params: CreateTaskParams): DomainResult<GameTaskDomain> {
+        val effectiveRepeatPattern = resolveRepeatPattern(params.type, params.habitResetPeriod, params.repeatPattern)
+        val effectiveDueDate = if (params.type == TaskType.Habit) null else params.dueDate
         val remote =
             caller
                 .safeApiCall {
@@ -88,8 +91,8 @@ class TaskRepositoryImpl(
                             type = params.type.toDto(),
                             difficulty = params.difficulty.toDto(),
                             habitPolarity = params.habitPolarity.toRequestPolarity(params.type),
-                            dueDate = params.dueDate,
-                            repeatPattern = params.repeatPattern,
+                            dueDate = effectiveDueDate,
+                            repeatPattern = effectiveRepeatPattern,
                             initialStreak = params.initialStreak,
                             checklistJson = params.checklistJson,
                             remindersJson = params.remindersJson,
@@ -116,8 +119,8 @@ class TaskRepositoryImpl(
                         habitPolarity = if (params.type == TaskType.Habit) params.habitPolarity else HabitPolarity.Both,
                         isCompleted = false,
                         isActive = true,
-                        dueDate = params.dueDate,
-                        repeatPattern = params.repeatPattern,
+                        dueDate = effectiveDueDate,
+                        repeatPattern = effectiveRepeatPattern,
                         checklistJson = params.checklistJson,
                         remindersJson = params.remindersJson,
                         isOverdue = false,
@@ -139,6 +142,8 @@ class TaskRepositoryImpl(
     }
 
     override suspend fun updateTask(params: UpdateTaskParams): DomainResult<GameTaskDomain> {
+        val effectiveRepeatPattern = resolveRepeatPattern(params.type, params.habitResetPeriod, params.repeatPattern)
+        val effectiveDueDate = if (params.type == TaskType.Habit) null else params.dueDate
         val remote =
             caller
                 .safeApiCall {
@@ -149,8 +154,8 @@ class TaskRepositoryImpl(
                             description = params.description,
                             difficulty = params.difficulty.toDto(),
                             habitPolarity = params.habitPolarity.toRequestPolarity(params.type),
-                            dueDate = params.dueDate,
-                            repeatPattern = params.repeatPattern,
+                            dueDate = effectiveDueDate,
+                            repeatPattern = effectiveRepeatPattern,
                             checklistJson = params.checklistJson,
                             remindersJson = params.remindersJson,
                         ),
@@ -268,3 +273,13 @@ class TaskRepositoryImpl(
 
 private fun HabitPolarity.toRequestPolarity(taskType: TaskType): com.lifetracker.mobile.data.remote.dto.HabitPolarity? =
     if (taskType == TaskType.Habit) toDto() else null
+
+private fun resolveRepeatPattern(
+    type: TaskType,
+    habitResetPeriod: HabitResetPeriod,
+    explicitRepeatPattern: String?,
+): String? =
+    when (type) {
+        TaskType.Habit -> HabitResetPeriod.encode(habitResetPeriod)
+        else -> explicitRepeatPattern
+    }
