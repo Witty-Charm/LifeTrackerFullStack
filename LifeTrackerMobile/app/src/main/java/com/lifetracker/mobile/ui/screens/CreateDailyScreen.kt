@@ -23,7 +23,6 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -46,6 +45,7 @@ import com.lifetracker.mobile.domain.model.ReminderItem
 import com.lifetracker.mobile.ui.components.CreateScreenFloatingFooter
 import com.lifetracker.mobile.ui.components.CreateScreenTopBar
 import com.lifetracker.mobile.ui.components.GameDatePickerDialog
+import com.lifetracker.mobile.ui.components.GameTextField
 import com.lifetracker.mobile.ui.model.CreateDailyFormState
 import com.lifetracker.mobile.ui.model.RepeatFrequency
 import com.lifetracker.mobile.ui.model.UiDifficulty
@@ -144,7 +144,7 @@ fun CreateDailyScreen(
                     .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            OutlinedTextField(
+            GameTextField(
                 value = state.title,
                 onValueChange = vm::onTitleChange,
                 label = { Text("Title") },
@@ -152,7 +152,7 @@ fun CreateDailyScreen(
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            OutlinedTextField(
+            GameTextField(
                 value = state.description,
                 onValueChange = vm::onDescriptionChange,
                 label = { Text("Description") },
@@ -193,7 +193,7 @@ fun CreateDailyScreen(
 
             if (!state.isEditMode) {
                 Text("Imported streak", style = MaterialTheme.typography.titleSmall)
-                OutlinedTextField(
+                GameTextField(
                     value = state.initialStreak.toString(),
                     onValueChange = { vm.onInitialStreakChange(it.toIntOrNull() ?: 0) },
                     label = { Text("Initial streak") },
@@ -229,14 +229,14 @@ fun CreateDailyScreen(
                 title = { Text("New reminder") },
                 text = {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        OutlinedTextField(
+                        GameTextField(
                             value = newReminderHour.toString(),
                             onValueChange = { newReminderHour = it.toIntOrNull()?.coerceIn(0, 23) ?: 0 },
                             label = { Text("Hour") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             modifier = Modifier.weight(1f),
                         )
-                        OutlinedTextField(
+                        GameTextField(
                             value = newReminderMinute.toString(),
                             onValueChange = { newReminderMinute = it.toIntOrNull()?.coerceIn(0, 59) ?: 0 },
                             label = { Text("Minute") },
@@ -281,7 +281,7 @@ private fun ChecklistSection(
                     IconButton(onClick = { onDelete(item.id) }) {
                         Icon(Icons.Default.Close, contentDescription = "Remove")
                     }
-                    OutlinedTextField(
+                    GameTextField(
                         value = item.text,
                         onValueChange = { onTextChange(item.id, it) },
                         modifier = Modifier.weight(1f),
@@ -339,14 +339,14 @@ private fun SchedulingSection(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        OutlinedTextField(
+        GameTextField(
             value = RepeatFrequency.DAILY.label,
             onValueChange = {},
             readOnly = true,
             label = { Text("Repeats") },
             modifier = Modifier.weight(1.5f),
         )
-        OutlinedTextField(
+        GameTextField(
             value = interval.toString(),
             onValueChange = { value -> onIntervalChange(value.toIntOrNull() ?: 1) },
             label = { Text("Every (${RepeatFrequency.DAILY.unitLabel})") },
