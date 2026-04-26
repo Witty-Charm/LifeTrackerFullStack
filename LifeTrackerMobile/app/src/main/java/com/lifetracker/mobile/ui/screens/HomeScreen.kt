@@ -1,5 +1,6 @@
 package com.lifetracker.mobile.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -129,6 +130,10 @@ fun HomeScreen(
                         val surfaceColor = MaterialTheme.colorScheme.surface
                         val isDark = isSystemInDarkTheme()
                         val borderColor = if (isDark) Color.White else Color.Black
+                        val glassBg = if (isDark)
+                            surfaceColor.copy(alpha = 0.70f)
+                        else
+                            surfaceColor.copy(alpha = 0.80f)
                         Popup(
                             alignment = Alignment.TopEnd,
                             onDismissRequest = { showMenu = false },
@@ -139,6 +144,7 @@ fun HomeScreen(
                                     .padding(top = 4.dp, end = 8.dp)
                                     .width(IntrinsicSize.Max)
                                     .clip(menuShape)
+                                    .background(glassBg)
                                     .hazeEffect(state = hazeState) {
                                         backgroundColor = surfaceColor
                                         blurRadius = 28.dp
