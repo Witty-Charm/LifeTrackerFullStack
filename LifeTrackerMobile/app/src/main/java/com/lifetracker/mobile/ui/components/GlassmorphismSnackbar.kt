@@ -1,5 +1,6 @@
 package com.lifetracker.mobile.ui.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
@@ -28,11 +29,17 @@ fun GlassmorphismSnackbar(
     val isDark = isSystemInDarkTheme()
     val borderColor = if (isDark) Color.White else Color.Black
 
+    val glassBg = if (isDark)
+        surfaceColor.copy(alpha = 0.70f)
+    else
+        surfaceColor.copy(alpha = 0.80f)
+
     Box(
         modifier = Modifier
             .padding(horizontal = 16.dp, vertical = 8.dp)
             .fillMaxWidth()
             .clip(shape)
+            .background(glassBg)
             .hazeEffect(state = hazeState) {
                 backgroundColor = surfaceColor
                 blurRadius = 28.dp
