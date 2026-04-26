@@ -417,9 +417,6 @@ class HeroViewModel(
     private fun findTask(taskId: Int): TaskUi? =
         _state.value.tasks.firstOrNull { it.id == taskId }
 
-    // Used by edit screens to populate the form. We hit the network/Room cache
-    // through the repository so deep-links / cold starts (where state.tasks may
-    // be empty) still work. Returns null on failure — caller should bail out.
     suspend fun loadTaskForEdit(taskId: Int): GameTaskDomain? =
         safeCall { taskUseCases.getTask(taskId) }.dataOrNull()
 

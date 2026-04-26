@@ -139,7 +139,6 @@ class TaskRepositoryImpl(
     }
 
     override suspend fun updateTask(params: UpdateTaskParams): DomainResult<GameTaskDomain> {
-        // Online-only on this iteration: SyncWorker queue handles only creates today.
         val remote =
             caller
                 .safeApiCall {

@@ -202,7 +202,6 @@ class CreateDailyViewModel(
                     title = s.title,
                     description = s.description.ifBlank { null },
                     difficulty = s.difficulty.toDomain(),
-                    // For Daily tasks dueDate is reused as the schedule's start date.
                     dueDate = s.startDate,
                     repeatPattern = repeatPattern,
                     checklistJson = checklistJson,
@@ -227,9 +226,6 @@ class CreateDailyViewModel(
 
         result.fold(
             onSuccess = { task ->
-                // For both create and edit: cancel any previously scheduled reminders
-                // (so removing one in the form actually removes its notification),
-                // then re-schedule any that remain.
                 runCatching { reminderScheduler.cancelAll(task.id) }
                     .onFailure { Timber.e(it, "Failed to cancel reminders for daily task %s", task.id) }
                 if (!remindersJson.isNullOrBlank()) {

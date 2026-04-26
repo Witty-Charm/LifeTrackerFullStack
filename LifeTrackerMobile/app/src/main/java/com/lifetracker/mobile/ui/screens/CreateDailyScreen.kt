@@ -191,8 +191,6 @@ fun CreateDailyScreen(
                 onIntervalChange = vm::onIntervalChange,
             )
 
-            // "Initial streak" only seeds the streak when the task is created — it
-            // can't change after the fact, so we hide it in edit mode.
             if (!state.isEditMode) {
                 Text("Imported streak", style = MaterialTheme.typography.titleSmall)
                 OutlinedTextField(

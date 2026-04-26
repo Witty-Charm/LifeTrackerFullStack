@@ -58,9 +58,6 @@ data class CreateTaskRequest(
     val checklistJson: String? = null,
     val remindersJson: String? = null,
 )
-
-// Type and HeroId are intentionally omitted: editing a task may not change them.
-// For Daily tasks `dueDate` is reused as the start date of the schedule.
 @Serializable
 data class UpdateTaskRequest(
     val title: String,

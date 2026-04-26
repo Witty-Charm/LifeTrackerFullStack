@@ -167,8 +167,6 @@ public class TaskController : DeviceScopedControllerBase
         if (task == null)
             return NotFound();
 
-        // Type is intentionally not editable: changing Type would invalidate
-        // streaks, daily completions and game-engine reward formulas.
         task.Title = request.Title.Trim();
         task.Description = request.Description ?? string.Empty;
         task.Difficulty = request.Difficulty;
@@ -179,13 +177,9 @@ public class TaskController : DeviceScopedControllerBase
         }
         else
         {
-            // Polarity is meaningful only for habits; for other types we keep the
-            // canonical default and ignore whatever the client sent.
             task.Polarity = HabitPolarity.Both;
         }
 
-        // For Daily tasks, DueDate is reused as the "start date" of the schedule.
-        // For OneTime tasks it is the deadline. For Habits it is unused.
         task.DueDate = request.DueDate;
 
         if (task.Type == TaskType.Daily)
@@ -198,7 +192,6 @@ public class TaskController : DeviceScopedControllerBase
         }
         else
         {
-            // Daily-only fields must not leak onto other task types.
             task.RepeatPattern = null;
             task.ChecklistJson = null;
             task.RemindersJson = null;

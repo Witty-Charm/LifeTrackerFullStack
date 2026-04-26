@@ -2,9 +2,6 @@ package com.lifetracker.mobile.domain.model
 
 import kotlin.time.Instant
 
-// Used by UpdateTaskUseCase / TaskRepository.updateTask.
-// Type and HeroId are intentionally absent: editing must not change them.
-// `dueDate` is reused as the start date for Daily tasks.
 data class UpdateTaskParams(
     val taskId: Int,
     val type: TaskType,

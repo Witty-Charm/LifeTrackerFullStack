@@ -17,8 +17,6 @@ data class CreateDailyFormState(
     val reminders: List<ReminderItem> = emptyList(),
     val isSaving: Boolean = false,
     val actionError: UiError? = null,
-    // Set when the screen is in edit mode; controls headline / submit-button label
-    // and whether onSubmit() runs the create or update flow.
     val editingTaskId: Int? = null,
     val isLoading: Boolean = false,
 ) {

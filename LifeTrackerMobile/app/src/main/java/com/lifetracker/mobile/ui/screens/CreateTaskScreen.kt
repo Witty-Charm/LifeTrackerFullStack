@@ -91,9 +91,6 @@ fun CreateTaskScreen(
 
     LaunchedEffect(editingTaskId) {
         if (editingTaskId == null) return@LaunchedEffect
-        // Pre-fill from in-memory list (avoids a network round-trip when possible);
-        // then fetch the canonical version through the repo so cold starts /
-        // deep links and partially-mapped TaskUi (no dueDate Instant) still work.
         val inMemory = state.tasks.firstOrNull { it.id == editingTaskId }
         inMemory?.let {
             selectedType = it.type
