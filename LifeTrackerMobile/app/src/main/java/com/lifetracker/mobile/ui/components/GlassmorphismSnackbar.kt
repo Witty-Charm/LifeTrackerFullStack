@@ -2,6 +2,7 @@ package com.lifetracker.mobile.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,7 +13,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarData
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,7 +28,7 @@ fun GlassmorphismSnackbar(
     snackbarData: SnackbarData,
     hazeState: HazeState,
 ) {
-    val shape = RoundedCornerShape(24.dp)
+    val shape = RoundedCornerShape(20.dp)
     val surfaceColor = MaterialTheme.colorScheme.surface
     val isDark = isSystemInDarkTheme()
     val borderColor = if (isDark) Color.White else Color.Black
@@ -61,7 +61,7 @@ fun GlassmorphismSnackbar(
                 ),
                 shape = shape,
             )
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+            .padding(horizontal = 16.dp, vertical = 10.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -75,15 +75,15 @@ fun GlassmorphismSnackbar(
                 modifier = Modifier.padding(end = if (actionLabel != null) 8.dp else 0.dp),
             )
             if (actionLabel != null) {
-                TextButton(
-                    onClick = { snackbarData.performAction() },
-                ) {
-                    Text(
-                        text = actionLabel,
-                        color = MaterialTheme.colorScheme.primary,
-                        style = MaterialTheme.typography.labelLarge,
-                    )
-                }
+                Text(
+                    text = actionLabel,
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { snackbarData.performAction() }
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                )
             }
         }
     }
