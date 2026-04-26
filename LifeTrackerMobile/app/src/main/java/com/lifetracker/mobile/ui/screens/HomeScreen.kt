@@ -131,9 +131,9 @@ fun HomeScreen(
                         val isDark = isSystemInDarkTheme()
                         val borderColor = if (isDark) Color.White else Color.Black
                         val glassBg = if (isDark)
-                            surfaceColor.copy(alpha = 0.70f)
+                            surfaceColor.copy(alpha = 0.85f)
                         else
-                            surfaceColor.copy(alpha = 0.80f)
+                            surfaceColor.copy(alpha = 0.90f)
                         Popup(
                             alignment = Alignment.TopEnd,
                             onDismissRequest = { showMenu = false },
@@ -141,7 +141,7 @@ fun HomeScreen(
                         ) {
                             Column(
                                 modifier = Modifier
-                                    .padding(top = 4.dp, end = 8.dp)
+                                    .padding(top = 4.dp, end = 48.dp)
                                     .width(IntrinsicSize.Max)
                                     .clip(menuShape)
                                     .background(glassBg)
