@@ -22,6 +22,8 @@ data class TaskDto(
     val checklistJson: String? = null,
     val remindersJson: String? = null,
     val isOverdue: Boolean,
+    val isScheduledToday: Boolean = true,
+    val nextScheduledLocalDate: String? = null,
     val completionCount: Int,
     val failCount: Int,
     val lastCompletedAt: Instant? = null,

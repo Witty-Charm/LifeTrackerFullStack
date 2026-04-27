@@ -127,9 +127,6 @@ class CreateDailyViewModel(
     fun onStartDateChange(value: Instant?) =
         _state.update { it.copy(startDate = value) }
 
-    fun onFrequencyChange() =
-        _state.update { it.copy(frequency = RepeatFrequency.DAILY) }
-
     fun onIntervalChange(value: Int) =
         _state.update { it.copy(interval = value, intervalError = value < 1) }
 

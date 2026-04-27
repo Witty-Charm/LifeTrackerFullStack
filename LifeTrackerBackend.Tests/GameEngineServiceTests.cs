@@ -90,6 +90,9 @@ public class GameEngineServiceTests
             ShieldActivatedAtUtc = DateTimeOffset.UtcNow.AddMinutes(-1)
         };
         var economy = new EconomyBalance();
+        // Daily tasks are now handled by the controller-level missed-day pipeline; this
+        // test exercises the GameEngineService.CheckOverdueTasks single-shot path used for
+        // OneTime tasks, which is still selected by IsOverdue().
         var tasks = new List<GameTask>
         {
             new()
@@ -98,9 +101,9 @@ public class GameEngineServiceTests
                 IsActive = true,
                 IsCompleted = false,
                 DueDate = DateTimeOffset.UtcNow.AddDays(-1),
-                Type = TaskType.Daily,
+                Type = TaskType.OneTime,
                 Difficulty = TaskDifficulty.Easy,
-                Title = "Daily 1"
+                Title = "OneTime 1"
             },
             new()
             {
@@ -108,9 +111,9 @@ public class GameEngineServiceTests
                 IsActive = true,
                 IsCompleted = false,
                 DueDate = DateTimeOffset.UtcNow.AddDays(-1),
-                Type = TaskType.Daily,
+                Type = TaskType.OneTime,
                 Difficulty = TaskDifficulty.Easy,
-                Title = "Daily 2"
+                Title = "OneTime 2"
             }
         };
         var streaks = new List<Streak>

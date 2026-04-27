@@ -84,6 +84,8 @@ data class TaskUi(
     val pendingAction: TaskPendingAction? = null,
     val actionError: String? = null,
     val isShieldActive: Boolean = false,
+    val isScheduledToday: Boolean = true,
+    val nextScheduledHint: String? = null,
 ) {
     val showsPositiveAction: Boolean
         get() = true
@@ -93,7 +95,7 @@ data class TaskUi(
 
     val positiveActionEnabled: Boolean
         get() = when (type) {
-            UiTaskType.Daily -> true
+            UiTaskType.Daily -> isScheduledToday
             UiTaskType.Habit -> habitPolarity != HabitPolarity.Negative
             else -> true
         }

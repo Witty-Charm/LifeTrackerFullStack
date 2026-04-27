@@ -140,7 +140,7 @@ public class TaskControllerAchievementTests : IAsyncLifetime
         db.GameTasks.Add(task);
         await db.SaveChangesAsync();
 
-        var controller = new TaskController(db, new GameEngineService(), new ThrowingAchievementService(db), new HeroTimeService(), Microsoft.Extensions.Logging.Abstractions.NullLogger<TaskController>.Instance, new CurrentHeroService(db));
+        var controller = new TaskController(db, new GameEngineService(), new ThrowingAchievementService(db), new HeroTimeService(), new DailyScheduleService(new HeroTimeService()), Microsoft.Extensions.Logging.Abstractions.NullLogger<TaskController>.Instance, new CurrentHeroService(db));
         controller.ControllerContext = new ControllerContext
         {
             HttpContext = new DefaultHttpContext()
@@ -210,7 +210,7 @@ public class TaskControllerAchievementTests : IAsyncLifetime
         });
         await db.SaveChangesAsync();
 
-        var controller = new TaskController(db, new GameEngineService(), new ThrowingAchievementService(db), new HeroTimeService(), Microsoft.Extensions.Logging.Abstractions.NullLogger<TaskController>.Instance, new CurrentHeroService(db));
+        var controller = new TaskController(db, new GameEngineService(), new ThrowingAchievementService(db), new HeroTimeService(), new DailyScheduleService(new HeroTimeService()), Microsoft.Extensions.Logging.Abstractions.NullLogger<TaskController>.Instance, new CurrentHeroService(db));
         controller.ControllerContext = new ControllerContext
         {
             HttpContext = new DefaultHttpContext(),
@@ -609,12 +609,13 @@ public class TaskControllerAchievementTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task CheckOverdueTasks_SeededDailyWithoutSameDayCompletion_BreaksStreakOnNextLocalDay()
+    public async Task CheckOverdueTasks_SeededDailyWithoutSameDayCompletion_BreaksStreakOnMissedScheduledDay()
     {
         await using var db = CreateDbContext();
         var createdUtc = new DateTimeOffset(2026, 04, 24, 00, 00, 00, TimeSpan.Zero);
         var overdueUtc = createdUtc.AddDays(1).AddHours(12);
         var hero = await CreateHeroAsync(db, timeZoneId: "UTC", createdAt: createdUtc);
+        var createdLocalDate = DateOnly.FromDateTime(createdUtc.UtcDateTime);
         var task = new GameTask
         {
             HeroId = hero.Id,
@@ -625,6 +626,9 @@ public class TaskControllerAchievementTests : IAsyncLifetime
             IsCompleted = false,
             IsActive = true,
             DueDate = createdUtc.AddHours(-1),
+            RepeatPattern = "DAILY:1",
+            // Schedule cursor anchored just before start, so the day-1 (createdLocal) miss is penalized.
+            LastMissedScheduledLocalDate = createdLocalDate.AddDays(-1).ToString("yyyy-MM-dd"),
             CompletionCount = 0,
             FailCount = 0,
             CreatedAt = createdUtc,
@@ -633,7 +637,6 @@ public class TaskControllerAchievementTests : IAsyncLifetime
         db.GameTasks.Add(task);
         await db.SaveChangesAsync();
 
-        var createdLocalDate = DateOnly.FromDateTime(createdUtc.UtcDateTime);
         db.Streaks.Add(new Streak
         {
             HeroId = hero.Id,
@@ -653,12 +656,17 @@ public class TaskControllerAchievementTests : IAsyncLifetime
         var ok = Assert.IsType<OkObjectResult>(actionResult.Result);
         var response = Assert.IsType<OverdueCheckResponse>(ok.Value);
         var streak = await db.Streaks.SingleAsync(x => x.TaskId == task.Id);
+        var updatedTask = await db.GameTasks.SingleAsync(x => x.Id == task.Id);
 
+        // One missed scheduled day (createdLocal) between cursor and yesterday.
         Assert.Equal(1, response.OverdueCount);
         Assert.Single(response.Penalties!);
         Assert.True(response.Penalties![0].StreakBroken);
         Assert.Equal(0, streak.CurrentDays);
-        Assert.Equal(overdueUtc.Date.ToString("yyyy-MM-dd"), streak.LastBreakLocalDate);
+        // Streak break is tagged with the missed scheduled day, not "today".
+        Assert.Equal(createdLocalDate.ToString("yyyy-MM-dd"), streak.LastBreakLocalDate);
+        // Cursor advanced through the last processed missed day.
+        Assert.Equal(createdLocalDate.ToString("yyyy-MM-dd"), updatedTask.LastMissedScheduledLocalDate);
     }
 
     [Fact]
@@ -996,6 +1004,8 @@ public class TaskControllerAchievementTests : IAsyncLifetime
 
     private static async Task<GameTask> CreateOverdueDailyTaskAsync(ApplicationDbContext db, int heroId, string title, int streakDays)
     {
+        var dueDate = DateTimeOffset.UtcNow.AddDays(-1);
+        var startLocalDate = DateOnly.FromDateTime(dueDate.UtcDateTime);
         var task = new GameTask
         {
             HeroId = heroId,
@@ -1005,7 +1015,10 @@ public class TaskControllerAchievementTests : IAsyncLifetime
             Polarity = HabitPolarity.Both,
             IsCompleted = false,
             IsActive = true,
-            DueDate = DateTimeOffset.UtcNow.AddDays(-1),
+            DueDate = dueDate,
+            RepeatPattern = "DAILY:1",
+            // Anchor cursor to (start - 1) so the seeded daily has exactly one missed scheduled day.
+            LastMissedScheduledLocalDate = startLocalDate.AddDays(-1).ToString("yyyy-MM-dd"),
             CompletionCount = 0,
             FailCount = 0
         };

@@ -40,6 +40,16 @@ public class GameTask
 
     public DateTimeOffset? LastCompletedAt { get; set; }
     public DateTimeOffset? OverdueProcessedAt { get; set; }
+
+    /// <summary>
+    /// For Daily tasks only. The most recent scheduled local date (yyyy-MM-dd) up to and
+    /// including which the missed-day penalty pipeline has already accounted for. Used by
+    /// <c>POST /api/Task/check-overdue</c> to advance the cursor and apply at most one penalty
+    /// per missed scheduled day. Null on legacy tasks; initialized lazily without back-fill.
+    /// Unused for OneTime/Habit tasks.
+    /// </summary>
+    public string? LastMissedScheduledLocalDate { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
 
@@ -79,6 +89,15 @@ public class GameTask
         return goldLoss;
     }
 
-    public bool IsOverdue() =>
-        DueDate.HasValue && DateTimeOffset.UtcNow > DueDate.Value && !IsCompleted;
+    /// <summary>
+    /// True iff this task should be flagged as overdue in the UI / single-shot penalty path.
+    /// For Daily tasks this always returns false; their missed-day pipeline runs through
+    /// <c>CheckOverdueTasks</c> using <see cref="LastMissedScheduledLocalDate"/> instead.
+    /// For Daily, <see cref="DueDate"/> is the schedule *start* date, not a deadline.
+    /// </summary>
+    public bool IsOverdue()
+    {
+        if (Type == TaskType.Daily) return false;
+        return DueDate.HasValue && DateTimeOffset.UtcNow > DueDate.Value && !IsCompleted;
+    }
 }
