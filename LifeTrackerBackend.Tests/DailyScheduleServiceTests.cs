@@ -12,16 +12,16 @@ public class DailyScheduleServiceTests
     [InlineData(null, 1)]
     [InlineData("", 1)]
     [InlineData("   ", 1)]
-    [InlineData("DAILY", 1)]            // missing colon → fallback
-    [InlineData("DAILY:", 1)]           // empty interval → fallback
+    [InlineData("DAILY", 1)]
+    [InlineData("DAILY:", 1)]
     [InlineData("DAILY:abc", 1)]
     [InlineData("DAILY:0", 1)]
     [InlineData("DAILY:-1", 1)]
     [InlineData("DAILY:1", 1)]
     [InlineData("DAILY:5", 5)]
     [InlineData("DAILY:30", 30)]
-    [InlineData("WEEKLY:2", 1)]         // non-DAILY frequency → fallback
-    [InlineData("daily:5", 1)]          // case-sensitive, falls back
+    [InlineData("WEEKLY:2", 1)]
+    [InlineData("daily:5", 1)]
     [InlineData("RESET:DAILY", 1)]
     public void ParseInterval_ReturnsExpected(string? pattern, int expected)
     {

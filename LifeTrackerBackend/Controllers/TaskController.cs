@@ -136,10 +136,6 @@ public class TaskController : DeviceScopedControllerBase
 
         if (task.Type == TaskType.Daily)
         {
-            // Initialize the missed-day cursor to (startLocalDate - 1) so the first scheduled
-            // day not completed in time will be penalized. Existing legacy tasks that go through
-            // CheckOverdueTasks with this cursor still null will be initialized lazily there
-            // without back-fill (see CheckOverdueDailyTasks).
             var tz = _heroTimeService.ResolveEffectiveTimeZone(hero, DateTimeOffset.UtcNow);
             var startLocal = _dailySchedule.GetStartLocalDate(task, tz);
             task.LastMissedScheduledLocalDate = startLocal
@@ -216,9 +212,6 @@ public class TaskController : DeviceScopedControllerBase
             task.ChecklistJson = request.ChecklistJson;
             task.RemindersJson = request.RemindersJson;
 
-            // If the schedule's anchor (start date) or interval changed, reset the missed-day
-            // cursor so the new schedule is honored without retroactive penalties for the
-            // previous schedule.
             var scheduleChanged = previousDueDate != task.DueDate
                 || !string.Equals(previousRepeatPattern, task.RepeatPattern, StringComparison.Ordinal);
             if (scheduleChanged)
@@ -437,8 +430,6 @@ public class TaskController : DeviceScopedControllerBase
         if (requestedLocalDate != todayLocalDate)
             return BadRequest("Only today's daily state can be changed");
 
-        // Reject toggling on a date that is not part of this Daily's schedule (interval-aware).
-        // This prevents the user from checking a daily on a non-scheduled day when interval > 1.
         if (request.IsChecked && !_dailySchedule.IsScheduledOn(task, todayLocalDate, effectiveTimeZone))
         {
             var nextScheduled = _dailySchedule.NextScheduledOnOrAfter(
@@ -718,9 +709,6 @@ public class TaskController : DeviceScopedControllerBase
         var shieldContexts = new Dictionary<int, ShieldConsumptionContext>();
         var heroesWithAnyPenalty = new HashSet<int>();
 
-        // 1) Legacy single-shot pass for OneTime / Habit tasks: an overdue task gets penalized
-        //    once and is then permanently marked via OverdueProcessedAt. Daily tasks are now
-        //    handled by the missed-day pipeline below; their IsOverdue() is always false.
         var legacyTasks = await _context.GameTasks
             .Include(t => t.Streak)
             .Include(t => t.Hero)
@@ -756,11 +744,6 @@ public class TaskController : DeviceScopedControllerBase
             });
         }
 
-        // 2) Daily missed-day pipeline. For every active Daily, walk each scheduled local day in
-        //    (LastMissedScheduledLocalDate .. today-1] and apply one ApplyTaskFailure per day
-        //    that has no successful DailyTaskCompletion. The cursor advances per day so repeated
-        //    runs are idempotent. Legacy dailies with a null cursor are initialized to (today-1)
-        //    without back-filling penalties for prior history.
         var dailies = await _context.GameTasks
             .Include(t => t.Streak)
             .Include(t => t.Hero)
@@ -771,7 +754,6 @@ public class TaskController : DeviceScopedControllerBase
 
         var dailyPenaltyCount = ApplyDailyMissedDayPenalties(dailies, penalties, shieldContexts, heroesWithAnyPenalty);
 
-        // 3) Consume the per-hero shield once if any failure absorbed a streak break this batch.
         foreach (var heroId2 in heroesWithAnyPenalty)
         {
             if (!shieldContexts.TryGetValue(heroId2, out var ctx) || !ctx.AbsorbedAnyBreak) continue;
@@ -812,12 +794,6 @@ public class TaskController : DeviceScopedControllerBase
         return ctx;
     }
 
-    /// <summary>
-    /// For each Daily, advances <see cref="GameTask.LastMissedScheduledLocalDate"/> through every
-    /// scheduled local day strictly before today, calling <see cref="GameEngineService.ApplyTaskFailure"/>
-    /// once per scheduled day with no matching successful <see cref="DailyTaskCompletion"/>.
-    /// Returns the number of penalties applied.
-    /// </summary>
     private int ApplyDailyMissedDayPenalties(
         IReadOnlyList<GameTask> dailies,
         List<OverdueTaskPenalty> penalties,
@@ -851,7 +827,6 @@ public class TaskController : DeviceScopedControllerBase
                 }
             }
 
-            // Legacy task without a cursor: initialize without back-filling prior history.
             if (lastProcessed is null)
             {
                 task.LastMissedScheduledLocalDate = yesterdayLocal.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
@@ -991,8 +966,6 @@ public class TaskController : DeviceScopedControllerBase
         }
         var isCheckedToday = todayLocalDateStr != null && task.DailyTaskCompletions.Any(c => c.LocalDate == todayLocalDateStr && c.IsChecked);
 
-        // For dailies, compute schedule-aware fields. Defaults for non-Daily are
-        // IsScheduledToday=true (so no UI gating) and a null nextScheduledLocalDate.
         var isScheduledToday = true;
         string? nextScheduledLocalDate = null;
         if (task.Type == TaskType.Daily && todayLocalDate.HasValue && effectiveTimeZone != null)
@@ -1176,11 +1149,7 @@ public class TaskDto
     public string? ChecklistJson { get; set; }
     public string? RemindersJson { get; set; }
     public bool IsOverdue { get; set; }
-
-    // True iff today's local date is part of this task's schedule. Always true for non-Daily.
     public bool IsScheduledToday { get; set; } = true;
-
-    // Local date (yyyy-MM-dd) of the next scheduled day after today. Null for non-Daily.
     public string? NextScheduledLocalDate { get; set; }
 
     public int CompletionCount { get; set; }

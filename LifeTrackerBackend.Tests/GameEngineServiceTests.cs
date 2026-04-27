@@ -90,9 +90,6 @@ public class GameEngineServiceTests
             ShieldActivatedAtUtc = DateTimeOffset.UtcNow.AddMinutes(-1)
         };
         var economy = new EconomyBalance();
-        // Daily tasks are now handled by the controller-level missed-day pipeline; this
-        // test exercises the GameEngineService.CheckOverdueTasks single-shot path used for
-        // OneTime tasks, which is still selected by IsOverdue().
         var tasks = new List<GameTask>
         {
             new()

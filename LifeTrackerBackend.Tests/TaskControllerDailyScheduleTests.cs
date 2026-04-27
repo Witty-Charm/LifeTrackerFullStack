@@ -97,7 +97,6 @@ public class TaskControllerDailyScheduleTests : IAsyncLifetime
         var startUtc = new DateTimeOffset(2026, 4, 24, 12, 0, 0, TimeSpan.Zero);
         var hero = await CreateHeroAsync(db, createdAt: startUtc);
 
-        // Daily on every-3rd-day schedule starting 2026-04-24. 04-25 is NOT scheduled.
         var task = new GameTask
         {
             HeroId = hero.Id,
@@ -187,7 +186,7 @@ public class TaskControllerDailyScheduleTests : IAsyncLifetime
             IsActive = true,
             DueDate = startUtc,
             RepeatPattern = "DAILY:1",
-            LastMissedScheduledLocalDate = null, // legacy: not initialized
+            LastMissedScheduledLocalDate = null,
             CreatedAt = startUtc,
             UpdatedAt = startUtc,
         };
@@ -200,7 +199,6 @@ public class TaskControllerDailyScheduleTests : IAsyncLifetime
         });
         await db.SaveChangesAsync();
 
-        // Run check-overdue 30 days later. Legacy back-fill MUST NOT happen.
         var checkUtc = startUtc.AddDays(30);
         var controller = CreateController(db, new FixedHeroTimeService(checkUtc));
         var result = await controller.CheckOverdueTasks(hero.Id);
@@ -211,8 +209,8 @@ public class TaskControllerDailyScheduleTests : IAsyncLifetime
 
         Assert.Equal(0, resp.OverdueCount);
         Assert.Empty(resp.Penalties ?? new List<OverdueTaskPenalty>());
-        Assert.Equal("2026-01-30", stored.LastMissedScheduledLocalDate); // initialized to (today - 1)
-        Assert.Equal(100, heroAfter.CurrentHp); // no HP loss because no back-fill
+        Assert.Equal("2026-01-30", stored.LastMissedScheduledLocalDate);
+        Assert.Equal(100, heroAfter.CurrentHp);
         _ = heroAfter;
     }
 
@@ -222,7 +220,6 @@ public class TaskControllerDailyScheduleTests : IAsyncLifetime
         await using var db = CreateDbContext();
         var startUtc = new DateTimeOffset(2026, 4, 20, 12, 0, 0, TimeSpan.Zero);
         var hero = await CreateHeroAsync(db, createdAt: startUtc);
-        // Avoid hero death from large penalties
         hero.CurrentHp = 100_000;
         hero.MaxHp = 100_000;
         await db.SaveChangesAsync();
@@ -250,7 +247,6 @@ public class TaskControllerDailyScheduleTests : IAsyncLifetime
         });
         await db.SaveChangesAsync();
 
-        // Today = 2026-04-24, missed days = 04-20, 04-21, 04-22, 04-23 (yesterday).
         var checkUtc = new DateTimeOffset(2026, 4, 24, 12, 0, 0, TimeSpan.Zero);
         var controller = CreateController(db, new FixedHeroTimeService(checkUtc));
 
@@ -262,8 +258,8 @@ public class TaskControllerDailyScheduleTests : IAsyncLifetime
 
         Assert.Equal(4, resp.OverdueCount);
         Assert.Equal(4, resp.Penalties!.Count);
-        Assert.Equal(0, streakAfter.CurrentDays); // streak broke once
-        Assert.Single(resp.Penalties!, p => p.StreakBroken); // only first miss flips break flag
+        Assert.Equal(0, streakAfter.CurrentDays);
+        Assert.Single(resp.Penalties!, p => p.StreakBroken);
         Assert.Equal("2026-04-23", stored.LastMissedScheduledLocalDate);
     }
 
@@ -320,7 +316,6 @@ public class TaskControllerDailyScheduleTests : IAsyncLifetime
         hero.CurrentHp = 100_000; hero.MaxHp = 100_000;
         await db.SaveChangesAsync();
 
-        // Start 04-18, every 3rd day → 04-18, 04-21, 04-24, 04-27, ...
         var task = new GameTask
         {
             HeroId = hero.Id,
@@ -344,7 +339,6 @@ public class TaskControllerDailyScheduleTests : IAsyncLifetime
         });
         await db.SaveChangesAsync();
 
-        // Today = 04-25; missed scheduled days <= 04-24 are 04-18, 04-21, 04-24 = 3 days.
         var checkUtc = new DateTimeOffset(2026, 4, 25, 12, 0, 0, TimeSpan.Zero);
         var controller = CreateController(db, new FixedHeroTimeService(checkUtc));
 
@@ -395,7 +389,6 @@ public class TaskControllerDailyScheduleTests : IAsyncLifetime
         });
         await db.SaveChangesAsync();
 
-        // Today = 04-25. Missed days candidates: 04-22, 04-23 (completed), 04-24. Penalty = 2.
         var checkUtc = new DateTimeOffset(2026, 4, 25, 12, 0, 0, TimeSpan.Zero);
         var controller = CreateController(db, new FixedHeroTimeService(checkUtc));
 
@@ -428,7 +421,6 @@ public class TaskControllerDailyScheduleTests : IAsyncLifetime
         db.GameTasks.Add(task);
         await db.SaveChangesAsync();
 
-        // Today = 04-25 (NOT scheduled). Next scheduled after today should be 04-27.
         var queryUtc = new DateTimeOffset(2026, 4, 25, 10, 0, 0, TimeSpan.Zero);
         var controller = CreateController(db, new FixedHeroTimeService(queryUtc));
 
