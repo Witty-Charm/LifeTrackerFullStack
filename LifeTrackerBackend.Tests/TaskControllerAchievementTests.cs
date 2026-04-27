@@ -627,7 +627,6 @@ public class TaskControllerAchievementTests : IAsyncLifetime
             IsActive = true,
             DueDate = createdUtc.AddHours(-1),
             RepeatPattern = "DAILY:1",
-            // Schedule cursor anchored just before start, so the day-1 (createdLocal) miss is penalized.
             LastMissedScheduledLocalDate = createdLocalDate.AddDays(-1).ToString("yyyy-MM-dd"),
             CompletionCount = 0,
             FailCount = 0,
@@ -658,14 +657,11 @@ public class TaskControllerAchievementTests : IAsyncLifetime
         var streak = await db.Streaks.SingleAsync(x => x.TaskId == task.Id);
         var updatedTask = await db.GameTasks.SingleAsync(x => x.Id == task.Id);
 
-        // One missed scheduled day (createdLocal) between cursor and yesterday.
         Assert.Equal(1, response.OverdueCount);
         Assert.Single(response.Penalties!);
         Assert.True(response.Penalties![0].StreakBroken);
         Assert.Equal(0, streak.CurrentDays);
-        // Streak break is tagged with the missed scheduled day, not "today".
         Assert.Equal(createdLocalDate.ToString("yyyy-MM-dd"), streak.LastBreakLocalDate);
-        // Cursor advanced through the last processed missed day.
         Assert.Equal(createdLocalDate.ToString("yyyy-MM-dd"), updatedTask.LastMissedScheduledLocalDate);
     }
 
@@ -1017,7 +1013,6 @@ public class TaskControllerAchievementTests : IAsyncLifetime
             IsActive = true,
             DueDate = dueDate,
             RepeatPattern = "DAILY:1",
-            // Anchor cursor to (start - 1) so the seeded daily has exactly one missed scheduled day.
             LastMissedScheduledLocalDate = startLocalDate.AddDays(-1).ToString("yyyy-MM-dd"),
             CompletionCount = 0,
             FailCount = 0

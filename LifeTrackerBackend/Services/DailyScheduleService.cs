@@ -28,11 +28,6 @@ public class DailyScheduleService : IDailyScheduleService
         _heroTimeService = heroTimeService;
     }
 
-    /// <summary>
-    /// Parses the per-task RepeatPattern into a positive day-interval.
-    /// Accepts "DAILY:N" with N >= 1; everything else (null, blank, non-DAILY frequency,
-    /// non-numeric, zero, negative) collapses to 1 so the schedule remains usable.
-    /// </summary>
     public int ParseInterval(string? repeatPattern)
     {
         if (string.IsNullOrWhiteSpace(repeatPattern)) return 1;
@@ -43,10 +38,6 @@ public class DailyScheduleService : IDailyScheduleService
         return n >= 1 ? n : 1;
     }
 
-    /// <summary>
-    /// Resolves the schedule start as a local date in the hero's time zone.
-    /// Falls back to <see cref="GameTask.CreatedAt"/> when DueDate is null (legacy data).
-    /// </summary>
     public DateOnly GetStartLocalDate(GameTask task, string heroTimeZoneId)
     {
         var anchor = task.DueDate ?? task.CreatedAt;
