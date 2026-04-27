@@ -67,6 +67,7 @@ data class TaskUi(
     val description: String,
     val type: UiTaskType,
     val habitPolarity: HabitPolarity = HabitPolarity.Both,
+    val difficulty: UiDifficulty = UiDifficulty.Easy,
     val difficultyLabel: String,
     val difficultyColor: Long,
     val isCompleted: Boolean,

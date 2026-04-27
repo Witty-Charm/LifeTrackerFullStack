@@ -5,7 +5,9 @@ import androidx.lifecycle.viewModelScope
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.lifetracker.mobile.BuildConfig
+import com.lifetracker.mobile.core.serialization.JsonDefaults
 import com.lifetracker.mobile.core.sync.SyncScheduler
+import com.lifetracker.mobile.domain.model.ChecklistItem
 import com.lifetracker.mobile.domain.model.CreateTaskParams
 import com.lifetracker.mobile.domain.model.UpdateTaskParams
 import com.lifetracker.mobile.domain.model.DomainResult
@@ -26,6 +28,7 @@ import com.lifetracker.mobile.domain.usecase.task.TaskUseCases
 import com.lifetracker.mobile.ui.mapper.toDomain
 import com.lifetracker.mobile.ui.mapper.toUi
 import com.lifetracker.mobile.ui.mapper.toUiError
+import com.lifetracker.mobile.ui.model.ChecklistItemUi
 import com.lifetracker.mobile.ui.model.HeroScreenState
 import com.lifetracker.mobile.ui.model.TaskActionFeedback
 import com.lifetracker.mobile.ui.model.TaskPendingAction
@@ -37,6 +40,7 @@ import com.lifetracker.mobile.ui.model.UiTaskType as TaskUiType
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Clock
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toPersistentList
 import kotlinx.collections.immutable.toPersistentSet
 import kotlinx.coroutines.CancellationException
@@ -315,6 +319,53 @@ class HeroViewModel(
                 onSuccess?.invoke()
             }
     }
+
+    fun toggleChecklistItem(taskId: Int, itemId: String) =
+        launchAction(ActionKeys.taskUpdate(taskId)) {
+            val task = findTask(taskId) ?: return@launchAction
+            if (isServerMutationBlocked(task)) {
+                showOfflineTaskActionBlockedMessage()
+                return@launchAction
+            }
+            val originalItems = task.checklistItems
+            if (originalItems.none { it.id == itemId }) return@launchAction
+            val updatedItems =
+                originalItems.map { item ->
+                    if (item.id == itemId) item.copy(isCompleted = !item.isCompleted) else item
+                }.toImmutableList()
+
+            patchTask(taskId) { it.copy(checklistItems = updatedItems) }
+
+            val checklistJson =
+                JsonDefaults.encodeToString(
+                    updatedItems.map { ChecklistItem(it.id, it.text, it.isCompleted) },
+                )
+            val params =
+                UpdateTaskParams(
+                    taskId = taskId,
+                    type = task.type.toDomain(),
+                    title = task.title,
+                    description = task.description.takeIf { it.isNotBlank() },
+                    difficulty = task.difficulty.toDomain(),
+                    habitPolarity = task.habitPolarity,
+                    checklistJson = checklistJson,
+                )
+            val result = executeAction { taskUseCases.updateTask(params) }
+            if (result == null) {
+                // Rollback optimistic update on failure
+                patchTask(taskId) { it.copy(checklistItems = originalItems) }
+            } else {
+                val refreshed = result.toUi()
+                _state.update { current ->
+                    current.copy(
+                        tasks =
+                            current.tasks
+                                .map { if (it.id == taskId) refreshed else it }
+                                .toPersistentList(),
+                    )
+                }
+            }
+        }
 
     fun deleteTask(taskId: Int) {
         val task = findTask(taskId) ?: return

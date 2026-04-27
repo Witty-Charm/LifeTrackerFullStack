@@ -283,6 +283,8 @@ fun HomeScreen(
                                     val onDelete = remember(taskId) { { vm.deleteTask(taskId) } }
                                     val onRetry = remember(taskId) { { vm.retrySync(taskId) } }
                                     val onDeleteFailed = remember(taskId) { { vm.deleteFailedTask(taskId) } }
+                                    val onChecklistItemToggle: (String) -> Unit =
+                                        remember(taskId) { { itemId -> vm.toggleChecklistItem(taskId, itemId) } }
                                     val currentHeroId = state.hero?.id
                                     val onEdit: () -> Unit =
                                         remember(taskId, taskType, currentHeroId) {
@@ -311,6 +313,7 @@ fun HomeScreen(
                                         onRetrySyncClick = onRetry,
                                         onDeleteFailedTaskClick = onDeleteFailed,
                                         onEditClick = onEdit,
+                                        onChecklistItemToggle = onChecklistItemToggle,
                                     )
                                 }
                             }

@@ -1,9 +1,11 @@
 package com.lifetracker.mobile.ui.components
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -13,6 +15,8 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -25,16 +29,22 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.lifetracker.mobile.ui.model.ChecklistItemUi
 import com.lifetracker.mobile.ui.model.TaskPendingAction
 import com.lifetracker.mobile.ui.model.TaskUi
 import com.lifetracker.mobile.ui.model.UiTaskType
+import kotlinx.collections.immutable.ImmutableList
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,6 +58,7 @@ fun TaskItem(
     onRetrySyncClick: () -> Unit,
     onDeleteFailedTaskClick: () -> Unit,
     onEditClick: () -> Unit = {},
+    onChecklistItemToggle: (itemId: String) -> Unit = {},
 ) {
     val hasPendingAction = task.pendingAction != null
     val isLocalOnly = task.id < 0 || task.isPendingSync || task.syncError != null
@@ -67,6 +78,8 @@ fun TaskItem(
             onDeleteFailedTaskClick = onDeleteFailedTaskClick,
             onEditClick = onEditClick,
             editEnabled = false,
+            onChecklistItemToggle = onChecklistItemToggle,
+            checklistToggleEnabled = false,
             modifier = modifier,
         )
         return
@@ -98,6 +111,8 @@ fun TaskItem(
             onDeleteFailedTaskClick = onDeleteFailedTaskClick,
             onEditClick = onEditClick,
             editEnabled = editEnabled,
+            onChecklistItemToggle = onChecklistItemToggle,
+            checklistToggleEnabled = editEnabled,
         )
     }
 }
@@ -132,17 +147,26 @@ private fun TaskCardContent(
     onDeleteFailedTaskClick: () -> Unit,
     onEditClick: () -> Unit,
     editEnabled: Boolean,
+    onChecklistItemToggle: (itemId: String) -> Unit,
+    checklistToggleEnabled: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    Row(
+    var checklistExpanded by rememberSaveable(task.id) { mutableStateOf(false) }
+    val hasChecklist = task.checklistItems.isNotEmpty()
+    Column(
         modifier =
             modifier
                 .fillMaxWidth()
-                .heightIn(min = 68.dp)
-                .height(IntrinsicSize.Min)
                 .clip(RoundedCornerShape(12.dp))
                 .background(MaterialTheme.colorScheme.surface)
                 .graphicsLayer { alpha = cardAlpha },
+    ) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = 68.dp)
+                .height(IntrinsicSize.Min),
     ) {
         val positiveHighlighted = positiveActionHighlighted(task, completeFailEnabled)
         val negativeHighlighted = negativeActionHighlighted(task, completeFailEnabled)
@@ -409,6 +433,7 @@ private fun TaskCardContent(
         }
 
         if (task.showsNegativeAction) {
+            val negativeRoundRight = !hasChecklist
             Box(
                 modifier =
                     Modifier
@@ -420,8 +445,8 @@ private fun TaskCardContent(
                                 RoundedCornerShape(
                                     topStart = 0.dp,
                                     bottomStart = 0.dp,
-                                    topEnd = 12.dp,
-                                    bottomEnd = 12.dp,
+                                    topEnd = if (negativeRoundRight) 12.dp else 0.dp,
+                                    bottomEnd = if (negativeRoundRight) 12.dp else 0.dp,
                                 ),
                         ).clickable(enabled = negativeEnabled, onClick = onFailClick),
                 contentAlignment = Alignment.Center,
@@ -442,6 +467,145 @@ private fun TaskCardContent(
                         color = negativeTextColor,
                     )
                 }
+            }
+        }
+
+            if (hasChecklist) {
+                ChecklistProgressColumn(
+                    items = task.checklistItems,
+                    expanded = checklistExpanded,
+                    onClick = { checklistExpanded = !checklistExpanded },
+                )
+            }
+        }
+
+        AnimatedVisibility(visible = hasChecklist && checklistExpanded) {
+            ChecklistExpandedList(
+                items = task.checklistItems,
+                onToggle = onChecklistItemToggle,
+                enabled = checklistToggleEnabled,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ChecklistProgressColumn(
+    items: ImmutableList<ChecklistItemUi>,
+    expanded: Boolean,
+    onClick: () -> Unit,
+) {
+    val completed = items.count { it.isCompleted }
+    val total = items.size
+    Box(
+        modifier =
+            Modifier
+                .width(56.dp)
+                .fillMaxHeight()
+                .background(
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape =
+                        RoundedCornerShape(
+                            topStart = 0.dp,
+                            bottomStart = 0.dp,
+                            topEnd = 12.dp,
+                            bottomEnd = 12.dp,
+                        ),
+                ).clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(
+                text = "$completed / $total",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Icon(
+                imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                contentDescription = if (expanded) "Collapse checklist" else "Expand checklist",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(16.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun ChecklistExpandedList(
+    items: ImmutableList<ChecklistItemUi>,
+    onToggle: (String) -> Unit,
+    enabled: Boolean,
+) {
+    Column(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        items.forEach { item ->
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(6.dp))
+                        .clickable(enabled = enabled) { onToggle(item.id) }
+                        .padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                val checkBg =
+                    if (item.isCompleted) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        Color.Transparent
+                    }
+                Box(
+                    modifier =
+                        Modifier
+                            .size(20.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(checkBg)
+                            .border(
+                                width = 1.5.dp,
+                                color =
+                                    if (item.isCompleted) {
+                                        MaterialTheme.colorScheme.primary
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                    },
+                                shape = RoundedCornerShape(4.dp),
+                            ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (item.isCompleted) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(14.dp),
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.width(10.dp))
+                Text(
+                    text = item.text,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color =
+                        if (item.isCompleted) {
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        } else {
+                            MaterialTheme.colorScheme.onSurface
+                        },
+                    textDecoration =
+                        if (item.isCompleted) TextDecoration.LineThrough else TextDecoration.None,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
             }
         }
     }
