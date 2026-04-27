@@ -47,6 +47,23 @@ class TaskUiPolarityTest {
     }
 
     @Test
+    fun dailyNotScheduledToday_disablesPositiveAction() {
+        val task = testTask(type = UiTaskType.Daily, habitPolarity = HabitPolarity.Both)
+            .copy(isScheduledToday = false)
+
+        assertTrue(task.showsPositiveAction)
+        assertFalse(task.positiveActionEnabled)
+    }
+
+    @Test
+    fun dailyScheduledToday_keepsPositiveActionEnabled() {
+        val task = testTask(type = UiTaskType.Daily, habitPolarity = HabitPolarity.Both)
+            .copy(isScheduledToday = true)
+
+        assertTrue(task.positiveActionEnabled)
+    }
+
+    @Test
     fun nonHabit_keepsBothActionsEnabled() {
         val task = testTask(type = UiTaskType.OneTime, habitPolarity = HabitPolarity.Negative)
 

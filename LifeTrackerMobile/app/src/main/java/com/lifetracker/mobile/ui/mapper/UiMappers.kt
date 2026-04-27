@@ -109,7 +109,19 @@ fun GameTaskDomain.toUi(): TaskUi =
         pendingAction = null,
         actionError = null,
         isShieldActive = streak?.isShieldActive ?: false,
+        isScheduledToday = isScheduledToday,
+        nextScheduledHint =
+            if (type == TaskType.Daily && !isScheduledToday) {
+                nextScheduledLocalDate?.toScheduledHint()
+            } else {
+                null
+            },
     )
+
+private fun String.toScheduledHint(): String? {
+    val date = runCatching { java.time.LocalDate.parse(this) }.getOrNull() ?: return null
+    return "Next: ${shortDateFormatter.format(date)}"
+}
 
 fun TaskType.toUi(): UiTaskType =
     when (this) {

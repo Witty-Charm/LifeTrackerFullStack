@@ -30,6 +30,8 @@ data class TaskEntity(
     val checklistJson: String?,
     val remindersJson: String?,
     val isOverdue: Boolean,
+    val isScheduledToday: Boolean = true,
+    val nextScheduledLocalDate: String? = null,
     val completionCount: Int,
     val failCount: Int,
     val lastCompletedAt: Long?,

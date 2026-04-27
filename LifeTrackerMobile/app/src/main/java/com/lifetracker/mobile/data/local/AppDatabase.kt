@@ -46,9 +46,17 @@ val MIGRATION_6_7 =
         }
     }
 
+val MIGRATION_7_8 =
+    object : Migration(7, 8) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE tasks ADD COLUMN isScheduledToday INTEGER NOT NULL DEFAULT 1")
+            db.execSQL("ALTER TABLE tasks ADD COLUMN nextScheduledLocalDate TEXT")
+        }
+    }
+
 @Database(
     entities = [HeroEntity::class, TaskEntity::class],
-    version = 7,
+    version = 8,
     exportSchema = true,
 )
 @TypeConverters(EnumConverters::class)

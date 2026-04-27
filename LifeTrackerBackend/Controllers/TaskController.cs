@@ -1,3 +1,4 @@
+using System.Globalization;
 using LifeTracker.Constants;
 using LifeTracker.Data;
 using LifeTracker.Models;
@@ -19,6 +20,7 @@ public class TaskController : DeviceScopedControllerBase
     private readonly GameEngineService _gameEngine;
     private readonly AchievementService _achievementService;
     private readonly IHeroTimeService _heroTimeService;
+    private readonly IDailyScheduleService _dailySchedule;
     private readonly ILogger<TaskController> _logger;
 
     public TaskController(
@@ -26,6 +28,7 @@ public class TaskController : DeviceScopedControllerBase
         GameEngineService gameEngine,
         AchievementService achievementService,
         IHeroTimeService heroTimeService,
+        IDailyScheduleService dailyScheduleService,
         ILogger<TaskController> logger,
         ICurrentHeroService currentHeroService)
         : base(currentHeroService)
@@ -34,11 +37,19 @@ public class TaskController : DeviceScopedControllerBase
         _gameEngine = gameEngine;
         _achievementService = achievementService;
         _heroTimeService = heroTimeService;
+        _dailySchedule = dailyScheduleService;
         _logger = logger;
     }
 
     internal static TaskController CreateForTests(ApplicationDbContext context, GameEngineService gameEngine, IHeroTimeService heroTimeService) =>
-        new(context, gameEngine, new AchievementService(context), heroTimeService, NullLogger<TaskController>.Instance, new CurrentHeroService(context));
+        new(
+            context,
+            gameEngine,
+            new AchievementService(context),
+            heroTimeService,
+            new DailyScheduleService(heroTimeService),
+            NullLogger<TaskController>.Instance,
+            new CurrentHeroService(context));
 
     [HttpGet]
     public async Task<ActionResult<IEnumerable<TaskDto>>> GetTasks([FromQuery] int? heroId = null)
@@ -123,6 +134,19 @@ public class TaskController : DeviceScopedControllerBase
             UpdatedAt = DateTimeOffset.UtcNow,
         };
 
+        if (task.Type == TaskType.Daily)
+        {
+            // Initialize the missed-day cursor to (startLocalDate - 1) so the first scheduled
+            // day not completed in time will be penalized. Existing legacy tasks that go through
+            // CheckOverdueTasks with this cursor still null will be initialized lazily there
+            // without back-fill (see CheckOverdueDailyTasks).
+            var tz = _heroTimeService.ResolveEffectiveTimeZone(hero, DateTimeOffset.UtcNow);
+            var startLocal = _dailySchedule.GetStartLocalDate(task, tz);
+            task.LastMissedScheduledLocalDate = startLocal
+                .AddDays(-1)
+                .ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        }
+
         _context.GameTasks.Add(task);
         await _context.SaveChangesAsync();
 
@@ -180,6 +204,8 @@ public class TaskController : DeviceScopedControllerBase
             task.Polarity = HabitPolarity.Both;
         }
 
+        var previousDueDate = task.DueDate;
+        var previousRepeatPattern = task.RepeatPattern;
         task.DueDate = request.DueDate;
 
         if (task.Type == TaskType.Daily)
@@ -189,6 +215,24 @@ public class TaskController : DeviceScopedControllerBase
                 : request.RepeatPattern;
             task.ChecklistJson = request.ChecklistJson;
             task.RemindersJson = request.RemindersJson;
+
+            // If the schedule's anchor (start date) or interval changed, reset the missed-day
+            // cursor so the new schedule is honored without retroactive penalties for the
+            // previous schedule.
+            var scheduleChanged = previousDueDate != task.DueDate
+                || !string.Equals(previousRepeatPattern, task.RepeatPattern, StringComparison.Ordinal);
+            if (scheduleChanged)
+            {
+                var owningHero = task.Hero ?? await _context.Heroes.FindAsync(task.HeroId);
+                if (owningHero != null)
+                {
+                    var tz = _heroTimeService.ResolveEffectiveTimeZone(owningHero, DateTimeOffset.UtcNow);
+                    var newStartLocal = _dailySchedule.GetStartLocalDate(task, tz);
+                    task.LastMissedScheduledLocalDate = newStartLocal
+                        .AddDays(-1)
+                        .ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+                }
+            }
         }
         else if (task.Type == TaskType.Habit)
         {
@@ -392,6 +436,23 @@ public class TaskController : DeviceScopedControllerBase
         var requestedLocalDate = _heroTimeService.ParseLocalDate(request.LocalDate);
         if (requestedLocalDate != todayLocalDate)
             return BadRequest("Only today's daily state can be changed");
+
+        // Reject toggling on a date that is not part of this Daily's schedule (interval-aware).
+        // This prevents the user from checking a daily on a non-scheduled day when interval > 1.
+        if (request.IsChecked && !_dailySchedule.IsScheduledOn(task, todayLocalDate, effectiveTimeZone))
+        {
+            var nextScheduled = _dailySchedule.NextScheduledOnOrAfter(
+                task,
+                todayLocalDate.AddDays(1),
+                effectiveTimeZone);
+            return BadRequest(new
+            {
+                errorCode = "DAILY_NOT_SCHEDULED_TODAY",
+                error = "Daily is not scheduled today",
+                message = "This daily repeats on a longer interval; today is not a scheduled day.",
+                nextScheduledLocalDate = nextScheduled.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            });
+        }
 
         var economy = hero.EconomyBalance;
         if (economy == null)
@@ -653,25 +714,22 @@ public class TaskController : DeviceScopedControllerBase
         if (effectiveHeroId != currentHero.Id)
             return NotFound();
 
-        var tasks = await _context.GameTasks
+        var penalties = new List<OverdueTaskPenalty>();
+        var shieldContexts = new Dictionary<int, ShieldConsumptionContext>();
+        var heroesWithAnyPenalty = new HashSet<int>();
+
+        // 1) Legacy single-shot pass for OneTime / Habit tasks: an overdue task gets penalized
+        //    once and is then permanently marked via OverdueProcessedAt. Daily tasks are now
+        //    handled by the missed-day pipeline below; their IsOverdue() is always false.
+        var legacyTasks = await _context.GameTasks
             .Include(t => t.Streak)
             .Include(t => t.Hero)
             .ThenInclude(h => h!.EconomyBalance)
-            .Where(t => t.IsActive && !t.IsCompleted && t.OverdueProcessedAt == null && t.HeroId == effectiveHeroId)
+            .Where(t => t.IsActive && !t.IsCompleted && t.OverdueProcessedAt == null
+                        && t.Type != TaskType.Daily && t.HeroId == effectiveHeroId)
             .ToListAsync();
 
-        var overdueTasks = tasks.Where(t => t.IsOverdue()).ToList();
-        if (!overdueTasks.Any())
-            return Ok(new OverdueCheckResponse
-            {
-                OverdueCount = 0,
-                Message = "No overdue tasks found",
-            });
-
-        var penalties = new List<OverdueTaskPenalty>();
-        var shieldContexts = new Dictionary<int, ShieldConsumptionContext>();
-
-        foreach (var task in overdueTasks)
+        foreach (var task in legacyTasks.Where(t => t.IsOverdue()))
         {
             var hero = task.Hero!;
             var economy = hero.EconomyBalance ?? new EconomyBalance { HeroId = hero.Id };
@@ -681,14 +739,10 @@ public class TaskController : DeviceScopedControllerBase
             var effectiveTimeZone = _heroTimeService.ResolveEffectiveTimeZone(hero, utcNow);
             var todayLocalDate = _heroTimeService.GetLocalDate(utcNow, effectiveTimeZone);
 
-            if (!shieldContexts.TryGetValue(hero.Id, out var shieldContext))
-            {
-                shieldContext = new ShieldConsumptionContext();
-                shieldContexts[hero.Id] = shieldContext;
-            }
-
+            var shieldContext = GetOrCreateShieldContext(shieldContexts, hero.Id);
             var failureResult = _gameEngine.ApplyTaskFailure(task, hero, streak, economy, todayLocalDate, shieldContext);
-            task.OverdueProcessedAt = DateTimeOffset.UtcNow;
+            task.OverdueProcessedAt = utcNow;
+            heroesWithAnyPenalty.Add(hero.Id);
 
             penalties.Add(new OverdueTaskPenalty
             {
@@ -702,24 +756,150 @@ public class TaskController : DeviceScopedControllerBase
             });
         }
 
-        foreach (var heroWithShieldUse in overdueTasks
-                     .Select(t => t.Hero!)
-                     .Where(h => shieldContexts.TryGetValue(h.Id, out var context) && context.AbsorbedAnyBreak)
-                     .DistinctBy(h => h.Id))
+        // 2) Daily missed-day pipeline. For every active Daily, walk each scheduled local day in
+        //    (LastMissedScheduledLocalDate .. today-1] and apply one ApplyTaskFailure per day
+        //    that has no successful DailyTaskCompletion. The cursor advances per day so repeated
+        //    runs are idempotent. Legacy dailies with a null cursor are initialized to (today-1)
+        //    without back-filling penalties for prior history.
+        var dailies = await _context.GameTasks
+            .Include(t => t.Streak)
+            .Include(t => t.Hero)
+            .ThenInclude(h => h!.EconomyBalance)
+            .Include(t => t.DailyTaskCompletions)
+            .Where(t => t.IsActive && t.Type == TaskType.Daily && t.HeroId == effectiveHeroId)
+            .ToListAsync();
+
+        var dailyPenaltyCount = ApplyDailyMissedDayPenalties(dailies, penalties, shieldContexts, heroesWithAnyPenalty);
+
+        // 3) Consume the per-hero shield once if any failure absorbed a streak break this batch.
+        foreach (var heroId2 in heroesWithAnyPenalty)
         {
-            heroWithShieldUse.IsShieldActive = false;
-            heroWithShieldUse.ShieldActivatedAtUtc = null;
+            if (!shieldContexts.TryGetValue(heroId2, out var ctx) || !ctx.AbsorbedAnyBreak) continue;
+            var hero = legacyTasks.FirstOrDefault(t => t.HeroId == heroId2)?.Hero
+                       ?? dailies.FirstOrDefault(t => t.HeroId == heroId2)?.Hero;
+            if (hero == null) continue;
+            hero.IsShieldActive = false;
+            hero.ShieldActivatedAtUtc = null;
         }
+
+        var totalCount = penalties.Count;
+        if (totalCount == 0)
+            return Ok(new OverdueCheckResponse
+            {
+                OverdueCount = 0,
+                Message = "No overdue tasks found",
+            });
 
         if (!await SaveChangesWithSingleRetryAsync())
             return Conflict(new { errorCode = "CONCURRENCY_CONFLICT", message = "Overdue state changed concurrently. Please retry." });
 
         return Ok(new OverdueCheckResponse
         {
-            OverdueCount = overdueTasks.Count,
+            OverdueCount = totalCount,
             Penalties = penalties,
-            Message = $"Applied penalties for {overdueTasks.Count} overdue task(s)",
+            Message = $"Applied penalties for {totalCount} overdue task(s)",
         });
+    }
+
+    private static ShieldConsumptionContext GetOrCreateShieldContext(
+        Dictionary<int, ShieldConsumptionContext> shieldContexts, int heroId)
+    {
+        if (!shieldContexts.TryGetValue(heroId, out var ctx))
+        {
+            ctx = new ShieldConsumptionContext();
+            shieldContexts[heroId] = ctx;
+        }
+        return ctx;
+    }
+
+    /// <summary>
+    /// For each Daily, advances <see cref="GameTask.LastMissedScheduledLocalDate"/> through every
+    /// scheduled local day strictly before today, calling <see cref="GameEngineService.ApplyTaskFailure"/>
+    /// once per scheduled day with no matching successful <see cref="DailyTaskCompletion"/>.
+    /// Returns the number of penalties applied.
+    /// </summary>
+    private int ApplyDailyMissedDayPenalties(
+        IReadOnlyList<GameTask> dailies,
+        List<OverdueTaskPenalty> penalties,
+        Dictionary<int, ShieldConsumptionContext> shieldContexts,
+        HashSet<int> heroesWithAnyPenalty)
+    {
+        var applied = 0;
+        var utcNow = DateTimeOffset.UtcNow;
+
+        foreach (var task in dailies)
+        {
+            var hero = task.Hero;
+            if (hero == null) continue;
+
+            var economy = hero.EconomyBalance ?? new EconomyBalance { HeroId = hero.Id };
+            var tz = _heroTimeService.ResolveEffectiveTimeZone(hero, utcNow);
+            var todayLocal = _heroTimeService.GetLocalDate(utcNow, tz);
+            var yesterdayLocal = todayLocal.AddDays(-1);
+
+            DateOnly? lastProcessed = null;
+            if (!string.IsNullOrWhiteSpace(task.LastMissedScheduledLocalDate))
+            {
+                if (DateOnly.TryParseExact(
+                        task.LastMissedScheduledLocalDate,
+                        "yyyy-MM-dd",
+                        CultureInfo.InvariantCulture,
+                        DateTimeStyles.None,
+                        out var parsed))
+                {
+                    lastProcessed = parsed;
+                }
+            }
+
+            // Legacy task without a cursor: initialize without back-filling prior history.
+            if (lastProcessed is null)
+            {
+                task.LastMissedScheduledLocalDate = yesterdayLocal.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+                task.UpdatedAt = utcNow;
+                continue;
+            }
+
+            var fromLocal = _dailySchedule.NextScheduledOnOrAfter(task, lastProcessed.Value.AddDays(1), tz);
+            if (fromLocal > yesterdayLocal) continue;
+
+            var checkedDates = new HashSet<string>(
+                task.DailyTaskCompletions
+                    .Where(c => c.IsChecked)
+                    .Select(c => c.LocalDate),
+                StringComparer.Ordinal);
+
+            foreach (var day in _dailySchedule.EnumerateScheduledDays(task, fromLocal, yesterdayLocal, tz))
+            {
+                var dayStr = day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+                if (checkedDates.Contains(dayStr))
+                {
+                    task.LastMissedScheduledLocalDate = dayStr;
+                    task.UpdatedAt = utcNow;
+                    continue;
+                }
+
+                var shieldContext = GetOrCreateShieldContext(shieldContexts, hero.Id);
+                var failureResult = _gameEngine.ApplyTaskFailure(task, hero, task.Streak, economy, day, shieldContext);
+                heroesWithAnyPenalty.Add(hero.Id);
+                applied++;
+
+                penalties.Add(new OverdueTaskPenalty
+                {
+                    TaskId = task.Id,
+                    TaskTitle = task.Title,
+                    DueDate = day.ToDateTime(TimeOnly.MinValue, DateTimeKind.Unspecified),
+                    HpLost = failureResult.HpLost,
+                    GoldLost = failureResult.GoldLost,
+                    HeroDied = failureResult.HeroDied,
+                    StreakBroken = failureResult.StreakBroken,
+                });
+
+                task.LastMissedScheduledLocalDate = dayStr;
+                task.UpdatedAt = utcNow;
+            }
+        }
+
+        return applied;
     }
 
     [HttpDelete("{id}")]
@@ -800,10 +980,28 @@ public class TaskController : DeviceScopedControllerBase
 
     private TaskDto MapToDto(GameTask task)
     {
-        var todayLocalDate = task.Hero != null
-            ? _heroTimeService.GetLocalDate(DateTimeOffset.UtcNow, _heroTimeService.ResolveEffectiveTimeZone(task.Hero, DateTimeOffset.UtcNow)).ToString("yyyy-MM-dd")
-            : null;
-        var isCheckedToday = todayLocalDate != null && task.DailyTaskCompletions.Any(c => c.LocalDate == todayLocalDate && c.IsChecked);
+        string? todayLocalDateStr = null;
+        DateOnly? todayLocalDate = null;
+        string? effectiveTimeZone = null;
+        if (task.Hero != null)
+        {
+            effectiveTimeZone = _heroTimeService.ResolveEffectiveTimeZone(task.Hero, DateTimeOffset.UtcNow);
+            todayLocalDate = _heroTimeService.GetLocalDate(DateTimeOffset.UtcNow, effectiveTimeZone);
+            todayLocalDateStr = todayLocalDate.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        }
+        var isCheckedToday = todayLocalDateStr != null && task.DailyTaskCompletions.Any(c => c.LocalDate == todayLocalDateStr && c.IsChecked);
+
+        // For dailies, compute schedule-aware fields. Defaults for non-Daily are
+        // IsScheduledToday=true (so no UI gating) and a null nextScheduledLocalDate.
+        var isScheduledToday = true;
+        string? nextScheduledLocalDate = null;
+        if (task.Type == TaskType.Daily && todayLocalDate.HasValue && effectiveTimeZone != null)
+        {
+            isScheduledToday = _dailySchedule.IsScheduledOn(task, todayLocalDate.Value, effectiveTimeZone);
+            nextScheduledLocalDate = _dailySchedule
+                .NextScheduledOnOrAfter(task, todayLocalDate.Value.AddDays(1), effectiveTimeZone)
+                .ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        }
 
         return new TaskDto
         {
@@ -822,6 +1020,8 @@ public class TaskController : DeviceScopedControllerBase
             ChecklistJson = task.ChecklistJson,
             RemindersJson = task.RemindersJson,
             IsOverdue = task.IsOverdue(),
+            IsScheduledToday = isScheduledToday,
+            NextScheduledLocalDate = nextScheduledLocalDate,
             CompletionCount = task.CompletionCount,
             FailCount = task.FailCount,
             LastCompletedAt = task.LastCompletedAt,
@@ -976,6 +1176,13 @@ public class TaskDto
     public string? ChecklistJson { get; set; }
     public string? RemindersJson { get; set; }
     public bool IsOverdue { get; set; }
+
+    // True iff today's local date is part of this task's schedule. Always true for non-Daily.
+    public bool IsScheduledToday { get; set; } = true;
+
+    // Local date (yyyy-MM-dd) of the next scheduled day after today. Null for non-Daily.
+    public string? NextScheduledLocalDate { get; set; }
+
     public int CompletionCount { get; set; }
     public int FailCount { get; set; }
     public DateTimeOffset? LastCompletedAt { get; set; }

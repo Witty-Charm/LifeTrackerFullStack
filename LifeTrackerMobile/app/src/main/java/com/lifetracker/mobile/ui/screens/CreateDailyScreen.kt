@@ -433,7 +433,9 @@ private fun SchedulingSection(
             modifier = Modifier.weight(1f),
         )
     }
-    Text("Repeats DAILY every $interval ${RepeatFrequency.DAILY.unitLabel}")
+    val safeInterval = interval.coerceAtLeast(1)
+    val intervalText = if (safeInterval == 1) "Repeats every day" else "Repeats every $safeInterval days"
+    Text(intervalText)
 }
 
 @Composable

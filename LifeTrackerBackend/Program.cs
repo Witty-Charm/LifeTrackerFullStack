@@ -29,6 +29,7 @@ builder.Services.AddScoped<LifeTracker.Services.Achievements.AchievementService>
 builder.Services.AddScoped<IShopService, ShopService>();
 builder.Services.AddScoped<ICurrentHeroService, CurrentHeroService>();
 builder.Services.AddScoped<LifeTracker.Services.Time.IHeroTimeService, LifeTracker.Services.Time.HeroTimeService>();
+builder.Services.AddScoped<IDailyScheduleService, DailyScheduleService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddProblemDetails();
 

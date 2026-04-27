@@ -333,6 +333,14 @@ private fun TaskCardContent(
                 )
             }
 
+            if (task.nextScheduledHint != null) {
+                Text(
+                    text = task.nextScheduledHint,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
             task.pendingAction?.let { pendingAction ->
                 val suppressLabel = task.type == UiTaskType.Daily && pendingAction == TaskPendingAction.Complete
                 if (!suppressLabel) {
