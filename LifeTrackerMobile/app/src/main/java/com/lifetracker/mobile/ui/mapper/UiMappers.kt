@@ -71,6 +71,7 @@ fun GameTaskDomain.toUi(): TaskUi =
                 TaskType.Unknown -> UiTaskType.Unknown
             },
         habitPolarity = if (type == TaskType.Habit) habitPolarity else HabitPolarity.Both,
+        difficulty = difficulty.toUi(),
         difficultyLabel =
             when (difficulty) {
                 TaskDifficulty.Easy -> "Easy"
