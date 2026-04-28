@@ -104,6 +104,7 @@ fun GameTaskDomain.toUi(): TaskUi =
             streak
                 ?.takeIf { it.currentDays > 0 }
                 ?.let { "\uD83D\uDD25 ${it.currentDays} days (+${it.bonusXpPercent}%)" },
+        habitCountersText = formatHabitCountersText(type, habitPolarity, completionCount, failCount),
         isPendingSync = pendingSync,
         syncError = syncError,
         pendingAction = null,
@@ -121,6 +122,26 @@ fun GameTaskDomain.toUi(): TaskUi =
 private fun String.toScheduledHint(): String? {
     val date = runCatching { java.time.LocalDate.parse(this) }.getOrNull() ?: return null
     return "Next: ${shortDateFormatter.format(date)}"
+}
+
+// Per-period habit counters surfaced under the card. Backend resets these
+// compute-on-read on local-day/week/month rollover, so this string reflects
+// the current period only. Hidden when the polarity-relevant counter is zero.
+private fun formatHabitCountersText(
+    type: TaskType,
+    polarity: HabitPolarity,
+    completionCount: Int,
+    failCount: Int,
+): String? {
+    if (type != TaskType.Habit) return null
+    return when (polarity) {
+        HabitPolarity.Positive -> if (completionCount > 0) "+$completionCount" else null
+        HabitPolarity.Negative -> if (failCount > 0) "-$failCount" else null
+        HabitPolarity.Both -> {
+            if (completionCount == 0 && failCount == 0) null
+            else "+$completionCount / -$failCount"
+        }
+    }
 }
 
 fun TaskType.toUi(): UiTaskType =
