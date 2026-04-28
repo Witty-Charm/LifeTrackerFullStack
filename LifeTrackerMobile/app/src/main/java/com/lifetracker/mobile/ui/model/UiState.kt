@@ -79,6 +79,7 @@ data class TaskUi(
     val rewardText: String,
     val penaltyText: String,
     val streakText: String?,
+    val habitCountersText: String? = null,
     val isPendingSync: Boolean,
     val syncError: String? = null,
     val pendingAction: TaskPendingAction? = null,

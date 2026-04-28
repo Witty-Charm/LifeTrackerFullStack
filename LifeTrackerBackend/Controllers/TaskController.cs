@@ -976,6 +976,11 @@ public class TaskController : DeviceScopedControllerBase
                 .ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
         }
 
+        var (effectiveCompletionCount, effectiveFailCount) =
+            todayLocalDate.HasValue && effectiveTimeZone != null
+                ? GetEffectiveHabitCounters(task, todayLocalDate.Value, effectiveTimeZone, _heroTimeService.GetLocalDate)
+                : (task.CompletionCount, task.FailCount);
+
         return new TaskDto
         {
             Id = task.Id,
@@ -995,8 +1000,8 @@ public class TaskController : DeviceScopedControllerBase
             IsOverdue = task.IsOverdue(),
             IsScheduledToday = isScheduledToday,
             NextScheduledLocalDate = nextScheduledLocalDate,
-            CompletionCount = task.CompletionCount,
-            FailCount = task.FailCount,
+            CompletionCount = effectiveCompletionCount,
+            FailCount = effectiveFailCount,
             LastCompletedAt = task.LastCompletedAt,
             OverdueProcessedAt = task.OverdueProcessedAt,
             BaseXp = task.GetBaseRewardXP(),
@@ -1019,6 +1024,43 @@ public class TaskController : DeviceScopedControllerBase
 
     private const string HabitResetPatternPrefix = "RESET:";
 
+    // Pure check used by both the persisting reset path (/complete, /fail)
+    // and the read-only sibling that exposes effective counters. Returns
+    // false for non-habit tasks, missing/legacy/unknown RepeatPattern, or
+    // when the period bucket has not rolled over yet.
+    private static bool ShouldResetHabitCounter(
+        GameTask task,
+        DateOnly todayLocalDate,
+        string effectiveTimeZoneId,
+        Func<DateTimeOffset, string, DateOnly> getLocalDate)
+    {
+        if (task.Type != TaskType.Habit)
+            return false;
+
+        if (string.IsNullOrWhiteSpace(task.RepeatPattern))
+            return false;
+
+        if (!task.RepeatPattern.StartsWith(HabitResetPatternPrefix, StringComparison.Ordinal))
+            return false;
+
+        var periodToken = task.RepeatPattern.Substring(HabitResetPatternPrefix.Length).Trim();
+        if (periodToken.Length == 0)
+            return false;
+
+        // Anchor for the "previous" period bucket: last counter activity (complete or fail).
+        // Fall back to UpdatedAt (CreatedAt for new tasks) when no activity has been recorded yet.
+        var previousActivityUtc = task.LastCompletedAt ?? task.UpdatedAt;
+        var previousLocalDate = getLocalDate(previousActivityUtc, effectiveTimeZoneId);
+
+        return periodToken switch
+        {
+            "DAILY" => previousLocalDate != todayLocalDate,
+            "WEEKLY" => GetIsoWeekBucket(previousLocalDate) != GetIsoWeekBucket(todayLocalDate),
+            "MONTHLY" => (previousLocalDate.Year, previousLocalDate.Month) != (todayLocalDate.Year, todayLocalDate.Month),
+            _ => false,
+        };
+    }
+
     // Habitica-style reset counter. If the habit's RepeatPattern is "RESET:DAILY|WEEKLY|MONTHLY"
     // and the current period bucket (in hero's local time zone) differs from the bucket of the last
     // counter activity, reset CompletionCount and FailCount to 0 before the next increment.
@@ -1028,37 +1070,27 @@ public class TaskController : DeviceScopedControllerBase
         string effectiveTimeZoneId,
         Func<DateTimeOffset, string, DateOnly> getLocalDate)
     {
-        if (task.Type != TaskType.Habit)
-            return;
-
-        if (string.IsNullOrWhiteSpace(task.RepeatPattern))
-            return;
-
-        if (!task.RepeatPattern.StartsWith(HabitResetPatternPrefix, StringComparison.Ordinal))
-            return;
-
-        var periodToken = task.RepeatPattern.Substring(HabitResetPatternPrefix.Length).Trim();
-        if (periodToken.Length == 0)
-            return;
-
-        // Anchor for the "previous" period bucket: last counter activity (complete or fail).
-        // Fall back to UpdatedAt (CreatedAt for new tasks) when no activity has been recorded yet.
-        var previousActivityUtc = task.LastCompletedAt ?? task.UpdatedAt;
-        var previousLocalDate = getLocalDate(previousActivityUtc, effectiveTimeZoneId);
-
-        bool bucketChanged = periodToken switch
-        {
-            "DAILY" => previousLocalDate != todayLocalDate,
-            "WEEKLY" => GetIsoWeekBucket(previousLocalDate) != GetIsoWeekBucket(todayLocalDate),
-            "MONTHLY" => (previousLocalDate.Year, previousLocalDate.Month) != (todayLocalDate.Year, todayLocalDate.Month),
-            _ => false,
-        };
-
-        if (bucketChanged)
+        if (ShouldResetHabitCounter(task, todayLocalDate, effectiveTimeZoneId, getLocalDate))
         {
             task.CompletionCount = 0;
             task.FailCount = 0;
         }
+    }
+
+    // Read-only sibling of ResetHabitCounterIfNeeded. Returns the counters
+    // a client should display today, applying period reset compute-on-read
+    // without mutating the EF-tracked entity. Used by MapToDto so that
+    // GET endpoints surface zero counters once the hero's local period
+    // has rolled over, even before /complete or /fail is next called.
+    internal static (int CompletionCount, int FailCount) GetEffectiveHabitCounters(
+        GameTask task,
+        DateOnly todayLocalDate,
+        string effectiveTimeZoneId,
+        Func<DateTimeOffset, string, DateOnly> getLocalDate)
+    {
+        if (ShouldResetHabitCounter(task, todayLocalDate, effectiveTimeZoneId, getLocalDate))
+            return (0, 0);
+        return (task.CompletionCount, task.FailCount);
     }
 
     private static (int IsoYear, int IsoWeek) GetIsoWeekBucket(DateOnly localDate)

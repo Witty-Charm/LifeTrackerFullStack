@@ -317,6 +317,14 @@ private fun TaskCardContent(
                 )
             }
 
+            if (task.habitCountersText != null) {
+                Text(
+                    text = task.habitCountersText,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
             if (task.isShieldActive) {
                 Text(
                     text = "🛡️ Shield active",
