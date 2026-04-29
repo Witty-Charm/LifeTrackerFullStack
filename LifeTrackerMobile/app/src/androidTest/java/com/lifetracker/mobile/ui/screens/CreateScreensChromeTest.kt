@@ -2,6 +2,7 @@ package com.lifetracker.mobile.ui.screens
 
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
@@ -27,6 +28,7 @@ import com.lifetracker.mobile.domain.model.OverdueResult
 import com.lifetracker.mobile.domain.model.RespawnResult
 import com.lifetracker.mobile.domain.model.TaskCompletionResult
 import com.lifetracker.mobile.domain.model.TaskFailureResult
+import com.lifetracker.mobile.domain.model.UpdateTaskParams
 import com.lifetracker.mobile.domain.repository.HeroRepository
 import com.lifetracker.mobile.domain.repository.TaskRepository
 import com.lifetracker.mobile.domain.usecase.hero.CreateHeroUseCase
@@ -51,6 +53,7 @@ import com.lifetracker.mobile.domain.usecase.task.GetTasksUseCase
 import com.lifetracker.mobile.domain.usecase.task.RetryTaskSyncUseCase
 import com.lifetracker.mobile.domain.usecase.task.SetDailyTaskStateUseCase
 import com.lifetracker.mobile.domain.usecase.task.TaskUseCases
+import com.lifetracker.mobile.domain.usecase.task.UpdateTaskUseCase
 import com.lifetracker.mobile.ui.model.CreateDailyFormState
 import com.lifetracker.mobile.ui.model.HeroScreenState
 import com.lifetracker.mobile.ui.model.RepeatFrequency
@@ -232,7 +235,7 @@ class CreateScreensChromeTest {
 private fun rememberHeroViewModel(): HeroViewModel {
     val context = LocalContext.current
 
-    return androidx.compose.runtime.remember {
+    return remember {
         val heroRepository = CreateScreenFakeHeroRepository()
         val taskRepository = CreateScreenFakeTaskRepository()
 
@@ -262,6 +265,7 @@ private fun rememberHeroViewModel(): HeroViewModel {
                     retryTaskSync = RetryTaskSyncUseCase(taskRepository),
                     deleteLocalTask = DeleteLocalTaskUseCase(taskRepository),
                     deleteTask = DeleteTaskUseCase(taskRepository),
+                    updateTask = UpdateTaskUseCase(taskRepository),
                 ),
             workManager = WorkManager.getInstance(context),
         )
@@ -272,7 +276,7 @@ private fun rememberHeroViewModel(): HeroViewModel {
 private fun rememberCreateDailyViewModel(): CreateDailyViewModel {
     val context = LocalContext.current
 
-    return androidx.compose.runtime.remember {
+    return remember {
         val taskRepository = CreateScreenFakeTaskRepository()
         CreateDailyViewModel(
             heroId = 1,
@@ -288,6 +292,7 @@ private fun rememberCreateDailyViewModel(): CreateDailyViewModel {
                     retryTaskSync = RetryTaskSyncUseCase(taskRepository),
                     deleteLocalTask = DeleteLocalTaskUseCase(taskRepository),
                     deleteTask = DeleteTaskUseCase(taskRepository),
+                    updateTask = UpdateTaskUseCase(taskRepository),
                 ),
             reminderScheduler = ReminderScheduler(WorkManager.getInstance(context), JsonDefaults),
         )
@@ -383,6 +388,9 @@ private class CreateScreenFakeTaskRepository : TaskRepository {
                 syncError = null,
             ),
         )
+
+    override suspend fun updateTask(params: UpdateTaskParams): DomainResult<GameTaskDomain> =
+        DomainResult.Failure(GameError.Unknown("Not used in this test"))
 
     override suspend fun completeTask(taskId: Int): DomainResult<TaskCompletionResult> =
         DomainResult.Failure(GameError.Unknown("Not used in this test"))

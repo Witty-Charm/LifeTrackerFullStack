@@ -124,9 +124,6 @@ private fun String.toScheduledHint(): String? {
     return "Next: ${shortDateFormatter.format(date)}"
 }
 
-// Per-period habit counters surfaced under the card. Backend resets these
-// compute-on-read on local-day/week/month rollover, so this string reflects
-// the current period only. Hidden when the polarity-relevant counter is zero.
 private fun formatHabitCountersText(
     type: TaskType,
     polarity: HabitPolarity,
