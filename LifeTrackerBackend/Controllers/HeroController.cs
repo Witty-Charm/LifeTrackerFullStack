@@ -35,7 +35,7 @@ public class HeroController : DeviceScopedControllerBase
     [HttpGet("me")]
     public async Task<ActionResult<HeroDto>> GetCurrentHero()
     {
-        _ = RequireCurrentDevice(out var errorResult);
+        _ = RequireCurrentUser(out var errorResult);
         if (errorResult is not null)
             return errorResult;
 
@@ -53,7 +53,7 @@ public class HeroController : DeviceScopedControllerBase
     [HttpGet("{id}")]
     public async Task<ActionResult<HeroDto>> GetHero(int id)
     {
-        _ = RequireCurrentDevice(out var errorResult);
+        _ = RequireCurrentUser(out var errorResult);
         if (errorResult is not null)
             return errorResult;
 
@@ -72,7 +72,7 @@ public class HeroController : DeviceScopedControllerBase
     [HttpPost]
     public async Task<ActionResult<HeroDto>> PostHero([FromBody] CreateHeroRequest request)
     {
-        var deviceId = RequireCurrentDevice(out var errorResult);
+        var userId = RequireCurrentUser(out var errorResult);
         if (errorResult is not null)
             return errorResult;
 
@@ -81,7 +81,8 @@ public class HeroController : DeviceScopedControllerBase
 
         var hero = new Hero
         {
-            OwnerDeviceId = deviceId!,
+            UserId = userId,
+            OwnerDeviceId = TryGetDeviceIdMetadata() ?? string.Empty,
             Name = request.Name,
             Level = 1,
             MaxHp = GameConstants.CalculateMaxHp(1),
@@ -122,7 +123,7 @@ public class HeroController : DeviceScopedControllerBase
     [HttpGet("{id}/achievements")]
     public async Task<ActionResult<HeroAchievementsResponse>> GetAchievements(int id)
     {
-        _ = RequireCurrentDevice(out var errorResult);
+        _ = RequireCurrentUser(out var errorResult);
         if (errorResult is not null)
             return errorResult;
 
@@ -143,7 +144,7 @@ public class HeroController : DeviceScopedControllerBase
     [HttpGet("{id}/stats")]
     public async Task<ActionResult<HeroStatsDto>> GetHeroStats(int id)
     {
-        _ = RequireCurrentDevice(out var errorResult);
+        _ = RequireCurrentUser(out var errorResult);
         if (errorResult is not null)
             return errorResult;
 
@@ -205,7 +206,7 @@ public class HeroController : DeviceScopedControllerBase
     [HttpPatch("{id}/timezone")]
     public async Task<ActionResult<HeroTimeZoneUpdateResponse>> UpdateHeroTimeZone(int id, [FromBody] UpdateHeroTimeZoneRequest request)
     {
-        _ = RequireCurrentDevice(out var errorResult);
+        _ = RequireCurrentUser(out var errorResult);
         if (errorResult is not null)
             return errorResult;
 
@@ -254,7 +255,7 @@ public class HeroController : DeviceScopedControllerBase
     [HttpPost("{id}/respawn")]
     public async Task<ActionResult<RespawnResponse>> RespawnHero(int id)
     {
-        _ = RequireCurrentDevice(out var errorResult);
+        _ = RequireCurrentUser(out var errorResult);
         if (errorResult is not null)
             return errorResult;
 
@@ -302,7 +303,7 @@ public class HeroController : DeviceScopedControllerBase
     [HttpPost("{id}/heal")]
     public async Task<ActionResult<HealResponse>> HealHero(int id, [FromQuery] int amount = 0)
     {
-        _ = RequireCurrentDevice(out var errorResult);
+        _ = RequireCurrentUser(out var errorResult);
         if (errorResult is not null)
             return errorResult;
 

@@ -15,6 +15,7 @@ namespace LifeTrackerBackend.Tests;
 public class TaskControllerDailyScheduleTests : IAsyncLifetime
 {
     private const string TestDeviceId = "11111111-1111-1111-1111-111111111111";
+    private const int TestUserId = 1;
     private readonly SqliteConnection _connection = new("Data Source=:memory:");
     private DbContextOptions<ApplicationDbContext> _options = null!;
 
@@ -26,6 +27,8 @@ public class TaskControllerDailyScheduleTests : IAsyncLifetime
             .Options;
         await using var db = CreateDbContext();
         await db.Database.EnsureCreatedAsync();
+        db.Users.Add(new User { Id = TestUserId, Provider = AuthProvider.Google, ExternalId = "ext-" + TestUserId, Email = "user@example.com" });
+        await db.SaveChangesAsync();
     }
 
     public async Task DisposeAsync() => await _connection.DisposeAsync();
@@ -436,10 +439,12 @@ public class TaskControllerDailyScheduleTests : IAsyncLifetime
     {
         var controller = TaskController.CreateForTests(db, new GameEngineService(), timeService);
         controller.ControllerContext = new ControllerContext
+
         {
-            HttpContext = new DefaultHttpContext(),
+
+            HttpContext = TestAuthHelpers.CreateAuthenticatedHttpContext(TestUserId, TestDeviceId)
+
         };
-        controller.ControllerContext.HttpContext.Request.Headers["X-Device-Id"] = TestDeviceId;
         return controller;
     }
 
@@ -455,6 +460,7 @@ public class TaskControllerDailyScheduleTests : IAsyncLifetime
             MaxHp = 100,
             TimeZoneId = timeZoneId,
             OwnerDeviceId = TestDeviceId,
+            UserId = TestUserId,
             CreatedDate = heroCreatedAt,
             UpdatedAt = heroCreatedAt,
         };

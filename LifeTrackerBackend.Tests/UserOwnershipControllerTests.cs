@@ -12,10 +12,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LifeTrackerBackend.Tests;
 
-public class DeviceOwnershipControllerTests : IAsyncLifetime
+public class UserOwnershipControllerTests : IAsyncLifetime
 {
+    private const int UserA = 1;
+    private const int UserB = 2;
     private const string DeviceA = "11111111-1111-1111-1111-111111111111";
     private const string DeviceB = "22222222-2222-2222-2222-222222222222";
+
     private readonly SqliteConnection _connection = new("Data Source=:memory:");
     private DbContextOptions<ApplicationDbContext> _options = null!;
 
@@ -28,46 +31,62 @@ public class DeviceOwnershipControllerTests : IAsyncLifetime
 
         await using var db = CreateDbContext();
         await db.Database.EnsureCreatedAsync();
+        db.Users.AddRange(
+            new User { Id = UserA, Provider = AuthProvider.Google, ExternalId = "ext-A", Email = "a@example.com" },
+            new User { Id = UserB, Provider = AuthProvider.Google, ExternalId = "ext-B", Email = "b@example.com" });
+        await db.SaveChangesAsync();
     }
 
-    public async Task DisposeAsync()
-    {
-        await _connection.DisposeAsync();
-    }
+    public async Task DisposeAsync() => await _connection.DisposeAsync();
 
     [Fact]
-    public async Task GetHero_WithoutDeviceHeader_ReturnsBadRequest()
+    public async Task GetHero_WithoutAuthenticatedPrincipal_ReturnsUnauthorized()
     {
         await using var db = CreateDbContext();
-        var hero = await CreateHeroAsync(db, "Alex");
-        var controller = CreateHeroController(db);
+        var hero = await CreateHeroAsync(db, "Alex", userId: UserA, ownerDeviceId: DeviceA);
+        var controller = HeroController.CreateForTests(db, new HeroTimeService());
         controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
 
         var actionResult = await controller.GetHero(hero.Id);
 
-        Assert.IsType<BadRequestObjectResult>(actionResult.Result);
+        Assert.IsType<UnauthorizedObjectResult>(actionResult.Result);
     }
 
     [Fact]
-    public async Task PostHero_PersistsOwnerDeviceIdFromHeader()
+    public async Task PostHero_PersistsUserIdFromJwtAndDeviceIdMetadataFromHeader()
     {
         await using var db = CreateDbContext();
-        var controller = CreateHeroController(db, DeviceA);
+        var controller = CreateHeroController(db, userId: UserA, deviceId: DeviceA);
 
         var actionResult = await controller.PostHero(new CreateHeroRequest { Name = "Alex" });
 
         var created = Assert.IsType<CreatedAtActionResult>(actionResult.Result);
         Assert.IsType<HeroDto>(created.Value);
-        var storedHero = await db.Heroes.SingleAsync();
-        Assert.Equal(DeviceA, ReadOwnerDeviceId(storedHero));
+        var stored = await db.Heroes.SingleAsync();
+        Assert.Equal(UserA, stored.UserId);
+        Assert.Equal(DeviceA, ReadOwnerDeviceId(stored));
     }
 
     [Fact]
-    public async Task GetHero_ForOtherDevice_ReturnsNotFound()
+    public async Task PostHero_WithoutDeviceHeader_PersistsEmptyDeviceMetadata()
     {
         await using var db = CreateDbContext();
-        var hero = await CreateHeroAsync(db, "Alex", ownerDeviceId: DeviceA);
-        var controller = CreateHeroController(db, DeviceB);
+        var controller = CreateHeroController(db, userId: UserA, deviceId: null);
+
+        var actionResult = await controller.PostHero(new CreateHeroRequest { Name = "Alex" });
+
+        Assert.IsType<CreatedAtActionResult>(actionResult.Result);
+        var stored = await db.Heroes.SingleAsync();
+        Assert.Equal(UserA, stored.UserId);
+        Assert.Equal(string.Empty, ReadOwnerDeviceId(stored));
+    }
+
+    [Fact]
+    public async Task GetHero_ForOtherUser_ReturnsNotFound()
+    {
+        await using var db = CreateDbContext();
+        var hero = await CreateHeroAsync(db, "Alex", userId: UserA, ownerDeviceId: DeviceA);
+        var controller = CreateHeroController(db, userId: UserB, deviceId: DeviceB);
 
         var actionResult = await controller.GetHero(hero.Id);
 
@@ -75,11 +94,11 @@ public class DeviceOwnershipControllerTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GetCurrentHero_ForCurrentDevice_ReturnsOwnedHero()
+    public async Task GetCurrentHero_ForCurrentUser_ReturnsOwnedHero()
     {
         await using var db = CreateDbContext();
-        var hero = await CreateHeroAsync(db, "Alex", ownerDeviceId: DeviceA);
-        var controller = CreateHeroController(db, DeviceA);
+        var hero = await CreateHeroAsync(db, "Alex", userId: UserA, ownerDeviceId: DeviceA);
+        var controller = CreateHeroController(db, userId: UserA, deviceId: DeviceA);
         var method = typeof(HeroController).GetMethod("GetCurrentHero", BindingFlags.Instance | BindingFlags.Public);
 
         Assert.NotNull(method);
@@ -96,16 +115,16 @@ public class DeviceOwnershipControllerTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task PostTask_WithoutHeroId_UsesHeroOwnedByCurrentDevice()
+    public async Task PostTask_WithoutHeroId_UsesHeroOwnedByCurrentUser()
     {
         await using var db = CreateDbContext();
-        var heroA = await CreateHeroAsync(db, "Alex", ownerDeviceId: DeviceA);
-        var heroB = await CreateHeroAsync(db, "Blair", ownerDeviceId: DeviceB);
-        var controller = CreateTaskController(db, DeviceB);
+        var heroA = await CreateHeroAsync(db, "Alex", userId: UserA, ownerDeviceId: DeviceA);
+        var heroB = await CreateHeroAsync(db, "Blair", userId: UserB, ownerDeviceId: DeviceB);
+        var controller = CreateTaskController(db, userId: UserB, deviceId: DeviceB);
 
         var actionResult = await controller.PostTask(new CreateTaskRequest
         {
-            Title = "Device scoped task",
+            Title = "User scoped task",
             Type = TaskType.OneTime,
             Difficulty = TaskDifficulty.Easy,
         });
@@ -120,62 +139,45 @@ public class DeviceOwnershipControllerTests : IAsyncLifetime
     public void HeroController_DoesNotExposePublicGetHeroesEndpoint()
     {
         var getHeroes = typeof(HeroController).GetMethod("GetHeroes", BindingFlags.Instance | BindingFlags.Public);
-
         Assert.Null(getHeroes);
     }
 
-    private static HeroController CreateHeroController(ApplicationDbContext db, string? deviceId = null)
+    private static HeroController CreateHeroController(ApplicationDbContext db, int userId, string? deviceId)
     {
         var controller = HeroController.CreateForTests(db, new HeroTimeService());
-        controller.ControllerContext = new ControllerContext { HttpContext = CreateHttpContext(deviceId) };
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = TestAuthHelpers.CreateAuthenticatedHttpContext(userId, deviceId),
+        };
         return controller;
     }
 
-    private static TaskController CreateTaskController(ApplicationDbContext db, string? deviceId = null)
+    private static TaskController CreateTaskController(ApplicationDbContext db, int userId, string? deviceId)
     {
         var controller = TaskController.CreateForTests(db, new GameEngineService(), new HeroTimeService());
-        controller.ControllerContext = new ControllerContext { HttpContext = CreateHttpContext(deviceId) };
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = TestAuthHelpers.CreateAuthenticatedHttpContext(userId, deviceId),
+        };
         return controller;
     }
 
-    private static DefaultHttpContext CreateHttpContext(string? deviceId)
-    {
-        var context = new DefaultHttpContext();
-        if (!string.IsNullOrWhiteSpace(deviceId))
-        {
-            context.Request.Headers["X-Device-Id"] = deviceId;
-        }
-
-        return context;
-    }
-
-    private static async Task<Hero> CreateHeroAsync(ApplicationDbContext db, string name, string? ownerDeviceId = null)
+    private static async Task<Hero> CreateHeroAsync(ApplicationDbContext db, string name, int userId, string ownerDeviceId)
     {
         var hero = new Hero
         {
             Name = name,
+            UserId = userId,
             Gold = 100,
             Level = 1,
             CurrentHp = GameConstants.BaseHp,
             MaxHp = GameConstants.BaseHp,
             TimeZoneId = "UTC",
+            OwnerDeviceId = ownerDeviceId,
         };
-
-        if (ownerDeviceId is not null)
-        {
-            SetOwnerDeviceId(hero, ownerDeviceId);
-        }
-
         db.Heroes.Add(hero);
         await db.SaveChangesAsync();
         return hero;
-    }
-
-    private static void SetOwnerDeviceId(Hero hero, string ownerDeviceId)
-    {
-        var property = typeof(Hero).GetProperty("OwnerDeviceId");
-        Assert.NotNull(property);
-        property!.SetValue(hero, ownerDeviceId);
     }
 
     private static string ReadOwnerDeviceId(Hero hero)
