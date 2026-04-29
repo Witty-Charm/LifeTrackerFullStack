@@ -28,6 +28,9 @@ public class Hero
 
     public string OwnerDeviceId { get; set; } = string.Empty;
 
+    public int? UserId { get; set; }
+    public User? User { get; set; }
+
     public string TimeZoneId { get; set; } = "UTC";
     public string? PendingTimeZoneId { get; set; }
     public string? TimeZoneSwitchAfterLocalDate { get; set; }

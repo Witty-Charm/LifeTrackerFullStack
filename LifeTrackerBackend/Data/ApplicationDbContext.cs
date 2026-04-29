@@ -30,6 +30,8 @@ public class ApplicationDbContext : DbContext
     public DbSet<ShopItem> ShopItems { get; set; }
     public DbSet<Purchase> Purchases { get; set; }
     public DbSet<HeroAchievement> HeroAchievements { get; set; }
+    public DbSet<User> Users { get; set; }
+    public DbSet<RefreshToken> RefreshTokens { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -99,6 +101,43 @@ public class ApplicationDbContext : DbContext
             .Property(h => h.RowVersion)
             .IsConcurrencyToken();
 
+        modelBuilder.Entity<Hero>()
+            .HasOne(h => h.User)
+            .WithMany(u => u.Heroes)
+            .HasForeignKey(h => h.UserId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<Hero>()
+            .HasIndex(h => h.UserId);
+
+        modelBuilder.Entity<User>()
+            .Property(u => u.Provider)
+            .HasConversion<int>();
+
+        modelBuilder.Entity<User>()
+            .HasIndex(u => new { u.Provider, u.ExternalId })
+            .IsUnique();
+
+        modelBuilder.Entity<User>()
+            .HasIndex(u => u.Email);
+
+        modelBuilder.Entity<User>()
+            .Property(u => u.RowVersion)
+            .IsConcurrencyToken();
+
+        modelBuilder.Entity<RefreshToken>()
+            .HasOne(t => t.User)
+            .WithMany(u => u.RefreshTokens)
+            .HasForeignKey(t => t.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<RefreshToken>()
+            .HasIndex(t => t.TokenHash)
+            .IsUnique();
+
+        modelBuilder.Entity<RefreshToken>()
+            .HasIndex(t => t.UserId);
+
         modelBuilder.Entity<Purchase>()
             .HasOne(p => p.Hero)
             .WithMany()
@@ -162,6 +201,12 @@ public class ApplicationDbContext : DbContext
         }
 
         foreach (var entry in ChangeTracker.Entries<DailyTaskCompletion>()
+                     .Where(e => e.State is EntityState.Added or EntityState.Modified))
+        {
+            entry.Entity.RowVersion = Guid.NewGuid().ToByteArray();
+        }
+
+        foreach (var entry in ChangeTracker.Entries<User>()
                      .Where(e => e.State is EntityState.Added or EntityState.Modified))
         {
             entry.Entity.RowVersion = Guid.NewGuid().ToByteArray();

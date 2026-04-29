@@ -1,10 +1,13 @@
 using System.Collections;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using LifeTracker.Configuration;
 using LifeTracker.Data;
 using LifeTracker.Services;
+using LifeTracker.Services.Auth;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -33,6 +36,36 @@ builder.Services.AddScoped<IDailyScheduleService, DailyScheduleService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddProblemDetails();
 
+var authOptions = AuthOptionsLoader.Load(builder.Configuration);
+builder.Services.AddSingleton(authOptions);
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<IJwtTokenService, JwtTokenService>();
+
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = authOptions.JwtIssuer,
+            ValidateAudience = true,
+            ValidAudience = authOptions.JwtAudience,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(
+                DecodeJwtSigningKey(authOptions.JwtSigningKey)),
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.FromSeconds(30),
+        };
+    });
+builder.Services.AddAuthorization();
+
+static byte[] DecodeJwtSigningKey(string raw)
+{
+    try { return Convert.FromBase64String(raw); }
+    catch (FormatException) { return System.Text.Encoding.UTF8.GetBytes(raw); }
+}
+
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
@@ -56,6 +89,7 @@ app.UseSwagger();
 app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
