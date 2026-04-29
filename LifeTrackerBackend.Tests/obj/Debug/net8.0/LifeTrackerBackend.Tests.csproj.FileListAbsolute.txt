@@ -147,3 +147,9 @@
 /home/ubuntu/repos/LifeTrackerFullStack/LifeTrackerBackend.Tests/obj/Debug/net8.0/LifeTrackerBackend.Tests.pdb
 /home/ubuntu/repos/LifeTrackerFullStack/LifeTrackerBackend.Tests/obj/Debug/net8.0/LifeTrackerBackend.Tests.genruntimeconfig.cache
 /home/ubuntu/repos/LifeTrackerFullStack/LifeTrackerBackend.Tests/obj/Debug/net8.0/ref/LifeTrackerBackend.Tests.dll
+/home/ubuntu/repos/LifeTrackerFullStack/LifeTrackerBackend.Tests/bin/Debug/net8.0/Google.Apis.dll
+/home/ubuntu/repos/LifeTrackerFullStack/LifeTrackerBackend.Tests/bin/Debug/net8.0/Google.Apis.Auth.dll
+/home/ubuntu/repos/LifeTrackerFullStack/LifeTrackerBackend.Tests/bin/Debug/net8.0/Google.Apis.Core.dll
+/home/ubuntu/repos/LifeTrackerFullStack/LifeTrackerBackend.Tests/bin/Debug/net8.0/System.CodeDom.dll
+/home/ubuntu/repos/LifeTrackerFullStack/LifeTrackerBackend.Tests/bin/Debug/net8.0/System.Management.dll
+/home/ubuntu/repos/LifeTrackerFullStack/LifeTrackerBackend.Tests/bin/Debug/net8.0/runtimes/win/lib/net7.0/System.Management.dll
