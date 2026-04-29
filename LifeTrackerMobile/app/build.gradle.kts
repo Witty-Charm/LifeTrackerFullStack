@@ -37,12 +37,15 @@ android {
     }
 
     buildTypes {
+        val googleWebClientId: String = localProps.getProperty("google.web_client_id", "")
         debug {
             val baseUrl: String = localProps.getProperty("dev.base_url", "http://10.0.2.2:5000/")
             buildConfigField("String", "BASE_URL", "\"$baseUrl\"")
+            buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
         }
         release {
             buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:5000/\"")
+            buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
         }
     }
 
@@ -110,6 +113,11 @@ dependencies {
     implementation(libs.koin.workmanager)
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.datastore.preferences)
+
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
+    implementation(libs.googleid)
+    implementation(libs.androidx.security.crypto)
 
     debugImplementation(libs.compose.ui.tooling)
     debugImplementation(libs.compose.ui.test.manifest)

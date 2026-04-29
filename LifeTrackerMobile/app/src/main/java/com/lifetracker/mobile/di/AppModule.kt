@@ -19,11 +19,18 @@ import com.lifetracker.mobile.data.local.MIGRATION_4_5
 import com.lifetracker.mobile.data.local.MIGRATION_5_6
 import com.lifetracker.mobile.data.local.MIGRATION_6_7
 import com.lifetracker.mobile.data.local.MIGRATION_7_8
+import com.lifetracker.mobile.data.auth.AuthRepositoryImpl
+import com.lifetracker.mobile.data.auth.AuthTokenStore
+import com.lifetracker.mobile.data.auth.EncryptedAuthTokenStore
+import com.lifetracker.mobile.data.auth.GoogleSignInClient
+import com.lifetracker.mobile.data.remote.AuthApi
+import com.lifetracker.mobile.data.remote.LifeTrackerApi
 import com.lifetracker.mobile.data.remote.NetworkModule
 import com.lifetracker.mobile.data.repository.DataStoreSettingsRepository
 import com.lifetracker.mobile.data.repository.HeroRepositoryImpl
 import com.lifetracker.mobile.data.repository.ShopRepositoryImpl
 import com.lifetracker.mobile.data.repository.TaskRepositoryImpl
+import com.lifetracker.mobile.domain.auth.AuthRepository
 import com.lifetracker.mobile.domain.repository.HeroRepository
 import com.lifetracker.mobile.domain.repository.SettingsRepository
 import com.lifetracker.mobile.domain.repository.ShopRepository
@@ -61,27 +68,89 @@ import com.lifetracker.mobile.domain.usecase.task.UpdateTaskUseCase
 import com.lifetracker.mobile.ui.viewmodel.AchievementsViewModel
 import com.lifetracker.mobile.ui.viewmodel.CreateDailyViewModel
 import com.lifetracker.mobile.ui.viewmodel.HeroViewModel
+import com.lifetracker.mobile.ui.viewmodel.SignInViewModel
 import com.lifetracker.mobile.ui.viewmodel.ShopViewModel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import okhttp3.OkHttpClient
+import retrofit2.Retrofit
 import com.lifetracker.mobile.ui.viewmodel.StatsViewModel
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.module.dsl.viewModelOf
+import org.koin.core.qualifier.named
 import org.koin.dsl.module
+
+private const val AUTH_OKHTTP = "auth_okhttp"
+private const val AUTH_RETROFIT = "auth_retrofit"
+private const val APPLICATION_SCOPE = "application_scope"
 
 val appModule =
     module {
         single { JsonDefaults }
         single { SafeApiCaller(json = get()) }
 
-        single {
+        single<AuthTokenStore> { EncryptedAuthTokenStore(context = androidContext()) }
+
+        single(named(AUTH_OKHTTP)) {
             val settingsRepository: SettingsRepository = get()
-            NetworkModule.provideOkHttpClient(
+            NetworkModule.provideAuthOkHttpClient(
+                tokenStore = get(),
                 deviceIdProvider = settingsRepository::getOrCreateDeviceIdBlocking,
                 isDebug = BuildConfig.DEBUG,
             )
         }
 
-        single { NetworkModule.provideApi(baseUrl = BuildConfig.BASE_URL, client = get(), json = get()) }
+        single(named(AUTH_RETROFIT)) {
+            NetworkModule.provideRetrofit(
+                baseUrl = BuildConfig.BASE_URL,
+                client = get(named(AUTH_OKHTTP)),
+                json = get(),
+            )
+        }
+
+        single<AuthApi> { NetworkModule.provideAuthApi(get(named(AUTH_RETROFIT))) }
+
+        single<OkHttpClient> {
+            val settingsRepository: SettingsRepository = get()
+            NetworkModule.provideOkHttpClient(
+                tokenStore = get(),
+                deviceIdProvider = settingsRepository::getOrCreateDeviceIdBlocking,
+                authApiProvider = { get<AuthApi>() },
+                isDebug = BuildConfig.DEBUG,
+            )
+        }
+
+        single<Retrofit> {
+            NetworkModule.provideRetrofit(
+                baseUrl = BuildConfig.BASE_URL,
+                client = get(),
+                json = get(),
+            )
+        }
+
+        single<LifeTrackerApi> { NetworkModule.provideApi(get()) }
+
+        single(named(APPLICATION_SCOPE)) {
+            CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        }
+
+        single<AuthRepository> {
+            AuthRepositoryImpl(
+                authApi = get(),
+                tokenStore = get(),
+                settings = get(),
+                scope = get(named(APPLICATION_SCOPE)),
+            )
+        }
+
+        single {
+            GoogleSignInClient(
+                context = androidContext(),
+                webClientId = BuildConfig.GOOGLE_WEB_CLIENT_ID,
+            )
+        }
         single { SyncScheduler(workManager = get()) }
         single { ReminderScheduler(workManager = get(), json = get()) }
 
@@ -174,6 +243,7 @@ val appModule =
         viewModelOf(::ShopViewModel)
         viewModelOf(::AchievementsViewModel)
         viewModelOf(::StatsViewModel)
+        viewModelOf(::SignInViewModel)
 
         single {
             Room
