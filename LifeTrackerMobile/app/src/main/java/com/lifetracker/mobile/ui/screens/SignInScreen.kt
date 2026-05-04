@@ -46,6 +46,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -64,6 +65,11 @@ fun SignInScreen(
     val colors = MaterialTheme.colorScheme
     val isDark = isSystemInDarkTheme()
 
+    val topTint = if (isDark) 0.42f else 0.20f
+    val bottomTint = if (isDark) 0.22f else 0.10f
+    val backgroundTop = lerp(colors.background, colors.primary, topTint)
+    val backgroundBottom = lerp(colors.background, colors.primary, bottomTint)
+
     Box(
         modifier =
             Modifier
@@ -72,9 +78,9 @@ fun SignInScreen(
                     Brush.verticalGradient(
                         colors =
                             listOf(
-                                colors.primary.copy(alpha = 0.18f),
+                                backgroundTop,
                                 colors.background,
-                                colors.primary.copy(alpha = 0.08f),
+                                backgroundBottom,
                             ),
                     ),
                 )
