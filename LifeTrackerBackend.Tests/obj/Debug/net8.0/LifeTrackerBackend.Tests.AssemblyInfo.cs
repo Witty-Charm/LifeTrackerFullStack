@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("LifeTrackerBackend.Tests")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+da496ba39bd60f496a9dfc34da81131a3e19729a")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7c9f50183c7d72c39d425e8d95b84bb42e89f919")]
 [assembly: System.Reflection.AssemblyProductAttribute("LifeTrackerBackend.Tests")]
 [assembly: System.Reflection.AssemblyTitleAttribute("LifeTrackerBackend.Tests")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

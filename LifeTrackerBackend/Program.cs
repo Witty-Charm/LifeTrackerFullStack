@@ -40,8 +40,6 @@ var authOptions = AuthOptionsLoader.Load(builder.Configuration);
 builder.Services.AddSingleton(authOptions);
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<IJwtTokenService, JwtTokenService>();
-builder.Services.AddSingleton<IGoogleTokenVerifier, GoogleTokenVerifier>();
-builder.Services.AddScoped<IUserAuthService, UserAuthService>();
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
