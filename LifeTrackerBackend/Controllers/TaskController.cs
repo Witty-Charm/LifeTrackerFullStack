@@ -54,7 +54,7 @@ public class TaskController : DeviceScopedControllerBase
     [HttpGet]
     public async Task<ActionResult<IEnumerable<TaskDto>>> GetTasks([FromQuery] int? heroId = null)
     {
-        _ = RequireCurrentDevice(out var errorResult);
+        _ = RequireCurrentUser(out var errorResult);
         if (errorResult is not null)
             return errorResult;
 
@@ -79,7 +79,7 @@ public class TaskController : DeviceScopedControllerBase
     [HttpGet("{id}")]
     public async Task<ActionResult<TaskDto>> GetTask(int id)
     {
-        _ = RequireCurrentDevice(out var errorResult);
+        _ = RequireCurrentUser(out var errorResult);
         if (errorResult is not null)
             return errorResult;
 
@@ -93,7 +93,7 @@ public class TaskController : DeviceScopedControllerBase
     [HttpPost]
     public async Task<ActionResult<TaskDto>> PostTask([FromBody] CreateTaskRequest request)
     {
-        _ = RequireCurrentDevice(out var errorResult);
+        _ = RequireCurrentUser(out var errorResult);
         if (errorResult is not null)
             return errorResult;
 
@@ -176,7 +176,7 @@ public class TaskController : DeviceScopedControllerBase
     [HttpPut("{id}")]
     public async Task<ActionResult<TaskDto>> UpdateTask(int id, [FromBody] UpdateTaskRequest request)
     {
-        _ = RequireCurrentDevice(out var errorResult);
+        _ = RequireCurrentUser(out var errorResult);
         if (errorResult is not null)
             return errorResult;
 
@@ -252,7 +252,7 @@ public class TaskController : DeviceScopedControllerBase
     [HttpPut("{id}/complete")]
     public async Task<ActionResult<CompleteTaskResponse>> CompleteTask(int id)
     {
-        _ = RequireCurrentDevice(out var errorResult);
+        _ = RequireCurrentUser(out var errorResult);
         if (errorResult is not null)
             return errorResult;
 
@@ -397,7 +397,7 @@ public class TaskController : DeviceScopedControllerBase
     [HttpPut("{id}/daily-state")]
     public async Task<ActionResult<SetDailyTaskStateResponse>> SetDailyTaskState(int id, [FromBody] SetDailyTaskStateRequest request)
     {
-        _ = RequireCurrentDevice(out var errorResult);
+        _ = RequireCurrentUser(out var errorResult);
         if (errorResult is not null)
             return errorResult;
 
@@ -612,7 +612,7 @@ public class TaskController : DeviceScopedControllerBase
     [HttpPut("{id}/fail")]
     public async Task<ActionResult<FailTaskResponse>> FailTask(int id)
     {
-        _ = RequireCurrentDevice(out var errorResult);
+        _ = RequireCurrentUser(out var errorResult);
         if (errorResult is not null)
             return errorResult;
 
@@ -689,7 +689,7 @@ public class TaskController : DeviceScopedControllerBase
     [HttpPost("check-overdue")]
     public async Task<ActionResult<OverdueCheckResponse>> CheckOverdueTasks([FromQuery] int? heroId = null)
     {
-        _ = RequireCurrentDevice(out var errorResult);
+        _ = RequireCurrentUser(out var errorResult);
         if (errorResult is not null)
             return errorResult;
 
@@ -880,7 +880,7 @@ public class TaskController : DeviceScopedControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteTask(int id)
     {
-        _ = RequireCurrentDevice(out var errorResult);
+        _ = RequireCurrentUser(out var errorResult);
         if (errorResult is not null)
             return errorResult;
 
@@ -897,14 +897,15 @@ public class TaskController : DeviceScopedControllerBase
 
     private Task<GameTask?> LoadOwnedTaskAsync(int taskId)
     {
-        var deviceId = HttpContext.Items[LifeTracker.Infrastructure.DeviceRequestContext.ItemKey]?.ToString();
+        if (!CurrentHeroService.TryGetCurrentUserId(HttpContext, out var userId, out _))
+            return Task.FromResult<GameTask?>(null);
 
         return _context.GameTasks
             .Include(t => t.Streak)
             .Include(t => t.Hero)
             .ThenInclude(h => h!.EconomyBalance)
             .Include(t => t.DailyTaskCompletions)
-            .FirstOrDefaultAsync(t => t.Id == taskId && t.Hero != null && t.Hero.OwnerDeviceId == deviceId);
+            .FirstOrDefaultAsync(t => t.Id == taskId && t.Hero != null && t.Hero.UserId == userId);
     }
 
     private Task<Hero?> LoadOwnedHeroForTaskAsync(int heroId) =>

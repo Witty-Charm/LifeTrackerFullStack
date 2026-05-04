@@ -24,7 +24,7 @@ public class ShopController : DeviceScopedControllerBase
     [HttpPost("buy")]
     public async Task<ActionResult<BuyResultDto>> BuyItem([FromBody] BuyItemRequest request)
     {
-        _ = RequireCurrentDevice(out var errorResult);
+        _ = RequireCurrentUser(out var errorResult);
         if (errorResult is not null)
             return errorResult;
 
@@ -45,7 +45,7 @@ public class ShopController : DeviceScopedControllerBase
     [HttpGet("inventory/{heroId:int}")]
     public async Task<ActionResult<IEnumerable<PurchasedItemDto>>> GetInventory(int heroId)
     {
-        _ = RequireCurrentDevice(out var errorResult);
+        _ = RequireCurrentUser(out var errorResult);
         if (errorResult is not null)
             return errorResult;
 

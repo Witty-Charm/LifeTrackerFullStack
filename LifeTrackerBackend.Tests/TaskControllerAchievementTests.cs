@@ -14,6 +14,7 @@ namespace LifeTrackerBackend.Tests;
 public class TaskControllerAchievementTests : IAsyncLifetime
 {
     private const string TestDeviceId = "11111111-1111-1111-1111-111111111111";
+    private const int TestUserId = 1;
     private readonly SqliteConnection _connection = new("Data Source=:memory:");
     private DbContextOptions<ApplicationDbContext> _options = null!;
 
@@ -26,6 +27,8 @@ public class TaskControllerAchievementTests : IAsyncLifetime
 
         await using var db = CreateDbContext();
         await db.Database.EnsureCreatedAsync();
+        db.Users.Add(new User { Id = TestUserId, Provider = AuthProvider.Google, ExternalId = "ext-" + TestUserId, Email = "user@example.com" });
+        await db.SaveChangesAsync();
     }
 
     public async Task DisposeAsync()
@@ -47,6 +50,7 @@ public class TaskControllerAchievementTests : IAsyncLifetime
             MaxHp = 100,
             TimeZoneId = "UTC",
             OwnerDeviceId = TestDeviceId,
+            UserId = TestUserId,
         };
         db.Heroes.Add(hero);
         await db.SaveChangesAsync();
@@ -115,6 +119,7 @@ public class TaskControllerAchievementTests : IAsyncLifetime
             MaxHp = 100,
             TimeZoneId = "UTC",
             OwnerDeviceId = TestDeviceId,
+            UserId = TestUserId,
         };
         db.Heroes.Add(hero);
         await db.SaveChangesAsync();
@@ -142,10 +147,12 @@ public class TaskControllerAchievementTests : IAsyncLifetime
 
         var controller = new TaskController(db, new GameEngineService(), new ThrowingAchievementService(db), new HeroTimeService(), new DailyScheduleService(new HeroTimeService()), Microsoft.Extensions.Logging.Abstractions.NullLogger<TaskController>.Instance, new CurrentHeroService(db));
         controller.ControllerContext = new ControllerContext
+
         {
-            HttpContext = new DefaultHttpContext()
+
+            HttpContext = TestAuthHelpers.CreateAuthenticatedHttpContext(TestUserId, TestDeviceId)
+
         };
-        controller.ControllerContext.HttpContext.Request.Headers["X-Device-Id"] = TestDeviceId;
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => controller.CompleteTask(task.Id));
 
@@ -176,6 +183,7 @@ public class TaskControllerAchievementTests : IAsyncLifetime
             MaxHp = 100,
             TimeZoneId = "UTC",
             OwnerDeviceId = TestDeviceId,
+            UserId = TestUserId,
         };
         db.Heroes.Add(hero);
         await db.SaveChangesAsync();
@@ -212,10 +220,12 @@ public class TaskControllerAchievementTests : IAsyncLifetime
 
         var controller = new TaskController(db, new GameEngineService(), new ThrowingAchievementService(db), new HeroTimeService(), new DailyScheduleService(new HeroTimeService()), Microsoft.Extensions.Logging.Abstractions.NullLogger<TaskController>.Instance, new CurrentHeroService(db));
         controller.ControllerContext = new ControllerContext
+
         {
-            HttpContext = new DefaultHttpContext(),
+
+            HttpContext = TestAuthHelpers.CreateAuthenticatedHttpContext(TestUserId, TestDeviceId)
+
         };
-        controller.ControllerContext.HttpContext.Request.Headers["X-Device-Id"] = TestDeviceId;
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             controller.SetDailyTaskState(task.Id, new SetDailyTaskStateRequest
@@ -786,6 +796,7 @@ public class TaskControllerAchievementTests : IAsyncLifetime
             MaxHp = 100,
             TimeZoneId = "UTC",
             OwnerDeviceId = TestDeviceId,
+            UserId = TestUserId,
             CreatedDate = utcNow,
             UpdatedAt = utcNow,
         };
@@ -915,10 +926,12 @@ public class TaskControllerAchievementTests : IAsyncLifetime
     {
         var controller = TaskController.CreateForTests(db, new GameEngineService(), timeService ?? new HeroTimeService());
         controller.ControllerContext = new ControllerContext
+
         {
-            HttpContext = new DefaultHttpContext()
+
+            HttpContext = TestAuthHelpers.CreateAuthenticatedHttpContext(TestUserId, TestDeviceId)
+
         };
-        controller.ControllerContext.HttpContext.Request.Headers["X-Device-Id"] = TestDeviceId;
         return controller;
     }
 
@@ -934,6 +947,7 @@ public class TaskControllerAchievementTests : IAsyncLifetime
             MaxHp = 100,
             TimeZoneId = timeZoneId,
             OwnerDeviceId = TestDeviceId,
+            UserId = TestUserId,
             CreatedDate = heroCreatedAt,
             UpdatedAt = heroCreatedAt,
         };
