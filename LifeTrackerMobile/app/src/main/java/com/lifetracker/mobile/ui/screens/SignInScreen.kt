@@ -10,7 +10,6 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -326,7 +325,6 @@ private fun GoogleSignInButton(
                 disabledContainerColor = Color.White.copy(alpha = 0.75f),
                 disabledContentColor = Color(0xFF1F1F1F).copy(alpha = 0.6f),
             ),
-        border = BorderStroke(1.dp, Color(0xFFDADCE0)),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 8.dp),
     ) {
         Crossfade(
