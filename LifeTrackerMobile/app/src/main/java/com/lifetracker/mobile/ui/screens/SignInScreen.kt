@@ -72,9 +72,9 @@ fun SignInScreen(
                     Brush.verticalGradient(
                         colors =
                             listOf(
-                                colors.primary.copy(alpha = 0.14f),
+                                colors.primary.copy(alpha = 0.18f),
                                 colors.background,
-                                colors.secondary.copy(alpha = 0.10f),
+                                colors.primary.copy(alpha = 0.08f),
                             ),
                     ),
                 )
@@ -166,7 +166,7 @@ private fun HeroEmblem() {
                             colors =
                                 listOf(
                                     colors.primary,
-                                    colors.secondary,
+                                    colors.primary.copy(alpha = 0.65f),
                                 ),
                         ),
                     )
@@ -196,17 +196,11 @@ private fun HeroEmblem() {
 @Composable
 private fun GradientTitle(text: String) {
     val colors = MaterialTheme.colorScheme
-    val gradient =
-        Brush.linearGradient(
-            colors = listOf(colors.primary, colors.secondary),
-        )
     Text(
         text = text,
-        style =
-            MaterialTheme.typography.displaySmall.copy(
-                brush = gradient,
-                fontWeight = FontWeight.Bold,
-            ),
+        style = MaterialTheme.typography.displaySmall,
+        fontWeight = FontWeight.Bold,
+        color = colors.primary,
     )
 }
 
