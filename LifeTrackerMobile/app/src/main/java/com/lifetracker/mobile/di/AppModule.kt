@@ -68,6 +68,7 @@ import com.lifetracker.mobile.domain.usecase.task.UpdateTaskUseCase
 import com.lifetracker.mobile.ui.viewmodel.AchievementsViewModel
 import com.lifetracker.mobile.ui.viewmodel.CreateDailyViewModel
 import com.lifetracker.mobile.ui.viewmodel.HeroViewModel
+import com.lifetracker.mobile.ui.viewmodel.SettingsViewModel
 import com.lifetracker.mobile.ui.viewmodel.SignInViewModel
 import com.lifetracker.mobile.ui.viewmodel.ShopViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -244,6 +245,7 @@ val appModule =
         viewModelOf(::AchievementsViewModel)
         viewModelOf(::StatsViewModel)
         viewModelOf(::SignInViewModel)
+        viewModelOf(::SettingsViewModel)
 
         single {
             Room

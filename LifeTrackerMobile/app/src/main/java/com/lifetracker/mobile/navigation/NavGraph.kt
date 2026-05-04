@@ -16,6 +16,7 @@ import com.lifetracker.mobile.ui.screens.CreateDailyScreen
 import com.lifetracker.mobile.ui.screens.CreateHeroScreen
 import com.lifetracker.mobile.ui.screens.CreateTaskScreen
 import com.lifetracker.mobile.ui.screens.HomeScreen
+import com.lifetracker.mobile.ui.screens.SettingsScreen
 import com.lifetracker.mobile.ui.screens.StatsScreenRoot
 import com.lifetracker.mobile.ui.viewmodel.CreateDailyViewModel
 import com.lifetracker.mobile.ui.viewmodel.HeroViewModel
@@ -59,6 +60,10 @@ sealed interface Screen {
         override val route = "stats/{heroId}"
 
         fun route(heroId: Int) = "stats/$heroId"
+    }
+
+    data object Settings : Screen {
+        override val route = "settings"
     }
 
     data object CreateDaily : Screen {
@@ -162,6 +167,10 @@ fun NavGraph(
         ) { backStackEntry ->
             val heroId = backStackEntry.arguments?.getInt("heroId") ?: return@composable
             StatsScreenRoot(heroId = heroId, onBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.Settings.route) {
+            SettingsScreen(onBack = { navController.popBackStack() })
         }
 
         composable(
