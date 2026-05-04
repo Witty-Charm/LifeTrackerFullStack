@@ -112,9 +112,8 @@ fun SignInScreen(
 
             Spacer(Modifier.height(12.dp))
 
-            GoogleSignInCard(
+            GoogleSignInButton(
                 isLoading = state.isSigningIn,
-                isDark = isDark,
                 onClick = { vm.startSignIn() },
             )
 
@@ -262,46 +261,6 @@ private fun FeatureHighlight(
             color = colors.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
-    }
-}
-
-@Composable
-private fun GoogleSignInCard(
-    isLoading: Boolean,
-    isDark: Boolean,
-    onClick: () -> Unit,
-) {
-    val colors = MaterialTheme.colorScheme
-    val cardShape = RoundedCornerShape(24.dp)
-    val cardBg =
-        if (isDark) {
-            colors.surface.copy(alpha = 0.55f)
-        } else {
-            colors.surface.copy(alpha = 0.75f)
-        }
-    val borderTint = if (isDark) Color.White else Color.Black
-
-    Box(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .shadow(elevation = 10.dp, shape = cardShape)
-                .clip(cardShape)
-                .background(cardBg)
-                .border(
-                    width = 1.dp,
-                    brush =
-                        Brush.verticalGradient(
-                            listOf(
-                                borderTint.copy(alpha = 0.18f),
-                                borderTint.copy(alpha = 0.04f),
-                            ),
-                        ),
-                    shape = cardShape,
-                )
-                .padding(14.dp),
-    ) {
-        GoogleSignInButton(isLoading = isLoading, onClick = onClick)
     }
 }
 
