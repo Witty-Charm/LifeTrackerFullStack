@@ -328,6 +328,9 @@ namespace LifeTracker.Migrations
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int?>("UserId")
+                        .HasColumnType("integer");
+
                     b.Property<int>("XpBoostPercent")
                         .HasColumnType("integer");
 
@@ -337,6 +340,8 @@ namespace LifeTracker.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("OwnerDeviceId");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("Heroes");
                 });
@@ -397,6 +402,46 @@ namespace LifeTracker.Migrations
                     b.HasIndex("ShopItemId");
 
                     b.ToTable("Purchases");
+                });
+
+            modelBuilder.Entity("LifeTracker.Models.RefreshToken", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DeviceId")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ReplacedByTokenHash")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("RefreshTokens");
                 });
 
             modelBuilder.Entity("LifeTracker.Models.ShopItem", b =>
@@ -509,6 +554,52 @@ namespace LifeTracker.Migrations
                     b.ToTable("Streaks");
                 });
 
+            modelBuilder.Entity("LifeTracker.Models.User", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AvatarUrl")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DisplayName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ExternalId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("LastLoginAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Provider")
+                        .HasColumnType("integer");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email");
+
+                    b.HasIndex("Provider", "ExternalId")
+                        .IsUnique();
+
+                    b.ToTable("Users");
+                });
+
             modelBuilder.Entity("LifeTracker.Models.DailyTaskCompletion", b =>
                 {
                     b.HasOne("LifeTracker.Models.Hero", "Hero")
@@ -550,6 +641,16 @@ namespace LifeTracker.Migrations
                     b.Navigation("Hero");
                 });
 
+            modelBuilder.Entity("LifeTracker.Models.Hero", b =>
+                {
+                    b.HasOne("LifeTracker.Models.User", "User")
+                        .WithMany("Heroes")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("LifeTracker.Models.Purchase", b =>
                 {
                     b.HasOne("LifeTracker.Models.Hero", "Hero")
@@ -567,6 +668,17 @@ namespace LifeTracker.Migrations
                     b.Navigation("Hero");
 
                     b.Navigation("ShopItem");
+                });
+
+            modelBuilder.Entity("LifeTracker.Models.RefreshToken", b =>
+                {
+                    b.HasOne("LifeTracker.Models.User", "User")
+                        .WithMany("RefreshTokens")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("LifeTracker.Models.Streak", b =>
@@ -603,6 +715,13 @@ namespace LifeTracker.Migrations
                     b.Navigation("Streaks");
 
                     b.Navigation("Tasks");
+                });
+
+            modelBuilder.Entity("LifeTracker.Models.User", b =>
+                {
+                    b.Navigation("Heroes");
+
+                    b.Navigation("RefreshTokens");
                 });
 #pragma warning restore 612, 618
         }
