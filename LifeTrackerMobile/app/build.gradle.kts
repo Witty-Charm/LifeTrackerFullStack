@@ -44,7 +44,11 @@ android {
             buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
         }
         release {
-            buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:5000/\"")
+            val baseUrl: String = localProps.getProperty(
+                "dev.base_url",
+                "https://lifetrackerfullstack-production.up.railway.app/"
+            )
+            buildConfigField("String", "BASE_URL", "\"$baseUrl\"")
             buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
         }
     }

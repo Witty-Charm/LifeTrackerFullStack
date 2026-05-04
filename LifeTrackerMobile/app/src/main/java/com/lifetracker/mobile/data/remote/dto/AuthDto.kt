@@ -22,9 +22,9 @@ data class LogoutRequestDto(
 @Serializable
 data class AuthResponseDto(
     @SerialName("accessToken") val accessToken: String,
-    @SerialName("expiresAtUtc") val expiresAtUtc: String,
+    @SerialName("accessTokenExpiresAt") val accessTokenExpiresAt: String,
     @SerialName("refreshToken") val refreshToken: String,
-    @SerialName("refreshExpiresAtUtc") val refreshExpiresAtUtc: String,
+    @SerialName("refreshTokenExpiresAt") val refreshTokenExpiresAt: String,
     @SerialName("user") val user: AuthUserDto,
 )
 
