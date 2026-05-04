@@ -107,7 +107,7 @@ fun SignInScreen(
 
             Spacer(Modifier.height(12.dp))
 
-            GoogleSignInCard(
+            GoogleSignInButton(
                 isLoading = state.isSigningIn,
                 isDark = isDark,
                 onClick = { vm.startSignIn() },
@@ -267,66 +267,37 @@ private fun FeatureHighlight(
 }
 
 @Composable
-private fun GoogleSignInCard(
+private fun GoogleSignInButton(
     isLoading: Boolean,
     isDark: Boolean,
     onClick: () -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme
-    val cardShape = RoundedCornerShape(24.dp)
-    val cardBg =
-        if (isDark) {
-            colors.surface.copy(alpha = 0.55f)
-        } else {
-            colors.surface.copy(alpha = 0.75f)
-        }
-    val borderTint = if (isDark) Color.White else Color.Black
+    val containerColor = if (isDark) Color(0xFF131314) else Color.White
+    val contentColor = if (isDark) Color(0xFFE8EAED) else Color(0xFF1F1F1F)
+    val disabledContainerColor =
+        if (isDark) Color(0xFF131314).copy(alpha = 0.75f) else Color.White.copy(alpha = 0.75f)
+    val disabledContentColor = contentColor.copy(alpha = 0.6f)
+    val borderColor =
+        if (isDark) colors.primary.copy(alpha = 0.55f) else Color(0xFFDADCE0)
 
-    Box(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .shadow(elevation = 10.dp, shape = cardShape)
-                .clip(cardShape)
-                .background(cardBg)
-                .border(
-                    width = 1.dp,
-                    brush =
-                        Brush.verticalGradient(
-                            listOf(
-                                borderTint.copy(alpha = 0.18f),
-                                borderTint.copy(alpha = 0.04f),
-                            ),
-                        ),
-                    shape = cardShape,
-                )
-                .padding(14.dp),
-    ) {
-        GoogleSignInButton(isLoading = isLoading, onClick = onClick)
-    }
-}
-
-@Composable
-private fun GoogleSignInButton(
-    isLoading: Boolean,
-    onClick: () -> Unit,
-) {
     Button(
         onClick = onClick,
         enabled = !isLoading,
         modifier =
             Modifier
                 .fillMaxWidth()
-                .height(52.dp),
+                .height(56.dp)
+                .shadow(elevation = if (isDark) 8.dp else 4.dp, shape = RoundedCornerShape(18.dp)),
         shape = RoundedCornerShape(18.dp),
         colors =
             ButtonDefaults.buttonColors(
-                containerColor = Color.White,
-                contentColor = Color(0xFF1F1F1F),
-                disabledContainerColor = Color.White.copy(alpha = 0.75f),
-                disabledContentColor = Color(0xFF1F1F1F).copy(alpha = 0.6f),
+                containerColor = containerColor,
+                contentColor = contentColor,
+                disabledContainerColor = disabledContainerColor,
+                disabledContentColor = disabledContentColor,
             ),
-        border = BorderStroke(1.dp, Color(0xFFDADCE0)),
+        border = BorderStroke(1.dp, borderColor),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 8.dp),
     ) {
         Crossfade(
@@ -343,7 +314,7 @@ private fun GoogleSignInButton(
                     CircularProgressIndicator(
                         modifier = Modifier.size(20.dp),
                         strokeWidth = 2.dp,
-                        color = Color(0xFF1F1F1F),
+                        color = contentColor,
                     )
                     Spacer(Modifier.width(12.dp))
                     Text(
