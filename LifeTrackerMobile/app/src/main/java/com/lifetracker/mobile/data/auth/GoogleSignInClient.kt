@@ -27,11 +27,11 @@ class GoogleSignInClient(
         if (webClientId.isBlank()) {
             return Result.failure(IllegalStateException("Google Web Client ID is not configured."))
         }
-        return runCatching { request(useExplicitSignIn = true) }
+        return runCatching { request(useExplicitSignIn = false) }
             .recoverCatching { error ->
                 if (error is NoCredentialException) {
-                    Timber.w(error, "Explicit sign-in returned NoCredentialException; retrying with GetGoogleIdOption.")
-                    request(useExplicitSignIn = false)
+                    Timber.w(error, "GetGoogleIdOption returned NoCredentialException; falling back to GetSignInWithGoogleOption.")
+                    request(useExplicitSignIn = true)
                 } else {
                     throw error
                 }
