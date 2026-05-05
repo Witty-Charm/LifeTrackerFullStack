@@ -10,12 +10,14 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -51,6 +53,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lifetracker.mobile.R
 import com.lifetracker.mobile.ui.viewmodel.SignInViewModel
@@ -102,6 +105,7 @@ fun SignInScreen(
             Text(
                 text = "Your hero, quests and gold — synced across devices.",
                 style = MaterialTheme.typography.bodyMedium,
+                fontSize = 14.sp,
                 color = colors.onSurfaceVariant,
                 textAlign = TextAlign.Center,
             )
@@ -159,39 +163,19 @@ private fun HeroEmblem() {
                         ),
                     ),
         )
+
         Box(
             modifier =
                 Modifier
-                    .size(108.dp)
-                    .shadow(elevation = 18.dp, shape = CircleShape)
-                    .clip(CircleShape)
-                    .background(
-                        Brush.linearGradient(
-                            colors =
-                                listOf(
-                                    colors.primary,
-                                    colors.primary.copy(alpha = 0.65f),
-                                ),
-                        ),
-                    )
-                    .border(
-                        width = 1.dp,
-                        brush =
-                            Brush.verticalGradient(
-                                listOf(
-                                    Color.White.copy(alpha = 0.35f),
-                                    Color.White.copy(alpha = 0.05f),
-                                ),
-                            ),
-                        shape = CircleShape,
-                    ),
+                    .size(192.dp)
+                    .shadow(elevation = 64.dp, shape = CircleShape)
+                    .clip(CircleShape),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(
-                imageVector = Icons.Filled.Shield,
-                contentDescription = null,
-                tint = colors.onPrimary,
-                modifier = Modifier.size(56.dp),
+            Image(
+                painter = painterResource(id = R.drawable.lifetracker_icon),
+                contentDescription = "LifeTracker icon",
+                modifier = Modifier.size(128.dp),
             )
         }
     }
@@ -200,9 +184,11 @@ private fun HeroEmblem() {
 @Composable
 private fun GradientTitle(text: String) {
     val colors = MaterialTheme.colorScheme
+
     Text(
         text = text,
         style = MaterialTheme.typography.displaySmall,
+        fontSize = 36.sp,
         fontWeight = FontWeight.Bold,
         color = colors.primary,
     )
@@ -235,6 +221,7 @@ private fun FeatureHighlight(
     label: String,
 ) {
     val colors = MaterialTheme.colorScheme
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -255,9 +242,11 @@ private fun FeatureHighlight(
                 modifier = Modifier.size(20.dp),
             )
         }
+
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
+            fontSize = 10.sp,
             color = colors.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
@@ -284,7 +273,7 @@ private fun GoogleSignInButton(
                 disabledContainerColor = Color.White.copy(alpha = 0.75f),
                 disabledContentColor = Color(0xFF1F1F1F).copy(alpha = 0.6f),
             ),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
     ) {
         Crossfade(
             targetState = isLoading,
@@ -302,10 +291,13 @@ private fun GoogleSignInButton(
                         strokeWidth = 2.dp,
                         color = Color(0xFF1F1F1F),
                     )
+
                     Spacer(Modifier.width(12.dp))
+
                     Text(
                         text = "Signing in…",
                         style = MaterialTheme.typography.titleSmall,
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
                     )
                 }
@@ -321,10 +313,13 @@ private fun GoogleSignInButton(
                         tint = Color.Unspecified,
                         modifier = Modifier.size(20.dp),
                     )
+
                     Spacer(Modifier.width(12.dp))
+
                     Text(
                         text = "Sign in with Google",
                         style = MaterialTheme.typography.titleSmall,
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
                     )
                 }
@@ -336,6 +331,7 @@ private fun GoogleSignInButton(
 @Composable
 private fun ErrorCard(message: String) {
     val colors = MaterialTheme.colorScheme
+
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -357,10 +353,12 @@ private fun ErrorCard(message: String) {
             tint = colors.error,
             modifier = Modifier.size(18.dp),
         )
+
         Text(
             text = message,
             color = colors.onErrorContainer,
             style = MaterialTheme.typography.bodySmall,
+            fontSize = 12.sp,
         )
     }
 }
