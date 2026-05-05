@@ -143,6 +143,9 @@ val appModule =
                 tokenStore = get(),
                 settings = get(),
                 scope = get(named(APPLICATION_SCOPE)),
+                heroDao = get(),
+                taskDao = get(),
+                workManager = get(),
             )
         }
 

@@ -7,6 +7,8 @@ import androidx.work.WorkManager
 import com.lifetracker.mobile.BuildConfig
 import com.lifetracker.mobile.core.serialization.JsonDefaults
 import com.lifetracker.mobile.core.sync.SyncScheduler
+import com.lifetracker.mobile.domain.auth.AuthRepository
+import com.lifetracker.mobile.domain.auth.AuthSessionState
 import com.lifetracker.mobile.domain.model.ChecklistItem
 import com.lifetracker.mobile.domain.model.CreateTaskParams
 import com.lifetracker.mobile.domain.model.UpdateTaskParams
@@ -66,6 +68,7 @@ class HeroViewModel(
     private val heroUseCases: HeroUseCases,
     private val taskUseCases: TaskUseCases,
     private val workManager: WorkManager,
+    private val auth: AuthRepository,
 ) : ViewModel() {
     private val isDebug: Boolean = BuildConfig.DEBUG
 
@@ -111,6 +114,27 @@ class HeroViewModel(
     init {
         loadData()
         observeSyncWorker()
+        observeAuthState()
+    }
+
+    private fun observeAuthState() {
+        auth.authStateFlow
+            .drop(1)
+            .onEach { newState ->
+                when (newState) {
+                    AuthSessionState.SignedOut -> resetForSignOut()
+                    is AuthSessionState.SignedIn -> loadData()
+                    AuthSessionState.Unknown -> Unit
+                }
+            }
+            .launchIn(viewModelScope)
+    }
+
+    private fun resetForSignOut() {
+        loadJob?.cancel()
+        refreshTasksJob?.cancel()
+        heroDomain = null
+        _state.value = HeroScreenState()
     }
 
     fun loadData() {

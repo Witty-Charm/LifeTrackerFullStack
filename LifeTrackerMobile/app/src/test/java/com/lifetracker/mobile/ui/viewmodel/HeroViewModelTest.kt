@@ -1,6 +1,8 @@
 package com.lifetracker.mobile.ui.viewmodel
 
 import androidx.work.WorkManager
+import com.lifetracker.mobile.domain.auth.AuthRepository
+import com.lifetracker.mobile.domain.auth.AuthSessionState
 import com.lifetracker.mobile.domain.model.AchievementDomain
 import com.lifetracker.mobile.domain.model.CreateTaskParams
 import com.lifetracker.mobile.domain.model.UpdateTaskParams
@@ -49,6 +51,8 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
@@ -425,7 +429,18 @@ class HeroViewModelTest {
                     deleteLocalTask = DeleteLocalTaskUseCase(taskRepository),
                 ),
             workManager = workManager,
+            auth = NoOpAuthRepository(),
         )
+    }
+
+    private class NoOpAuthRepository : AuthRepository {
+        override val authStateFlow: StateFlow<AuthSessionState> =
+            MutableStateFlow(AuthSessionState.SignedIn(userId = 0, email = "", displayName = ""))
+
+        override suspend fun signInWithGoogle(idToken: String): Result<AuthSessionState.SignedIn> =
+            Result.failure(UnsupportedOperationException("not used in tests"))
+
+        override suspend fun signOut() = Unit
     }
 
     private class FakeHeroRepository : HeroRepository {
