@@ -28,7 +28,8 @@ class SignInViewModel(
             val tokenResult = googleSignInClient.fetchIdToken()
             val idToken =
                 tokenResult.getOrElse {
-                    _uiState.value = SignInUiState(isSigningIn = false, error = it.message ?: "Sign-in cancelled")
+                    _uiState.value =
+                        SignInUiState(isSigningIn = false, error = describeError(it, "Sign-in cancelled"))
                     return@launch
                 }
             val signInResult = auth.signInWithGoogle(idToken)
@@ -37,10 +38,26 @@ class SignInViewModel(
                     _uiState.value = SignInUiState(isSigningIn = false)
                 },
                 onFailure = {
-                    _uiState.value = SignInUiState(isSigningIn = false, error = it.message ?: "Sign-in failed")
+                    _uiState.value =
+                        SignInUiState(isSigningIn = false, error = describeError(it, "Sign-in failed"))
                 },
             )
         }
+    }
+
+    private fun describeError(throwable: Throwable, fallback: String): String {
+        val type = throwable::class.java.simpleName.ifBlank { "Error" }
+        val msg = throwable.message?.takeIf { it.isNotBlank() } ?: fallback
+        val cause = throwable.cause
+        val causeText =
+            if (cause != null && cause !== throwable) {
+                val causeType = cause::class.java.simpleName.ifBlank { "Cause" }
+                val causeMsg = cause.message?.takeIf { it.isNotBlank() }
+                if (causeMsg != null) " (cause: $causeType: $causeMsg)" else " (cause: $causeType)"
+            } else {
+                ""
+            }
+        return "$type: $msg$causeText"
     }
 
     fun clearError() {
