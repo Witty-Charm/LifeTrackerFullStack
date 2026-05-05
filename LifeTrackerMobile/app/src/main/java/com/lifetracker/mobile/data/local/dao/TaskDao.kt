@@ -20,6 +20,9 @@ abstract class TaskDao {
     @Query("DELETE FROM tasks WHERE id = :id")
     abstract suspend fun deleteById(id: Int)
 
+    @Query("DELETE FROM tasks")
+    abstract suspend fun deleteAll()
+
     @Query("SELECT * FROM tasks WHERE pendingSync = 1")
     abstract suspend fun getPendingSync(): List<TaskEntity>
 

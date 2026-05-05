@@ -1,5 +1,9 @@
 package com.lifetracker.mobile.data.auth
 
+import androidx.work.WorkManager
+import com.lifetracker.mobile.core.sync.SyncScheduler
+import com.lifetracker.mobile.data.local.dao.HeroDao
+import com.lifetracker.mobile.data.local.dao.TaskDao
 import com.lifetracker.mobile.data.remote.AuthApi
 import com.lifetracker.mobile.data.remote.dto.AuthResponseDto
 import com.lifetracker.mobile.data.remote.dto.GoogleSignInRequestDto
@@ -25,6 +29,9 @@ class AuthRepositoryImpl(
     private val tokenStore: AuthTokenStore,
     private val settings: SettingsRepository,
     private val scope: CoroutineScope,
+    private val heroDao: HeroDao,
+    private val taskDao: TaskDao,
+    private val workManager: WorkManager,
 ) : AuthRepository {
     private val sessionState: MutableStateFlow<AuthSessionState> =
         MutableStateFlow(initialStateFromTokens())
@@ -70,6 +77,12 @@ class AuthRepositoryImpl(
                 }.onFailure { Timber.w(it, "Logout request failed; clearing tokens locally.") }
             }
             tokenStore.clear()
+            runCatching { workManager.cancelUniqueWork(SyncScheduler.WORK_NAME) }
+                .onFailure { Timber.w(it, "Failed to cancel sync work on sign-out.") }
+            runCatching {
+                taskDao.deleteAll()
+                heroDao.deleteAll()
+            }.onFailure { Timber.w(it, "Failed to clear local data on sign-out.") }
             sessionState.value = AuthSessionState.SignedOut
         }
     }

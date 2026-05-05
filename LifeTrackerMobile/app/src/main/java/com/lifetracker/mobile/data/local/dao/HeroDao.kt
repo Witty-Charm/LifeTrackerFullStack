@@ -18,4 +18,7 @@ interface HeroDao {
 
     @Upsert
     suspend fun upsert(hero: HeroEntity)
+
+    @Query("DELETE FROM heroes")
+    suspend fun deleteAll()
 }

@@ -47,5 +47,8 @@ class HeroRepositoryImplTest {
             heroes[hero.id] = hero
         }
 
+        override suspend fun deleteAll() {
+            heroes.clear()
+        }
     }
 }
