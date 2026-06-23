@@ -31,8 +31,6 @@ The app makes self-improvement feel like playing a game.
 
 ## 📱 Screenshots
 
-> 📸 *Screenshots coming soon! Replace the placeholders below with your actual app screenshots.*
-
 <table>
   <tr>
     <td align="center"><b>🏠 Home Screen</b></td>
@@ -41,30 +39,10 @@ The app makes self-improvement feel like playing a game.
     <td align="center"><b>🛒 Shop</b></td>
   </tr>
   <tr>
-    <td align="center">
-
-<!-- ![Home Screen](screenshots/home.png) -->
-*Coming soon*
-
-</td>
-    <td align="center">
-
-<!-- ![Hero Stats](screenshots/hero.png) -->
-*Coming soon*
-
-</td>
-    <td align="center">
-
-<!-- ![Tasks](screenshots/tasks.png) -->
-*Coming soon*
-
-</td>
-    <td align="center">
-
-<!-- ![Shop](screenshots/shop.png) -->
-*Coming soon*
-
-</td>
+    <td align="center"><img src="screenshots/home.png" alt="Home Screen" width="200"/></td>
+    <td align="center"><img src="screenshots/hero.png" alt="Hero Stats" width="200"/></td>
+    <td align="center"><img src="screenshots/tasks.png" alt="Tasks" width="200"/></td>
+    <td align="center"><img src="screenshots/shop.png" alt="Shop" width="200"/></td>
   </tr>
   <tr>
     <td align="center"><b>🏆 Achievements</b></td>
@@ -73,30 +51,10 @@ The app makes self-improvement feel like playing a game.
     <td align="center"><b>🔐 Sign In</b></td>
   </tr>
   <tr>
-    <td align="center">
-
-<!-- ![Achievements](screenshots/achievements.png) -->
-*Coming soon*
-
-</td>
-    <td align="center">
-
-<!-- ![Statistics](screenshots/stats.png) -->
-*Coming soon*
-
-</td>
-    <td align="center">
-
-<!-- ![Settings](screenshots/settings.png) -->
-*Coming soon*
-
-</td>
-    <td align="center">
-
-<!-- ![Sign In](screenshots/signin.png) -->
-*Coming soon*
-
-</td>
+    <td align="center"><img src="screenshots/achievements.png" alt="Achievements" width="200"/></td>
+    <td align="center"><img src="screenshots/stats.png" alt="Statistics" width="200"/></td>
+    <td align="center"><img src="screenshots/settings.png" alt="Settings" width="200"/></td>
+    <td align="center"><img src="screenshots/signin.png" alt="Sign In" width="200"/></td>
   </tr>
 </table>
 
