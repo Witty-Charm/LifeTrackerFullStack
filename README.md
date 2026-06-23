@@ -35,26 +35,34 @@ The app makes self-improvement feel like playing a game.
   <tr>
     <td align="center"><b>🏠 Home Screen</b></td>
     <td align="center"><b>⚔️ Hero Stats</b></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="screenshots/home.png" alt="Home Screen" width="280"/></td>
+    <td align="center"><img src="screenshots/hero.png" alt="Hero Stats" width="280"/></td>
+  </tr>
+  <tr>
     <td align="center"><b>📋 Tasks</b></td>
     <td align="center"><b>🛒 Shop</b></td>
   </tr>
   <tr>
-    <td align="center"><img src="screenshots/home.png" alt="Home Screen" width="200"/></td>
-    <td align="center"><img src="screenshots/hero.png" alt="Hero Stats" width="200"/></td>
-    <td align="center"><img src="screenshots/tasks.png" alt="Tasks" width="200"/></td>
-    <td align="center"><img src="screenshots/shop.png" alt="Shop" width="200"/></td>
+    <td align="center"><img src="screenshots/tasks.png" alt="Tasks" width="280"/></td>
+    <td align="center"><img src="screenshots/shop.png" alt="Shop" width="280"/></td>
   </tr>
   <tr>
     <td align="center"><b>🏆 Achievements</b></td>
     <td align="center"><b>📊 Statistics</b></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="screenshots/achievements.png" alt="Achievements" width="280"/></td>
+    <td align="center"><img src="screenshots/stats.png" alt="Statistics" width="280"/></td>
+  </tr>
+  <tr>
     <td align="center"><b>⚙️ Settings</b></td>
     <td align="center"><b>🔐 Sign In</b></td>
   </tr>
   <tr>
-    <td align="center"><img src="screenshots/achievements.png" alt="Achievements" width="200"/></td>
-    <td align="center"><img src="screenshots/stats.png" alt="Statistics" width="200"/></td>
-    <td align="center"><img src="screenshots/settings.png" alt="Settings" width="200"/></td>
-    <td align="center"><img src="screenshots/signin.png" alt="Sign In" width="200"/></td>
+    <td align="center"><img src="screenshots/settings.png" alt="Settings" width="280"/></td>
+    <td align="center"><img src="screenshots/signin.png" alt="Sign In" width="280"/></td>
   </tr>
 </table>
 
