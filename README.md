@@ -129,27 +129,27 @@ The project follows **Clean Architecture** with clear separation of concerns:
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    📱 MOBILE (Android)                   │
+│                    MOBILE (Android)                     │
 ├─────────────────────────────────────────────────────────┤
 │                                                         │
-│   ┌─────────┐   ┌─────────┐   ┌─────────┐             │
-│   │   UI    │──▶│ Domain  │◀──│  Data   │             │
-│   │ Screens │   │ Models  │   │ Room DB │             │
-│   │   VMs   │   │UseCases │   │ Retrofit│             │
-│   │  Theme  │   │  Repos  │   │  DTOs   │             │
-│   └─────────┘   └─────────┘   └─────────┘             │
+│   ┌─────────┐   ┌─────────┐   ┌─────────┐               │
+│   │   UI    │─▶│ Domain  │◀─ │  Data   │               │
+│   │ Screens │   │ Models  │   │ Room DB │               │
+│   │   VMs   │   │UseCases │   │ Retrofit│               │
+│   │  Theme  │   │  Repos  │   │  DTOs   │               │
+│   └─────────┘   └─────────┘   └─────────┘               │
 │        │             │              │                   │
-│        └───── DI: Koin ──────┘─────┘                   │
+│        └───── DI: Koin ──────┘─────┘                    │
 │                                                         │
 ├─────────────────────────────────────────────────────────┤
-│               🌐 BACKEND (.NET 8.0)                    │
+│                   BACKEND (.NET 8.0)                    │
 ├─────────────────────────────────────────────────────────┤
 │                                                         │
-│   ┌──────────┐   ┌──────────┐   ┌──────────┐          │
-│   │Controllers│──▶│ Services │──▶│  Models  │          │
-│   │  REST API │   │GameEngine│   │ EF Core  │          │
-│   │  Swagger  │   │  Auth    │   │PostgreSQL│          │
-│   └──────────┘   └──────────┘   └──────────┘          │
+│   ┌───────────┐   ┌──────────┐   ┌──────────┐           │
+│   │Controllers│──▶│ Services │──▶│  Models │           │
+│   │  REST API │   │GameEngine│   │ EF Core  │           │
+│   │  Swagger  │   │  Auth    │   │PostgreSQL│           │
+│   └───────────┘   └──────────┘   └──────────┘           │
 │                                                         │
 └─────────────────────────────────────────────────────────┘
 ```
